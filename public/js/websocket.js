@@ -1,4 +1,4 @@
-import { io } from "socket.io-client";
+import { io } from "./socket.io.esm.min.js"; // ✅ Solution
 
 // 📌 Initialisation du WebSocket
 const socket = io("wss://seriousgame-ds65.onrender.com", {
