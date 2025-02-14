@@ -116,10 +116,8 @@ class GameManager {
 
     initializeGame(room) {
         try {
-            // Créer les decks pour les deux joueurs
             const decks = this.createInitialDecks();
             
-            // Mettre à jour l'état du jeu
             room.gameState = {
                 ...room.gameState,
                 status: 'playing',
@@ -130,7 +128,6 @@ class GameManager {
                 turn: room.players[0].id
             };
 
-            // Envoyer les mains initiales aux joueurs
             room.players.forEach((player, index) => {
                 const playerDeck = index === 0 ? decks.joueur1 : decks.joueur2;
                 this.io.to(player.id).emit('gameStart', {
@@ -150,7 +147,6 @@ class GameManager {
     }
 
     createInitialDecks() {
-        // Créer et mélanger les decks
         const deckManager = new Deck();
         return deckManager.creerDecksJoueurs();
     }
@@ -161,33 +157,26 @@ class GameManager {
             return false;
         }
 
-        // Mettre à jour l'état du jeu
         room.gameState.playedCards.set(data.slot, {
             playerId: socket.id,
             card: data.cardData
         });
 
-        // Notifier les autres joueurs
         socket.to(room.code).emit('cardPlayed', {
             cardId: data.cardId,
             slot: data.slot,
             playerId: socket.id
         });
 
-        // Changer le tour
         this.nextTurn(room);
-
         return true;
     }
 
     validateCardPlay(room, playerId, data) {
-        if (!room || 
-            room.gameState.status !== 'playing' ||
-            room.gameState.turn !== playerId ||
-            room.gameState.playedCards.has(data.slot)) {
-            return false;
-        }
-        return true;
+        return room && 
+               room.gameState.status === 'playing' &&
+               room.gameState.turn === playerId &&
+               !room.gameState.playedCards.has(data.slot);
     }
 
     nextTurn(room) {
@@ -197,21 +186,17 @@ class GameManager {
 
         this.io.to(room.code).emit('turnUpdate', room.gameState.turn);
     }
-
-    checkGameEnd(room) {
-        // Implémenter la logique de fin de partie
-        return false;
-    }
 }
 
 // 📌 Configuration des middlewares
 function setupMiddlewares(app) {
-    // CORS
     app.use(cors(CONFIG.CORS_OPTIONS));
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
 
-    // Static files
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
+    
     app.use(express.static(path.join(__dirname, 'public')));
     app.use('/js', express.static(path.join(__dirname, 'public/js'), {
         setHeaders: (res, path) => {
@@ -224,12 +209,14 @@ function setupMiddlewares(app) {
 
 // 📌 Configuration des routes
 function setupRoutes(app) {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
     app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
     app.get('/choose-mode', (req, res) => res.sendFile(path.join(__dirname, 'public', 'choose-mode.html')));
     app.get('/room-choice', (req, res) => res.sendFile(path.join(__dirname, 'public', 'room-choice.html')));
     app.get('/gameboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gameboard.html')));
 
-    // Route de monitoring
     app.get('/health', (req, res) => {
         res.json({
             status: 'ok',
@@ -246,91 +233,81 @@ function setupSocketEvents(io, roomManager, gameManager) {
     io.on('connection', (socket) => {
         console.log(`✅ Joueur connecté: ${socket.id}`);
 
-        socket.on('createRoom', (userData) => handleCreateRoom(socket, userData, roomManager));
-        socket.on('joinRoom', (data) => handleJoinRoom(socket, data, roomManager, gameManager));
-        socket.on('findRandomGame', (userData) => handleFindRandomGame(socket, userData, roomManager, gameManager));
-        socket.on('cardPlayed', (data) => handleCardPlayed(socket, data, gameManager));
-        socket.on('disconnect', () => handleDisconnect(socket, roomManager));
+        socket.on('createRoom', (userData) => {
+            if (!validateUserData(userData)) {
+                socket.emit('roomError', 'Données utilisateur invalides');
+                return;
+            }
+
+            let roomCode;
+            do {
+                roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+            } while (roomManager.getRoomByCode(roomCode));
+
+            const room = roomManager.createRoom(roomCode, { id: socket.id, ...userData });
+            socket.join(roomCode);
+            socket.emit('roomCreated', { roomCode });
+        });
+
+        socket.on('joinRoom', (data) => {
+            if (!validateUserData(data)) {
+                socket.emit('roomError', 'Données invalides');
+                return;
+            }
+
+            const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
+            if (!room) {
+                socket.emit('roomError', 'Room invalide ou pleine');
+                return;
+            }
+
+            socket.join(data.roomCode);
+
+            if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
+                gameManager.initializeGame(room);
+            }
+        });
+
+        socket.on('findRandomGame', (userData) => {
+            if (!validateUserData(userData)) {
+                socket.emit('roomError', 'Données utilisateur invalides');
+                return;
+            }
+
+            if (roomManager.state.waitingPlayers.length > 0) {
+                const opponent = roomManager.state.waitingPlayers.pop();
+                const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+                
+                const room = roomManager.createRoom(roomCode, opponent);
+                roomManager.joinRoom(roomCode, { id: socket.id, ...userData });
+
+                socket.join(roomCode);
+                io.to(opponent.id).emit('gameStart', { roomCode });
+                io.to(socket.id).emit('gameStart', { roomCode });
+
+                gameManager.initializeGame(room);
+            } else {
+                roomManager.state.waitingPlayers.push({ id: socket.id, ...userData });
+                socket.emit('waitingForOpponent');
+            }
+        });
+
+        socket.on('cardPlayed', (data) => {
+            gameManager.handleCardPlayed(socket, data);
+        });
+
+        socket.on('disconnect', () => {
+            const room = roomManager.leaveRoom(socket.id);
+            if (room) {
+                socket.to(room.code).emit('opponentLeft', 'Votre adversaire a quitté la partie.');
+            }
+
+            const waitingIndex = roomManager.state.waitingPlayers.findIndex(p => p.id === socket.id);
+            if (waitingIndex !== -1) {
+                roomManager.state.waitingPlayers.splice(waitingIndex, 1);
+            }
+        });
     });
-}
-
-// 📌 Handlers des événements socket
-function handleCreateRoom(socket, userData, roomManager) {
-    if (!validateUserData(userData)) {
-        socket.emit('roomError', 'Données utilisateur invalides');
-        return;
-    }
-
-    let roomCode;
-    do {
-        roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-    } while (roomManager.getRoomByCode(roomCode));
-
-    const room = roomManager.createRoom(roomCode, { id: socket.id, ...userData });
-    socket.join(roomCode);
-    socket.emit('roomCreated', { roomCode });
-}
-
-function handleJoinRoom(socket, data, roomManager, gameManager) {
-    if (!validateUserData(data)) {
-        socket.emit('roomError', 'Données invalides');
-        return;
-    }
-
-    const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
-    if (!room) {
-        socket.emit('roomError', 'Room invalide ou pleine');
-        return;
-    }
-
-    socket.join(data.roomCode);
-
-    if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
-        gameManager.initializeGame(room);
-    }
-}
-
-function handleFindRandomGame(socket, userData, roomManager, gameManager) {
-    if (!validateUserData(userData)) {
-        socket.emit('roomError', 'Données utilisateur invalides');
-        return;
-    }
-
-    const serverState = roomManager.state;
-    
-    if (serverState.waitingPlayers.length > 0) {
-        const opponent = serverState.waitingPlayers.pop();
-        const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-        
-        const room = roomManager.createRoom(roomCode, opponent);
-        roomManager.joinRoom(roomCode, { id: socket.id, ...userData });
-
-        socket.join(roomCode);
-        io.to(opponent.id).emit('gameStart', { roomCode });
-        io.to(socket.id).emit('gameStart', { roomCode });
-
-        gameManager.initializeGame(room);
-    } else {
-        serverState.waitingPlayers.push({ id: socket.id, ...userData });
-        socket.emit('waitingForOpponent');
-    }
-}
-
-function handleCardPlayed(socket, data, gameManager) {
-    gameManager.handleCardPlayed(socket, data);
-}
-
-function handleDisconnect(socket, roomManager) {
-    const room = roomManager.leaveRoom(socket.id);
-    if (room) {
-        socket.to(room.code).emit('opponentLeft', 'Votre adversaire a quitté la partie.');
-    }
-
-    const serverState = roomManager.state;
-    const waitingIndex = serverState.waitingPlayers.findIndex(p => p.id === socket.id);
-    if (waitingIndex !== -1) {
-        serverState.waitingPlayers.splice(waitingIndex, 1);
-    }
 }
 
 // 📌 Utilitaires
@@ -343,6 +320,9 @@ function validateUserData(userData) {
 
 // 📌 Initialisation du serveur
 const app = express();
+setupMiddlewares(app);
+setupRoutes(app);
+
 const server = createServer(app);
 const io = new Server(server, {
     cors: CONFIG.CORS_OPTIONS
@@ -352,8 +332,6 @@ const serverState = new ServerState();
 const roomManager = new RoomManager(serverState);
 const gameManager = new GameManager(io, roomManager);
 
-setupMiddlewares(app);
-setupRoutes(app);
 setupSocketEvents(io, roomManager, gameManager);
 
 // 📌 Nettoyage périodique
