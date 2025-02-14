@@ -1,4 +1,4 @@
-import { socket } from './websocket.js';
+import socket from './websocket.js';
 import Game from './game.js';
 import DragAndDropManager from './dragAndDrop.js';
 import Deck from './deck.js'; // ✅ Importation corrigée du deck

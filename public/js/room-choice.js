@@ -1,4 +1,4 @@
-import { socket } from './websocket.js'; // ✅ Importation du WebSocket centralisé
+import socket from './websocket.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     try {

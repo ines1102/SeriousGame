@@ -1,6 +1,6 @@
 // ✅ Importation correcte du deck
 import Deck from './deck.js'; 
-import socket from './websocket.js'; // Assure-toi que `socket.js` est bien géré comme un module
+import socket from './websocket.js';
 
 // ✅ Création de l'instance du deck (évite les problèmes de référence)
 const deckInstance = new Deck();
