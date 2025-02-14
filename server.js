@@ -6,7 +6,6 @@ import fs from 'fs';
 import os from 'os';
 import cors from 'cors';
 import Deck from './public/js/deck.js';
-import { c } from 'docker/src/languages.js';
 
 // 📌 Détection de l'IP locale pour une connexion réseau
 function getLocalIP() {
