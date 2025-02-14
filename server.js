@@ -1,54 +1,68 @@
 import express from 'express';
 import { createServer } from 'https';
 import { Server } from 'socket.io';
+import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import Deck from './public/js/deck.js'; // 🔥 Importation du deck
 
-// Configuration des chemins
+// 📌 Configuration des chemins
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Création de l'application Express
+// 📌 Création de l'application Express
 const app = express();
 
-// Configuration HTTPS
+// 📌 Activation de CORS pour éviter les erreurs de connexion entre domaines
+app.use(cors({
+    origin: "*", // 🔥 Accepter toutes les requêtes cross-origin
+    methods: ["GET", "POST"],
+    credentials: true
+}));
+
+// 📌 Configuration HTTPS (Ajoute tes certificats SSL)
 const options = {
-    key: fs.readFileSync('certs/key.pem'),
-    cert: fs.readFileSync('certs/cert.pem')
+    key: fs.readFileSync(path.join(__dirname, 'certs', 'key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, 'certs', 'cert.pem'))
 };
 
-// Création du serveur HTTPS et Socket.IO
+// 📌 Création du serveur HTTPS et WebSocket
 const server = createServer(options, app);
 const io = new Server(server, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
+        credentials: true
     }
 });
 
-// Stockage des rooms
+// 📌 Stockage des rooms
 const rooms = new Map();
 
-// Configuration des routes statiques
+// 📌 Configuration des routes statiques
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes
+// 📌 Routes principales
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/choose-mode', (req, res) => res.sendFile(path.join(__dirname, 'public', 'choose-mode.html')));
 app.get('/room-choice', (req, res) => res.sendFile(path.join(__dirname, 'public', 'room-choice.html')));
 app.get('/gameboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gameboard.html')));
 
-// Gestion des rooms et joueurs
+// 📌 Route pour récupérer l'IP du serveur (utile pour les WebSockets)
+app.get('/server-config', (req, res) => {
+    res.json({ serverIp: 'seriousgame-ds65.onrender.com' });
+});
+
+// 📌 Gestion des rooms et joueurs
 class GameRoom {
     constructor(roomCode) {
         this.roomCode = roomCode;
         this.players = [];
         this.deck = new Deck(); // 🔥 Une seule instance du deck par room
-        this.gameData = this.deck.initialiserPartie(); // 🎲 Génération des decks au début
+        this.gameData = this.deck.initialiserPartie();
         this.gameState = {
-            status: 'waiting', // waiting, playing, finished
+            status: 'waiting',
             currentTurn: null,
             playedCards: new Map(),
             turnNumber: 0,
@@ -84,59 +98,55 @@ class GameRoom {
     }
 }
 
-// Gestion des connexions Socket.IO
+// 📌 Gestion des connexions WebSocket
 io.on('connection', (socket) => {
-    console.log(`🔗 Nouvelle connexion: ${socket.id}`);
+    console.log(`✅ Joueur connecté: ${socket.id}`);
 
-    // Création d'une room
+    // 📌 Création d'une room
     socket.on('createRoom', (userData) => {
-        try {
-            if (!userData || !userData.name) {
-                throw new Error('Données utilisateur invalides');
-            }
-
-            let roomCode;
-            do {
-                roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-            } while (rooms.has(roomCode));
-
-            const newRoom = new GameRoom(roomCode);
-            newRoom.addPlayer({ id: socket.id, ...userData });
-            rooms.set(roomCode, newRoom);
-
-            socket.join(roomCode);
-            console.log(`🏠 Room créée: ${roomCode} par ${userData.name}`);
-
-            socket.emit('roomCreated', { roomCode });
-        } catch (error) {
-            console.error('❌ Erreur création room:', error);
-            socket.emit('error', { message: 'Erreur lors de la création de la room' });
+        if (!userData || !userData.name) {
+            socket.emit('error', { message: 'Données utilisateur invalides' });
+            return;
         }
+
+        let roomCode;
+        do {
+            roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+        } while (rooms.has(roomCode));
+
+        const newRoom = new GameRoom(roomCode);
+        newRoom.addPlayer({ id: socket.id, ...userData });
+        rooms.set(roomCode, newRoom);
+
+        socket.join(roomCode);
+        console.log(`🏠 Room créée: ${roomCode} par ${userData.name}`);
+
+        socket.emit('roomCreated', { roomCode });
     });
 
-    // Rejoindre une room
+    // 📌 Rejoindre une room
     socket.on('joinRoom', (data) => {
         const room = rooms.get(data.roomCode);
         if (!room) {
             socket.emit('roomError', "La room n'existe pas.");
             return;
         }
-    
+
         if (room.players.length >= 2) {
             socket.emit('roomError', 'La room est pleine.');
             return;
         }
-    
+
         const playerData = { id: socket.id, ...data };
         room.addPlayer(playerData);
         socket.join(data.roomCode);
-    
+
         console.log(`🎮 ${data.name} a rejoint la room ${data.roomCode}`);
-    
+
         if (room.players.length === 2) {
             room.gameState.status = 'playing';
             room.gameState.currentTurn = room.players[0].id;
-    
+
             // Chaque joueur reçoit uniquement sa main
             room.players.forEach(player => {
                 io.to(player.id).emit('gameStart', {
@@ -147,45 +157,37 @@ io.on('connection', (socket) => {
                 });
             });
         }
-    
+
         io.to(data.roomCode).emit('updatePlayers', room.players);
     });
 
-    // Déconnexion
+    // 📌 Gestion des déconnexions
     socket.on('disconnect', () => {
-        try {
-            const room = findRoomBySocket(socket.id);
-            if (!room) {
-                console.log(`⚠️ Joueur ${socket.id} non trouvé dans une room`);
-                return;
-            }
+        const room = findRoomBySocket(socket.id);
+        if (!room) {
+            console.log(`⚠️ Joueur ${socket.id} non trouvé dans une room`);
+            return;
+        }
 
-            console.log(`🔌 Déconnexion: ${socket.id} (Room ${room.roomCode})`);
+        console.log(`🔌 Déconnexion: ${socket.id} (Room ${room.roomCode})`);
+        const remainingPlayers = room.removePlayer(socket.id);
 
-            const remainingPlayers = room.removePlayer(socket.id);
-
-            if (remainingPlayers === 0) {
-                console.log(`❌ Room ${room.roomCode} sera supprimée après 15 secondes`);
-                setTimeout(() => {
-                    if (rooms.has(room.roomCode) && rooms.get(room.roomCode).players.length === 0) {
-                        rooms.delete(room.roomCode);
-                        console.log(`✅ Room ${room.roomCode} supprimée`);
-                    }
-                }, 15000);
-            } else {
-                io.to(room.roomCode).emit('opponentLeft', { 
-                    message: "Votre adversaire a quitté la partie." 
-                });
-                io.to(room.roomCode).emit('updatePlayers', room.players);
-            }
-
-        } catch (error) {
-            console.error('❌ Erreur disconnect:', error);
+        if (remainingPlayers === 0) {
+            console.log(`❌ Room ${room.roomCode} sera supprimée après 15 secondes`);
+            setTimeout(() => {
+                if (rooms.has(room.roomCode) && rooms.get(room.roomCode).players.length === 0) {
+                    rooms.delete(room.roomCode);
+                    console.log(`✅ Room ${room.roomCode} supprimée`);
+                }
+            }, 15000);
+        } else {
+            io.to(room.roomCode).emit('opponentLeft', { message: "Votre adversaire a quitté la partie." });
+            io.to(room.roomCode).emit('updatePlayers', room.players);
         }
     });
 });
 
-// Fonction utilitaire pour trouver une room par socket ID
+// 📌 Fonction utilitaire pour trouver une room par socket ID
 function findRoomBySocket(socketId) {
     for (const [roomCode, room] of rooms) {
         if (room.players.some(player => player.id === socketId)) {
@@ -195,7 +197,7 @@ function findRoomBySocket(socketId) {
     return null;
 }
 
-// Nettoyage périodique des rooms inactives
+// 📌 Nettoyage périodique des rooms inactives
 setInterval(() => {
     const now = Date.now();
     for (const [roomCode, room] of rooms) {
@@ -206,12 +208,12 @@ setInterval(() => {
     }
 }, 3600000);
 
-// Démarrage du serveur
-server.listen(3443, () => {
+// 📌 Démarrage du serveur
+server.listen(10000, '0.0.0.0', () => {
     console.log('✅ Serveur sécurisé démarré sur https://seriousgame-ds65.onrender.com');
 });
 
-// Gestion des erreurs
+// 📌 Gestion des erreurs globales
 process.on('uncaughtException', (error) => {
     console.error('❌ Erreur non gérée:', error);
 });
