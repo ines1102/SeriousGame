@@ -1,0 +1,26 @@
+{
+  "name": "codes",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off && node server.js",
+    "firewall-on": "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "https": "^1.0.0",
+    "path": "^0.12.7",
+    "socket.io": "^4.8.1",
+    "ws": "^8.18.0"
+  }
+}

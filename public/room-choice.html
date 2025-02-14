@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Health Royale - Choix de la room</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
+    <link rel="manifest" href="/favicon_io/site.webmanifest">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/room-choice.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Page specific JS -->
+    <script src="js/room-choice.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="room-choice-card">
+            <div class="user-info">
+                <img id="user-avatar" src="" alt="Votre avatar" class="avatar">
+                <span id="user-name" class="username"></span>
+            </div>
+            
+            <h2>Rejoindre une partie</h2>
+            <div class="room-options">
+                <button id="create-room" class="btn-create" aria-label="Créer une room">
+                    <i class="fas fa-plus-circle"></i>
+                    Créer une room
+                </button>
+                <div class="separator">ou</div>
+                <div class="room-join">
+                    <input type="text" id="room-code" maxlength="4" placeholder="Code à 4 chiffres" aria-label="Entrer le code de la room">
+                    <button id="join-room" class="btn-join" aria-label="Rejoindre la room">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Rejoindre
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Écran de chargement -->
+    <!-- Écran de chargement (overlay) -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <h2>En attente d'un adversaire...</h2>
+            <div class="spinner"></div>
+
+            <!-- AFFICHAGE DU CODE DE LA ROOM DANS L'OVERLAY -->
+            <div id="room-code-display" class="room-code-display hidden">
+                <p>Code de la room :</p>
+                <div class="code-container">
+                    <span id="display-code">----</span> <!-- ICI LE CODE APPARAÎT -->
+                    <button id="copy-code" class="btn-copy" aria-label="Copier le code">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button id="cancel-wait" class="btn-cancel">
+                <i class="fas fa-times"></i>
+                Annuler
+            </button>
+        </div>
+    </div>
+
+    <!-- Overlay de déconnexion -->
+    <div id="disconnect-overlay" class="overlay hidden">
+        <div class="overlay-content">
+            <h2>Déconnexion</h2>
+            <p>Message d'erreur ici</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js" defer></script>
+</body>
+</html>

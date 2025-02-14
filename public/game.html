@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Royale - Game</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="user-info">
+      <img id="user-avatar" class="avatar-img" src="" alt="User Avatar">
+      <p id="user-name"></p>
+    </div>
+    <div class="opponent-info">
+      <img id="opponent-avatar" class="avatar-img" src="" alt="Opponent Avatar">
+      <p id="opponent-name">En attente de l'adversaire</p>
+    </div>
+  </header>
+  <div id="back-button" class="back-button">←</div>
+  <script>
+      // Retour à la page précédente
+      document.getElementById('back-button').addEventListener('click', () => {
+      window.history.back();
+      });
+  </script>
+  <script src="game.js"></script>
+</body>
+</html>

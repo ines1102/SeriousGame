@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jouer entre amis</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Mode : Jouer entre amis</h1>
+    <button id="create-room">Créer une room</button>
+    <div>
+      <label for="room-id">Numéro de room :</label>
+      <input type="text" id="room-id" placeholder="Entrez le numéro de room">
+      <button id="join-room">Rejoindre une room</button>
+    </div>
+    <p id="room-info"></p>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io('http://localhost:3000');
+    const createRoomButton = document.getElementById('create-room');
+    const joinRoomButton = document.getElementById('join-room');
+    const roomIdInput = document.getElementById('room-id');
+    const roomInfo = document.getElementById('room-info');
+
+    // Créer une room
+    createRoomButton.addEventListener('click', () => {
+      const userName = prompt('Entrez votre nom :');
+      socket.emit('createRoom', { userName });
+    });
+
+    // Rejoindre une room
+    joinRoomButton.addEventListener('click', () => {
+      const roomId = roomIdInput.value;
+      const userName = prompt('Entrez votre nom :');
+      socket.emit('joinRoom', { roomId, userName });
+    });
+
+    // Afficher le numéro de la room créée
+    socket.on('roomCreated', (roomId) => {
+      roomInfo.textContent = `Room créée : ${roomId}`;
+    });
+
+    // Confirmation d'entrée dans une room
+    socket.on('roomJoined', (roomId) => {
+      window.location.href = `/chat/${roomId}`;
+    });
+
+    // Message d'erreur
+    socket.on('message', (msg) => {
+      alert(msg);
+    });
+    // Retour à la page précédente
+    document.getElementById('back-button').addEventListener('click', () => {
+    window.history.back();
+    });
+  </script>
+</body>
+</html>

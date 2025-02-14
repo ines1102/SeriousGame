@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Health Royale - Choix du mode</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
+    <link rel="manifest" href="/favicon_io/site.webmanifest">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/choose-mode.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- JavaScript -->
+    <script src="/js/choose-mode.js" type="module" defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="mode-selection-card">
+            <!-- Information utilisateur -->
+            <div class="user-info">
+                <img id="user-avatar" src="" alt="Votre avatar" class="avatar">
+                <span id="user-name" class="username"></span>
+            </div>
+
+            <h2>Choisissez votre mode de jeu</h2>
+
+            <!-- Boutons de mode -->
+            <div class="mode-buttons">
+                <button id="random-game" class="btn-mode">
+                    <i class="fas fa-random"></i>
+                    Partie aléatoire
+                </button>
+                
+                <button id="create-room" class="btn-mode">
+                    <i class="fas fa-users"></i>
+                    Jouer avec un ami
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay de chargement -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <h2 id="loading-message">Recherche d'un adversaire...</h2>
+            <div class="spinner"></div>
+            <button id="cancel-search" class="btn-cancel">
+                <i class="fas fa-times"></i>
+                Annuler la recherche
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast pour les erreurs -->
+    <div id="error-message" class="error-toast hidden">
+        <i class="fas fa-exclamation-circle"></i>
+        <span></span>
+    </div>
+</body>
+</html>
