@@ -1,5 +1,5 @@
 import express from 'express';
-import { createServer } from 'http';
+import { createServer } from 'http'; // Render gère déjà SSL, pas besoin de HTTPS ici
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
@@ -16,21 +16,18 @@ const app = express();
 
 // 📌 Activation de CORS pour éviter les erreurs de connexion entre domaines
 app.use(cors({
-    origin: "*", // 🔥 Accepter toutes les requêtes cross-origin
+    origin: "https://seriousgame-ds65.onrender.com", // 🔥 Accepter uniquement les requêtes de Render
     methods: ["GET", "POST"],
+    credentials: true
 }));
 
-// 📌 Configuration HTTPS (Ajoute tes certificats SSL)
-const options = {
-    key: fs.readFileSync(path.join(__dirname, 'certs', 'key.pem')),
-    cert: fs.readFileSync(path.join(__dirname, 'certs', 'cert.pem'))
-};
+// 📌 Création du serveur HTTP (Render gère HTTPS automatiquement)
+const server = createServer(app);
 
-// 📌 Création du serveur HTTPS et WebSocket
-const server = createServer(options, app);
+// 📌 Configuration de Socket.IO
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: "https://seriousgame-ds65.onrender.com",
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -58,7 +55,7 @@ class GameRoom {
     constructor(roomCode) {
         this.roomCode = roomCode;
         this.players = [];
-        this.deck = new Deck(); // 🔥 Une seule instance du deck par room
+        this.deck = new Deck();
         this.gameData = this.deck.initialiserPartie();
         this.gameState = {
             status: 'waiting',
@@ -211,14 +208,5 @@ setInterval(() => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Serveur sécurisé démarré sur https://seriousgame-ds65.onrender.com:${PORT}`);
-});
-
-// 📌 Gestion des erreurs globales
-process.on('uncaughtException', (error) => {
-    console.error('❌ Erreur non gérée:', error);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ Promise rejetée non gérée:', reason);
+    console.log(`✅ Serveur sécurisé démarré sur https://seriousgame-ds65.onrender.com`);
 });
