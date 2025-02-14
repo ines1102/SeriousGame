@@ -104,14 +104,26 @@ class GameManager {
     constructor(io, roomManager) {
         this.io = io;
         this.roomManager = roomManager;
-        this.deck = new Deck(); // Instance de Deck créée dans le constructeur
+        this.deckManager = new Deck(); // Instance de Deck
     }
 
     initializeGame(room) {
         try {
             console.log('🎮 Initialisation du jeu pour la room:', room.code);
-            const decks = this.deck.creerDecksJoueurs(); // Utilisation de this.deck au lieu de créer une nouvelle instance
             
+            // Vérification que deckManager existe
+            if (!this.deckManager) {
+                throw new Error('DeckManager non initialisé');
+            }
+
+            // Log pour debugging
+            console.log('📜 Méthodes disponibles sur deckManager:', Object.getOwnPropertyNames(this.deckManager));
+            
+            // Création des decks
+            const decks = this.deckManager.creerDecksJoueurs();
+            console.log('🃏 Decks créés:', decks);
+
+            // Mise à jour de l'état du jeu
             room.gameState = {
                 ...room.gameState,
                 status: 'playing',
@@ -125,6 +137,10 @@ class GameManager {
             // Envoyer les mains initiales aux joueurs
             room.players.forEach((player, index) => {
                 const playerDeck = index === 0 ? decks.joueur1 : decks.joueur2;
+                
+                // Log pour debugging
+                console.log(`🎮 Envoi du deck au joueur ${player.id}:`, playerDeck);
+
                 this.io.to(player.id).emit('gameStart', {
                     players: room.players,
                     hands: {
@@ -133,10 +149,14 @@ class GameManager {
                     }
                 });
             });
+
             console.log('✅ Jeu initialisé avec succès pour la room:', room.code);
             return true;
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation du jeu:', error);
+            // Log détaillé pour le debugging
+            console.error('État du DeckManager:', this.deckManager);
+            console.error('Stack trace:', error.stack);
             return false;
         }
     }
@@ -175,10 +195,6 @@ class GameManager {
         room.gameState.turn = room.players[nextPlayerIndex].id;
 
         this.io.to(room.code).emit('turnUpdate', room.gameState.turn);
-    }
-
-    createInitialDecks() {
-        return this.deck.creerDecksJoueurs(); // Utilisation de this.deck
     }
 }
 
@@ -332,3 +348,4 @@ server.listen(CONFIG.PORT, '0.0.0.0', () => {
 });
 
 export { app, io, roomManager, gameManager };
+export default GameManager;
