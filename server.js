@@ -21,20 +21,12 @@ const CONFIG = {
     }
 };
 
-// 📌 État du serveur
-class ServerState {
+// 📌 Gestionnaire de Room
+class RoomManager {
     constructor() {
         this.rooms = new Map();
         this.waitingPlayers = [];
-        this.gameStates = new Map();
-        this.playerRooms = new Map(); // Mappage joueur -> room
-    }
-}
-
-// 📌 Gestionnaire de Room
-class RoomManager {
-    constructor(serverState) {
-        this.state = serverState;
+        this.playerRooms = new Map();
     }
 
     createRoom(roomCode, creator) {
@@ -51,56 +43,55 @@ class RoomManager {
             createdAt: Date.now()
         };
 
-        this.state.rooms.set(roomCode, room);
-        this.state.playerRooms.set(creator.id, roomCode);
+        this.rooms.set(roomCode, room);
+        this.playerRooms.set(creator.id, roomCode);
         return room;
     }
 
     joinRoom(roomCode, player) {
-        const room = this.state.rooms.get(roomCode);
+        const room = this.rooms.get(roomCode);
         if (!room || room.players.length >= CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
             return null;
         }
 
         room.players.push(player);
-        this.state.playerRooms.set(player.id, roomCode);
+        this.playerRooms.set(player.id, roomCode);
         return room;
     }
 
     leaveRoom(playerId) {
-        const roomCode = this.state.playerRooms.get(playerId);
+        const roomCode = this.playerRooms.get(playerId);
         if (!roomCode) return;
 
-        const room = this.state.rooms.get(roomCode);
+        const room = this.rooms.get(roomCode);
         if (!room) return;
 
         room.players = room.players.filter(p => p.id !== playerId);
-        this.state.playerRooms.delete(playerId);
+        this.playerRooms.delete(playerId);
 
         if (room.players.length === 0) {
-            this.state.rooms.delete(roomCode);
-            this.state.gameStates.delete(roomCode);
+            this.rooms.delete(roomCode);
         }
 
         return room;
     }
 
     getRoomByCode(roomCode) {
-        return this.state.rooms.get(roomCode);
+        return this.rooms.get(roomCode);
     }
 
     getRoomByPlayerId(playerId) {
-        const roomCode = this.state.playerRooms.get(playerId);
-        return roomCode ? this.state.rooms.get(roomCode) : null;
+        const roomCode = this.playerRooms.get(playerId);
+        return roomCode ? this.rooms.get(roomCode) : null;
     }
 
     cleanInactiveRooms() {
         const now = Date.now();
-        for (const [roomCode, room] of this.state.rooms) {
+        for (const [roomCode, room] of this.rooms) {
             if (now - room.createdAt > CONFIG.GAME.MAX_INACTIVE_TIME) {
-                this.state.rooms.delete(roomCode);
+                this.rooms.delete(roomCode);
                 room.players.forEach(player => {
-                    this.state.playerRooms.delete(player.id);
+                    this.playerRooms.delete(player.id);
                 });
             }
         }
@@ -128,6 +119,7 @@ class GameManager {
                 turn: room.players[0].id
             };
 
+            // Envoyer les mains initiales aux joueurs
             room.players.forEach((player, index) => {
                 const playerDeck = index === 0 ? decks.joueur1 : decks.joueur2;
                 this.io.to(player.id).emit('gameStart', {
@@ -144,11 +136,6 @@ class GameManager {
             console.error('❌ Erreur lors de l\'initialisation du jeu:', error);
             return false;
         }
-    }
-
-    createInitialDecks() {
-        const deckManager = new Deck();
-        return deckManager.creerDecksJoueurs();
     }
 
     handleCardPlayed(socket, data) {
@@ -186,17 +173,22 @@ class GameManager {
 
         this.io.to(room.code).emit('turnUpdate', room.gameState.turn);
     }
+
+    createInitialDecks() {
+        const deckManager = new Deck();
+        return deckManager.creerDecksJoueurs();
+    }
 }
 
-// 📌 Configuration des middlewares
-function setupMiddlewares(app) {
-    app.use(cors(CONFIG.CORS_OPTIONS));
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
-
+// 📌 Configuration des middlewares et routes
+function setupServer() {
+    const app = express();
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    
+
+    // Middlewares
+    app.use(cors(CONFIG.CORS_OPTIONS));
+    app.use(express.json());
     app.use(express.static(path.join(__dirname, 'public')));
     app.use('/js', express.static(path.join(__dirname, 'public/js'), {
         setHeaders: (res, path) => {
@@ -205,30 +197,17 @@ function setupMiddlewares(app) {
             }
         }
     }));
-}
 
-// 📌 Configuration des routes
-function setupRoutes(app) {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-
+    // Routes
     app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
     app.get('/choose-mode', (req, res) => res.sendFile(path.join(__dirname, 'public', 'choose-mode.html')));
     app.get('/room-choice', (req, res) => res.sendFile(path.join(__dirname, 'public', 'room-choice.html')));
     app.get('/gameboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gameboard.html')));
 
-    app.get('/health', (req, res) => {
-        res.json({
-            status: 'ok',
-            uptime: process.uptime(),
-            timestamp: new Date().toISOString(),
-            activeRooms: serverState.rooms.size,
-            waitingPlayers: serverState.waitingPlayers.length
-        });
-    });
+    return app;
 }
 
-// 📌 Configuration des événements socket
+// 📌 Configuration des sockets
 function setupSocketEvents(io, roomManager, gameManager) {
     io.on('connection', (socket) => {
         console.log(`✅ Joueur connecté: ${socket.id}`);
@@ -274,8 +253,8 @@ function setupSocketEvents(io, roomManager, gameManager) {
                 return;
             }
 
-            if (roomManager.state.waitingPlayers.length > 0) {
-                const opponent = roomManager.state.waitingPlayers.pop();
+            if (roomManager.waitingPlayers.length > 0) {
+                const opponent = roomManager.waitingPlayers.pop();
                 const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
                 
                 const room = roomManager.createRoom(roomCode, opponent);
@@ -287,7 +266,7 @@ function setupSocketEvents(io, roomManager, gameManager) {
 
                 gameManager.initializeGame(room);
             } else {
-                roomManager.state.waitingPlayers.push({ id: socket.id, ...userData });
+                roomManager.waitingPlayers.push({ id: socket.id, ...userData });
                 socket.emit('waitingForOpponent');
             }
         });
@@ -302,9 +281,9 @@ function setupSocketEvents(io, roomManager, gameManager) {
                 socket.to(room.code).emit('opponentLeft', 'Votre adversaire a quitté la partie.');
             }
 
-            const waitingIndex = roomManager.state.waitingPlayers.findIndex(p => p.id === socket.id);
+            const waitingIndex = roomManager.waitingPlayers.findIndex(p => p.id === socket.id);
             if (waitingIndex !== -1) {
-                roomManager.state.waitingPlayers.splice(waitingIndex, 1);
+                roomManager.waitingPlayers.splice(waitingIndex, 1);
             }
         });
     });
@@ -318,28 +297,24 @@ function validateUserData(userData) {
            userData.name.length <= 20;
 }
 
-// 📌 Initialisation du serveur
-const app = express();
-setupMiddlewares(app);
-setupRoutes(app);
-
+// 📌 Initialisation
+const app = setupServer();
 const server = createServer(app);
 const io = new Server(server, {
     cors: CONFIG.CORS_OPTIONS
 });
 
-const serverState = new ServerState();
-const roomManager = new RoomManager(serverState);
+const roomManager = new RoomManager();
 const gameManager = new GameManager(io, roomManager);
 
 setupSocketEvents(io, roomManager, gameManager);
 
-// 📌 Nettoyage périodique
+// Nettoyage périodique
 setInterval(() => {
     roomManager.cleanInactiveRooms();
 }, CONFIG.GAME.MAX_INACTIVE_TIME);
 
-// 📌 Gestion des erreurs
+// Gestion des erreurs
 process.on('uncaughtException', (error) => {
     console.error('❌ Erreur non gérée:', error);
 });
@@ -348,10 +323,10 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('❌ Promise rejetée non gérée:', reason);
 });
 
-// 📌 Démarrage du serveur
+// Démarrage du serveur
 server.listen(CONFIG.PORT, '0.0.0.0', () => {
     console.log(`✅ Serveur démarré sur le port ${CONFIG.PORT}`);
     console.log(`📍 URL: ${CONFIG.CLIENT_URL}`);
 });
 
-export { app, io, serverState, roomManager, gameManager };
+export { app, io, roomManager, gameManager };
