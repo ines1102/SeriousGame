@@ -48,16 +48,10 @@ export default class Deck {
         ];
     }
 
-    /**
-     * Mélange un tableau de cartes.
-     */
     melanger(deck) {
         return [...deck].sort(() => Math.random() - 0.5);
     }
 
-    /**
-     * Tire une carte aléatoirement en fonction de sa rareté.
-     */
     tirerCarteAvecRareté(cartes) {
         const totalPoids = cartes.reduce((acc, carte) => acc + carte.rarity, 0);
         let seuil = Math.random() * totalPoids;
@@ -72,48 +66,34 @@ export default class Deck {
         return { ...cartes[0], id: crypto.randomUUID() };
     }
 
-    /**
-     * Génère un deck équilibré de 25 cartes pour chaque joueur.
-     */
     creerDecksJoueurs() {
         const deckJoueur1 = [];
         const deckJoueur2 = [];
-        const maladiesUtilisées = new Set();
+        const maladiesChoisies = [];
 
-        console.log("\n🔵 Génération des decks des joueurs...\n");
-
-        // Ajout de 7 maladies et leurs remèdes
         for (let i = 0; i < 7; i++) {
-            let maladie;
-            do {
-                maladie = this.tirerCarteAvecRareté(this.maladies);
-            } while (maladiesUtilisées.has(maladie.name));
-
-            maladiesUtilisées.add(maladie.name);
+            const maladie = this.tirerCarteAvecRareté(this.maladies);
             const remede = this.remedes.get(maladie.name);
 
             if (remede) {
+                maladiesChoisies.push(maladie);
                 deckJoueur1.push(maladie);
                 deckJoueur2.push({ ...remede, id: crypto.randomUUID() });
             }
         }
 
-        // Ajout de 3 bonus et 3 malus
         for (let i = 0; i < 3; i++) {
             deckJoueur1.push(this.tirerCarteAvecRareté(this.bonus));
             deckJoueur1.push(this.tirerCarteAvecRareté(this.malus));
         }
 
-        // Ajout de 5 supporters
         for (let i = 0; i < 5; i++) {
             deckJoueur1.push(this.tirerCarteAvecRareté(this.supporters));
         }
 
-        // Compléter jusqu'à 25 cartes
         while (deckJoueur1.length < 25) {
             const maladie = this.tirerCarteAvecRareté(this.maladies);
-            if (!maladiesUtilisées.has(maladie.name)) {
-                maladiesUtilisées.add(maladie.name);
+            if (!maladiesChoisies.find(m => m.name === maladie.name)) {
                 const remede = this.remedes.get(maladie.name);
                 if (remede) {
                     deckJoueur1.push(maladie);
@@ -122,28 +102,20 @@ export default class Deck {
             }
         }
 
-        // Compléter le deck du joueur 2 avec bonus/malus/supporters
         while (deckJoueur2.length < 25) {
             deckJoueur2.push(this.tirerCarteAvecRareté(this.bonus));
             deckJoueur2.push(this.tirerCarteAvecRareté(this.malus));
             deckJoueur2.push(this.tirerCarteAvecRareté(this.supporters));
         }
 
-        // Mélanger les decks
-        const finalDeck1 = this.melanger(deckJoueur1);
-        const finalDeck2 = this.melanger(deckJoueur2);
-
-        console.log("\n📜 Deck du Joueur 1 :\n", finalDeck1.map(c => c.name));
-        console.log("\n📜 Deck du Joueur 2 :\n", finalDeck2.map(c => c.name));
-
         return {
             joueur1: {
-                deck: finalDeck1,
-                main: finalDeck1.slice(0, 5) // 5 cartes en main
+                deck: this.melanger(deckJoueur1),
+                main: deckJoueur1.slice(0, 5)
             },
             joueur2: {
-                deck: finalDeck2,
-                main: finalDeck2.slice(0, 5) // 5 cartes en main
+                deck: this.melanger(deckJoueur2),
+                main: deckJoueur2.slice(0, 5)
             }
         };
     }
