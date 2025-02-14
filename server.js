@@ -21,36 +21,28 @@ function getLocalIP() {
 
 const SERVER_IP = getLocalIP();
 
-// 📌 Définition du chemin absolu du dossier du serveur
-const __dirname = path.resolve();
-
-// 📌 Configuration SSL (évite les erreurs Chrome/Safari)
-const options = {
-    key: fs.readFileSync(path.join(__dirname, 'certs', 'key.pem')),
-    cert: fs.readFileSync(path.join(__dirname, 'certs', 'cert.pem'))
-};
-
 // 📌 Initialisation du serveur Express et WebSocket
 const app = express();
+const PORT = process.env.PORT || 10000;
+
 const server = createServer(app);
 const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] },
-    transports: ['websocket', 'polling'],
-    rejectUnauthorized: false
 });
 
 // 📌 Middleware
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
+app.use(express.static(path.resolve( 'public')));
+
 
 // 📌 Routes principales (avec `path.resolve()` pour éviter l'erreur)
-app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'index.html')));
-app.get('/choose-mode', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'choose-mode.html')));
-app.get('/room-choice', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'room-choice.html')));
-app.get('/gameboard', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'gameboard.html')));
+app.get('/', (req, res) => res.sendFile(path.resolve('public/index.html')));
+app.get('/choose-mode', (req, res) => res.sendFile(path.resolve('public/choose-mode.html')));
+app.get('/room-choice', (req, res) => res.sendFile(path.resolve('public/room-choice.html')));
+app.get('/gameboard', (req, res) => res.sendFile(path.resolve('public/gameboard.html')));
 
-// 📌 Endpoint pour récupérer l'IP du serveur
-app.get('/server-config', (req, res) => res.json({ serverIp: SERVER_IP }));
+app.get('/server-config', (req, res) => {
+    res.json({ serverIp: getLocalIP(), serverPort: PORT });
+});
 
 // 📌 Stockage des rooms et joueurs
 const rooms = new Map();
@@ -163,7 +155,6 @@ setInterval(() => {
 }, 3600000);
 
 // 📌 Démarrage du serveur HTTPS
-const PORT = process.env.PORT || 10000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Serveur HTTPS disponible sur:`);
     console.log(`- Local: https://localhost:${PORT}`);
