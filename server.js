@@ -117,20 +117,8 @@ class GameManager {
     initializeGame(room) {
         try {
             console.log('🎮 Initialisation du jeu pour la room:', room.code);
-            
-            // Vérification que deckManager existe
-            if (!this.deckManager) {
-                throw new Error('DeckManager non initialisé');
-            }
-
-            // Log pour debugging
-            console.log('📜 Méthodes disponibles sur deckManager:', Object.getOwnPropertyNames(this.deckManager));
-            
-            // Création des decks
             const decks = this.deckManager.creerDecksJoueurs();
-            console.log('🃏 Decks créés:', decks);
-
-            // Mise à jour de l'état du jeu
+            
             room.gameState = {
                 ...room.gameState,
                 status: 'playing',
@@ -141,13 +129,8 @@ class GameManager {
                 turn: room.players[0].id
             };
 
-            // Envoyer les mains initiales aux joueurs
             room.players.forEach((player, index) => {
                 const playerDeck = index === 0 ? decks.joueur1 : decks.joueur2;
-                
-                // Log pour debugging
-                console.log(`🎮 Envoi du deck au joueur ${player.id}:`, playerDeck);
-
                 this.io.to(player.id).emit('gameStart', {
                     players: room.players,
                     hands: {
@@ -161,9 +144,6 @@ class GameManager {
             return true;
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation du jeu:', error);
-            // Log détaillé pour le debugging
-            console.error('État du DeckManager:', this.deckManager);
-            console.error('Stack trace:', error.stack);
             return false;
         }
     }
@@ -214,8 +194,12 @@ function setupServer() {
     // Middlewares
     app.use(cors(CONFIG.CORS_OPTIONS));
     app.use(express.json());
+
+    // Routes statiques
     app.use(express.static(path.join(__dirname, 'public')));
-    app.use('/js', express.static(path.join(__dirname, 'public/js'), {
+    app.use('/Avatars', express.static(path.join(__dirname, 'public', 'Avatars')));
+    app.use('/favicon_io', express.static(path.join(__dirname, 'public', 'favicon_io')));
+    app.use('/js', express.static(path.join(__dirname, 'public', 'js'), {
         setHeaders: (res, path) => {
             if (path.endsWith('.js')) {
                 res.setHeader('Content-Type', 'application/javascript');
@@ -223,11 +207,22 @@ function setupServer() {
         }
     }));
 
-    // Routes
+    // Routes principales
     app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
     app.get('/choose-mode', (req, res) => res.sendFile(path.join(__dirname, 'public', 'choose-mode.html')));
     app.get('/room-choice', (req, res) => res.sendFile(path.join(__dirname, 'public', 'room-choice.html')));
     app.get('/gameboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gameboard.html')));
+
+    // Route de monitoring
+    app.get('/health', (req, res) => {
+        res.json({
+            status: 'ok',
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString(),
+            activeRooms: roomManager.rooms.size,
+            waitingPlayers: roomManager.waitingPlayers.length
+        });
+    });
 
     return app;
 }
@@ -251,6 +246,7 @@ function setupSocketEvents(io, roomManager, gameManager) {
             const room = roomManager.createRoom(roomCode, { id: socket.id, ...userData });
             socket.join(roomCode);
             socket.emit('roomCreated', { roomCode });
+            console.log(`🎮 Room ${roomCode} créée par ${userData.name}`);
         });
 
         socket.on('joinRoom', (data) => {
@@ -266,6 +262,7 @@ function setupSocketEvents(io, roomManager, gameManager) {
             }
 
             socket.join(data.roomCode);
+            console.log(`🎮 ${data.name} a rejoint la room ${data.roomCode}`);
 
             if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
                 gameManager.initializeGame(room);
@@ -290,17 +287,21 @@ function setupSocketEvents(io, roomManager, gameManager) {
                 io.to(socket.id).emit('gameStart', { roomCode });
 
                 gameManager.initializeGame(room);
+                console.log(`🎮 Match trouvé! Room ${roomCode}: ${opponent.name} vs ${userData.name}`);
             } else {
                 roomManager.waitingPlayers.push({ id: socket.id, ...userData });
                 socket.emit('waitingForOpponent');
+                console.log(`⌛ ${userData.name} attend un adversaire...`);
             }
         });
 
         socket.on('cardPlayed', (data) => {
+            console.log(`🃏 Carte jouée dans la room: ${data.roomCode}`);
             gameManager.handleCardPlayed(socket, data);
         });
 
         socket.on('disconnect', () => {
+            console.log(`👋 Joueur déconnecté: ${socket.id}`);
             const room = roomManager.leaveRoom(socket.id);
             if (room) {
                 socket.to(room.code).emit('opponentLeft', 'Votre adversaire a quitté la partie.');
@@ -355,4 +356,3 @@ server.listen(CONFIG.PORT, '0.0.0.0', () => {
 });
 
 export { app, io, roomManager, gameManager };
-export default GameManager;
