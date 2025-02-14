@@ -1,7 +1,9 @@
-const socket = io(`https://seriousgame-ds65.onrender.com`, {
+const socket = io("wss://seriousgame-ds65.onrender.com", {
     secure: true,
-    rejectUnauthorized: false,
-    transports: ['websocket']
+    transports: ["websocket"],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    timeout: 10000
 });
 
 document.addEventListener('DOMContentLoaded', () => {

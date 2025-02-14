@@ -1,5 +1,5 @@
 import express from 'express';
-import { createServer } from 'http'; // Render gère déjà SSL, pas besoin de HTTPS ici
+import { createServer } from 'http'; // Render gère HTTPS, pas besoin de HTTPS ici
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
@@ -24,7 +24,7 @@ app.use(cors({
 // 📌 Création du serveur HTTP (Render gère HTTPS automatiquement)
 const server = createServer(app);
 
-// 📌 Configuration de Socket.IO
+// 📌 Configuration de Socket.IO avec gestion stricte de CORS
 const io = new Server(server, {
     cors: {
         origin: "https://seriousgame-ds65.onrender.com",
@@ -45,7 +45,7 @@ app.get('/choose-mode', (req, res) => res.sendFile(path.join(__dirname, 'public'
 app.get('/room-choice', (req, res) => res.sendFile(path.join(__dirname, 'public', 'room-choice.html')));
 app.get('/gameboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gameboard.html')));
 
-// 📌 Route pour récupérer l'IP du serveur (utile pour les WebSockets)
+// 📌 Route pour récupérer l'IP du serveur WebSocket
 app.get('/server-config', (req, res) => {
     res.json({ serverIp: 'seriousgame-ds65.onrender.com' });
 });
@@ -159,54 +159,13 @@ io.on('connection', (socket) => {
 
     // 📌 Gestion des déconnexions
     socket.on('disconnect', () => {
-        const room = findRoomBySocket(socket.id);
-        if (!room) {
-            console.log(`⚠️ Joueur ${socket.id} non trouvé dans une room`);
-            return;
-        }
-
-        console.log(`🔌 Déconnexion: ${socket.id} (Room ${room.roomCode})`);
-        const remainingPlayers = room.removePlayer(socket.id);
-
-        if (remainingPlayers === 0) {
-            console.log(`❌ Room ${room.roomCode} sera supprimée après 15 secondes`);
-            setTimeout(() => {
-                if (rooms.has(room.roomCode) && rooms.get(room.roomCode).players.length === 0) {
-                    rooms.delete(room.roomCode);
-                    console.log(`✅ Room ${room.roomCode} supprimée`);
-                }
-            }, 15000);
-        } else {
-            io.to(room.roomCode).emit('opponentLeft', { message: "Votre adversaire a quitté la partie." });
-            io.to(room.roomCode).emit('updatePlayers', room.players);
-        }
+        console.log(`🔌 Déconnexion: ${socket.id}`);
     });
 });
 
-// 📌 Fonction utilitaire pour trouver une room par socket ID
-function findRoomBySocket(socketId) {
-    for (const [roomCode, room] of rooms) {
-        if (room.players.some(player => player.id === socketId)) {
-            return room;
-        }
-    }
-    return null;
-}
-
-// 📌 Nettoyage périodique des rooms inactives
-setInterval(() => {
-    const now = Date.now();
-    for (const [roomCode, room] of rooms) {
-        if (room.players.length === 0 && now - room.createdAt > 3600000) { // 1 heure
-            rooms.delete(roomCode);
-            console.log(`🧹 Room inactive ${roomCode} supprimée`);
-        }
-    }
-}, 3600000);
-
-// 📌 Démarrage du serveur
+// 📌 Démarrage du serveur avec PORT de Render
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Serveur sécurisé démarré sur https://seriousgame-ds65.onrender.com`);
+    console.log(`✅ Serveur WebSocket démarré sur https://seriousgame-ds65.onrender.com`);
 });
