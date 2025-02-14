@@ -1,4 +1,6 @@
-export default class Deck {
+import Game from "./game";
+
+class Deck {
     constructor() {
         this.maladies = [
             { name: 'Cartes/Maladie/Allergies.png', rarity: 2 },
@@ -120,3 +122,5 @@ export default class Deck {
         };
     }
 }
+
+export default Deck;

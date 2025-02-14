@@ -52,3 +52,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+class DragAndDropManager {
+    constructor(gameInstance, socket) {
+        this.gameInstance = gameInstance;
+        this.socket = socket;
+    }
+}
+
+export default DragAndDropManager; // ✅ Ajout de l'export
