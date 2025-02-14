@@ -1,14 +1,15 @@
-import socket from './websocket.js';
+// 📌 Importation des modules
 import Game from './game.js';
 import DragAndDropManager from './dragAndDrop.js';
-import Deck from './deck.js'; // ✅ Importation corrigée du deck
+import Deck from './deck.js';
+import socket from './websocket.js';
 
 // Variables globales
 let gameInstance;
 let currentRoomId;
 let userData;
 
-// Initialisation du jeu
+// 📌 Initialisation du jeu
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔄 Initialisation du jeu...');
     
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Rejoindre la room
         socket.emit('joinRoom', { ...userData, roomCode: currentRoomId });
 
-        // Configuration des écouteurs WebSocket
+        // Configuration des écouteurs Socket.io
         setupSocketListeners(dragAndDrop);
     } catch (error) {
         console.error("❌ Erreur lors de l'initialisation:", error);
@@ -47,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// 📌 Écouteurs WebSocket
+// 📌 Configuration des écouteurs WebSocket
 function setupSocketListeners(dragAndDrop) {
     socket.on('updatePlayers', (players) => {
         console.log('🔄 Mise à jour des joueurs:', players);
@@ -65,6 +66,7 @@ function setupSocketListeners(dragAndDrop) {
             return;
         }
     
+        // Identifier les joueurs
         const currentPlayer = data.players.find(player => player.clientId === userData.clientId);
         const opponent = data.players.find(player => player.clientId !== userData.clientId);
     
@@ -72,9 +74,18 @@ function setupSocketListeners(dragAndDrop) {
             console.error("❌ Erreur d'attribution des joueurs.");
             return;
         }
+    
+        console.log(`📌 Vous êtes: ${currentPlayer.name}`);
+        console.log(`🎭 Votre adversaire est: ${opponent.name}`);
 
-        updateOpponentInfo(opponent);
-        displayHand(data.hands?.playerHand || [], true);
+        // 🔥 Vérification et affichage de la main
+        if (typeof displayHand === "function") {
+            const myCards = data.hands?.playerHand || [];
+            console.log('📌 Affichage de la main du joueur:', myCards);
+            displayHand(myCards, true);
+        } else {
+            console.error("❌ ERREUR: displayHand n'est pas défini !");
+        }
     });
 
     socket.on('cardPlayed', (data) => {
@@ -115,8 +126,6 @@ function initializeUI(userData) {
     if (playerAvatar && playerName) {
         playerAvatar.src = userData.avatarSrc || "/Avatars/default-avatar.jpeg";
         playerName.textContent = userData.name;
-    } else {
-        console.error("❌ Éléments UI non trouvés pour le joueur.");
     }
 }
 
@@ -128,7 +137,7 @@ function updateOpponentInfo(opponent) {
     const opponentName = document.getElementById('opponent-name');
 
     if (!opponentAvatar || !opponentName) {
-        console.error("❌ Éléments UI adversaire non trouvés.");
+        console.error("❌ Éléments de l'adversaire non trouvés");
         return;
     }
 
