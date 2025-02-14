@@ -209,8 +209,10 @@ setInterval(() => {
 }, 3600000);
 
 // 📌 Démarrage du serveur
-server.listen(10000, '0.0.0.0', () => {
-    console.log('✅ Serveur sécurisé démarré sur https://seriousgame-ds65.onrender.com');
+const PORT = process.env.PORT || 10000;
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Serveur sécurisé démarré sur https://seriousgame-ds65.onrender.com:${PORT}`);
 });
 
 // 📌 Gestion des erreurs globales
