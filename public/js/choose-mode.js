@@ -1,187 +1,156 @@
-// choose-mode.js
 import socket from './websocket.js';
 
+// Variables globales
 let userData = null;
+let isSearching = false;
 
-// Configuration des chemins d'avatars
-const AVATAR_PATHS = {
-    male: {
-        '1': '/Avatars/male1.jpeg',
-        '2': '/Avatars/male2.jpeg',
-        '3': '/Avatars/male3.jpeg'
-    },
-    female: {
-        '1': '/Avatars/female1.jpeg',
-        '2': '/Avatars/female2.jpeg',
-        '3': '/Avatars/female3.jpeg'
-    }
-};
-
+// Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Charger les données utilisateur
+        // Chargement des données utilisateur
         userData = JSON.parse(localStorage.getItem('userData'));
         if (!userData) {
-            console.error('❌ Données utilisateur non trouvées');
-            window.location.href = '/';
+            showError('Session expirée, veuillez vous reconnecter');
+            setTimeout(() => window.location.href = '/', 2000);
             return;
         }
-        console.log('🔒 Données utilisateur chargées:', userData);
 
-        // Initialiser l'interface utilisateur
+        // Initialisation de l'interface
         initializeUI();
-
-        // Attendre la connexion WebSocket avant de continuer
+        
+        // Connexion au serveur
         await socket.waitForConnection();
         console.log('✅ Connecté au serveur');
-
-        // Configuration des boutons
-        setupButtons();
+        
+        // Configuration des événements
+        setupEventListeners();
+        setupSocketListeners();
     } catch (error) {
         console.error('❌ Erreur lors de l\'initialisation:', error);
-        showError("Une erreur est survenue lors de l'initialisation");
+        showError('Erreur de connexion au serveur');
     }
 });
 
+// Initialisation de l'interface utilisateur
 function initializeUI() {
-    // Mise à jour de l'avatar et du nom
-    updateUserDisplay();
+    // Mise à jour des informations utilisateur
+    const avatarElement = document.getElementById('user-avatar');
+    const nameElement = document.getElementById('user-name');
     
-    // Initialisation des overlays
-    initializeOverlays();
-}
-
-function updateUserDisplay() {
-    // Mise à jour de l'avatar
-    const avatarElement = document.querySelector('.player-avatar img');
-    if (avatarElement) {
-        // Vérifier si l'avatar existe dans les chemins prédéfinis
-        const defaultAvatarPath = userData.sex === 'male' ? 
-            AVATAR_PATHS.male['1'] : AVATAR_PATHS.female['1'];
-            
-        avatarElement.src = userData.avatarSrc || defaultAvatarPath;
-        avatarElement.onerror = function() {
-            console.warn('❌ Erreur de chargement de l\'avatar, utilisation de l\'avatar par défaut');
-            this.src = defaultAvatarPath;
+    if (avatarElement && nameElement) {
+        avatarElement.src = userData.avatarSrc || '/Avatars/default.jpeg';
+        avatarElement.onerror = () => {
+            avatarElement.src = '/Avatars/default.jpeg';
         };
-    } else {
-        console.warn('⚠️ Élément avatar non trouvé dans le DOM');
-    }
-
-    // Mise à jour du nom
-    const nameElement = document.querySelector('.player-name');
-    if (nameElement) {
         nameElement.textContent = userData.name;
-    } else {
-        console.warn('⚠️ Élément nom non trouvé dans le DOM');
     }
 }
 
-function initializeOverlays() {
-    // Initialisation de l'overlay d'attente
-    const waitingOverlay = document.getElementById('waiting-overlay');
-    if (waitingOverlay) {
-        waitingOverlay.innerHTML = `
-            <div class="overlay-content">
-                <h2>Recherche d'un adversaire</h2>
-                <div class="spinner"></div>
-                <p>Veuillez patienter...</p>
-            </div>
-        `;
+// Configuration des écouteurs d'événements
+function setupEventListeners() {
+    // Mode joueur aléatoire
+    const randomModeBtn = document.getElementById('random-mode');
+    if (randomModeBtn) {
+        randomModeBtn.addEventListener('click', handleRandomMode);
     }
 
-    // Initialisation de l'overlay d'erreur
-    const errorOverlay = document.getElementById('error-overlay');
-    if (!errorOverlay) {
-        const overlay = document.createElement('div');
-        overlay.id = 'error-overlay';
-        overlay.className = 'overlay hidden';
-        overlay.innerHTML = `
-            <div class="overlay-content">
-                <p id="error-message"></p>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-    }
-}
-
-function setupButtons() {
-    const randomGameBtn = document.getElementById('random-game');
-    const createRoomBtn = document.getElementById('create-room');
-    const joinRoomBtn = document.getElementById('join-room');
-
-    if (randomGameBtn) {
-        randomGameBtn.addEventListener('click', async () => {
-            try {
-                randomGameBtn.disabled = true;
-                randomGameBtn.textContent = 'Recherche en cours...';
-
-                await socket.emit('findRandomGame', userData);
-                showWaitingScreen();
-            } catch (error) {
-                console.error('❌ Erreur lors de la recherche de partie:', error);
-                randomGameBtn.disabled = false;
-                randomGameBtn.textContent = 'Partie Aléatoire';
-                showError("Erreur lors de la recherche d'une partie");
-            }
-        });
+    // Mode entre amis
+    const friendModeBtn = document.getElementById('friend-mode');
+    if (friendModeBtn) {
+        friendModeBtn.addEventListener('click', handleFriendMode);
     }
 
-    if (createRoomBtn) {
-        createRoomBtn.addEventListener('click', () => {
-            window.location.href = '/room-choice?mode=create';
-        });
-    }
-
-    if (joinRoomBtn) {
-        joinRoomBtn.addEventListener('click', () => {
-            window.location.href = '/room-choice?mode=join';
-        });
+    // Bouton d'annulation de recherche
+    const cancelSearchBtn = document.getElementById('cancel-search');
+    if (cancelSearchBtn) {
+        cancelSearchBtn.addEventListener('click', handleCancelSearch);
     }
 }
 
 // Configuration des écouteurs socket
-socket.on('waitingForOpponent', () => {
-    console.log('⌛ En attente d\'un adversaire...');
-    showWaitingScreen();
-});
+function setupSocketListeners() {
+    socket.on('waitingForOpponent', () => {
+        isSearching = true;
+        showLoadingOverlay();
+    });
 
-socket.on('gameStart', (data) => {
-    console.log('🎮 Partie trouvée !', data);
-    window.location.href = `/gameboard?roomId=${data.roomCode}`;});
+    socket.on('gameStart', (data) => {
+        isSearching = false;
+        hideLoadingOverlay();
+        window.location.href = `/gameboard?roomId=${data.roomCode}`;
+    });
 
-socket.on('error', (error) => {
-    console.error('❌ Erreur socket:', error);
-    hideWaitingScreen();
-    showError("Une erreur est survenue");
-});
+    socket.on('error', (error) => {
+        isSearching = false;
+        hideLoadingOverlay();
+        showError(error.message || 'Une erreur est survenue');
+    });
 
-function showWaitingScreen() {
-    const waitingOverlay = document.getElementById('waiting-overlay');
-    if (waitingOverlay) {
-        waitingOverlay.classList.remove('hidden');
+    socket.on('disconnect', () => {
+        if (isSearching) {
+            hideLoadingOverlay();
+            showError('Déconnecté du serveur');
+        }
+    });
+}
+
+// Gestionnaires d'événements
+async function handleRandomMode() {
+    try {
+        if (!socket.isConnected()) {
+            showError('Non connecté au serveur');
+            return;
+        }
+
+        isSearching = true;
+        showLoadingOverlay();
+        await socket.emit('findRandomGame', userData);
+    } catch (error) {
+        console.error('❌ Erreur lors de la recherche de partie:', error);
+        hideLoadingOverlay();
+        showError('Erreur lors de la recherche de partie');
     }
 }
 
-function hideWaitingScreen() {
-    const waitingOverlay = document.getElementById('waiting-overlay');
-    if (waitingOverlay) {
-        waitingOverlay.classList.add('hidden');
+function handleFriendMode() {
+    window.location.href = '/room-choice';
+}
+
+function handleCancelSearch() {
+    if (isSearching) {
+        socket.emit('cancelSearch');
+        isSearching = false;
+        hideLoadingOverlay();
+    }
+}
+
+// Fonctions utilitaires UI
+function showLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+    }
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
     }
 }
 
 function showError(message) {
-    const errorOverlay = document.getElementById('error-overlay');
-    const errorMessage = document.getElementById('error-message');
+    const toast = document.getElementById('error-toast');
+    const messageElement = document.getElementById('error-message');
     
-    if (errorOverlay && errorMessage) {
-        errorMessage.textContent = message;
-        errorOverlay.classList.remove('hidden');
+    if (toast && messageElement) {
+        messageElement.textContent = message;
+        toast.classList.add('show');
         
         setTimeout(() => {
-            errorOverlay.classList.add('hidden');
+            toast.classList.remove('show');
         }, 3000);
     }
 }
 
-export { showWaitingScreen, hideWaitingScreen, showError };
+export { showLoadingOverlay, hideLoadingOverlay, showError };
