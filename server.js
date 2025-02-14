@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Deck } from './public/js/deck';
+import { Deck } from './public/js/deck.js';
 
 // 📌 Configuration
 const CONFIG = {

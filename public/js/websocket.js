@@ -1,142 +1,114 @@
+// websocket.js
 import { io } from "./socket.io.esm.min.js";
 
-// 📌 Configuration WebSocket
-const SOCKET_CONFIG = {
-    URL: "wss://seriousgame-ds65.onrender.com",
-    OPTIONS: {
-        secure: true,
-        transports: ["websocket"],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 10000,
-        autoConnect: true,
-        query: {
-            clientVersion: "1.0.0" // Pour la compatibilité des versions
-        }
-    }
-};
-
-// 📌 États de connexion
-const CONNECTION_STATES = {
-    CONNECTING: 'connecting',
-    CONNECTED: 'connected',
-    DISCONNECTED: 'disconnected',
-    RECONNECTING: 'reconnecting',
-    ERROR: 'error'
-};
-
 class SocketManager {
-    constructor(config = SOCKET_CONFIG) {
+    constructor() {
         this.socket = null;
-        this.config = config;
-        this.connectionState = CONNECTION_STATES.DISCONNECTED;
-        this.reconnectAttempts = 0;
+        this.pendingEmissions = new Map();
+        this.connectionPromise = null;
+        this.isConnecting = false;
         this.initialize();
     }
 
     initialize() {
-        try {
-            console.log('🔄 Initialisation de la connexion WebSocket...');
-            this.socket = io(this.config.URL, this.config.OPTIONS);
-            this.setupEventListeners();
-        } catch (error) {
-            console.error('❌ Erreur d\'initialisation WebSocket:', error);
-            this.connectionState = CONNECTION_STATES.ERROR;
-            throw new Error('Échec de l\'initialisation WebSocket');
-        }
+        console.log('🔄 Initialisation de la connexion WebSocket...');
+        
+        this.socket = io("wss://seriousgame-ds65.onrender.com", {
+            secure: true,
+            transports: ["websocket"],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 10000
+        });
+
+        this.setupEventListeners();
+        this.connectionPromise = this.createConnectionPromise();
+    }
+
+    createConnectionPromise() {
+        return new Promise((resolve, reject) => {
+            if (this.socket.connected) {
+                resolve(this.socket);
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                reject(new Error('Timeout de connexion'));
+            }, 10000);
+
+            this.socket.once('connect', () => {
+                clearTimeout(timeout);
+                this.processPendingEmissions();
+                resolve(this.socket);
+            });
+
+            this.socket.once('connect_error', (error) => {
+                clearTimeout(timeout);
+                reject(error);
+            });
+        });
     }
 
     setupEventListeners() {
-        // Événements de connexion
         this.socket.on('connect', () => {
             console.log('✅ Connecté au serveur WebSocket');
-            this.connectionState = CONNECTION_STATES.CONNECTED;
-            this.reconnectAttempts = 0;
+            this.isConnecting = false;
+            this.processPendingEmissions();
         });
 
         this.socket.on('disconnect', (reason) => {
             console.log(`🔌 Déconnecté du serveur: ${reason}`);
-            this.connectionState = CONNECTION_STATES.DISCONNECTED;
-            this.handleDisconnect(reason);
+            this.isConnecting = true;
         });
 
         this.socket.on('connect_error', (error) => {
             console.error('❌ Erreur de connexion:', error);
-            this.connectionState = CONNECTION_STATES.ERROR;
-            this.handleConnectionError(error);
-        });
-
-        this.socket.on('reconnect_attempt', (attemptNumber) => {
-            console.log(`🔄 Tentative de reconnexion #${attemptNumber}`);
-            this.connectionState = CONNECTION_STATES.RECONNECTING;
-            this.reconnectAttempts = attemptNumber;
+            this.isConnecting = false;
         });
 
         this.socket.on('error', (error) => {
             console.error('❌ Erreur WebSocket:', error);
-            this.handleError(error);
-        });
-
-        // Gestion du ping/pong pour vérifier la latence
-        this.socket.on('pong', (latency) => {
-            console.log(`📶 Latence actuelle: ${latency}ms`);
         });
     }
 
-    handleDisconnect(reason) {
-        if (reason === 'io server disconnect') {
-            // Déconnexion initiée par le serveur, tentative de reconnexion
-            setTimeout(() => this.socket.connect(), this.config.OPTIONS.reconnectionDelay);
-        }
-    }
+    async emit(eventName, data, callback) {
+        try {
+            // Si déjà connecté, émettre directement
+            if (this.socket.connected) {
+                this.socket.emit(eventName, data, callback);
+                return true;
+            }
 
-    handleConnectionError(error) {
-        if (this.reconnectAttempts >= this.config.OPTIONS.reconnectionAttempts) {
-            console.error('❌ Nombre maximum de tentatives de reconnexion atteint');
-            this.dispatchEvent('maxReconnectAttemptsReached');
-        }
-    }
+            // Si en cours de connexion, ajouter à la file d'attente
+            const emissionId = Date.now().toString();
+            this.pendingEmissions.set(emissionId, {
+                eventName,
+                data,
+                callback
+            });
 
-    handleError(error) {
-        // Dispatch d'un événement personnalisé pour l'erreur
-        this.dispatchEvent('socketError', { error });
-    }
-
-    dispatchEvent(eventName, data = {}) {
-        const event = new CustomEvent(`socket:${eventName}`, { detail: data });
-        window.dispatchEvent(event);
-    }
-
-    // Méthodes publiques
-    getState() {
-        return {
-            connectionState: this.connectionState,
-            reconnectAttempts: this.reconnectAttempts,
-            isConnected: this.socket?.connected || false
-        };
-    }
-
-    disconnect() {
-        if (this.socket) {
-            this.socket.disconnect();
-        }
-    }
-
-    reconnect() {
-        if (this.socket) {
-            this.socket.connect();
-        }
-    }
-
-    emit(eventName, data, callback) {
-        if (!this.socket?.connected) {
-            console.warn('⚠️ Tentative d\'émission alors que non connecté');
+            // Attendre la connexion
+            await this.connectionPromise;
+            return true;
+        } catch (error) {
+            console.error(`❌ Erreur lors de l'émission de ${eventName}:`, error);
             return false;
         }
-        this.socket.emit(eventName, data, callback);
-        return true;
+    }
+
+    processPendingEmissions() {
+        if (this.pendingEmissions.size === 0) return;
+
+        console.log(`🔄 Traitement de ${this.pendingEmissions.size} émissions en attente`);
+        
+        for (const [id, emission] of this.pendingEmissions) {
+            if (this.socket.connected) {
+                this.socket.emit(emission.eventName, emission.data, emission.callback);
+                this.pendingEmissions.delete(id);
+            }
+        }
     }
 
     on(eventName, callback) {
@@ -151,33 +123,20 @@ class SocketManager {
         }
     }
 
-    // Vérification de la connexion
-    checkConnection() {
-        return new Promise((resolve, reject) => {
-            if (this.socket?.connected) {
-                resolve(true);
-                return;
-            }
+    async waitForConnection() {
+        try {
+            await this.connectionPromise;
+            return true;
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'attente de la connexion:', error);
+            return false;
+        }
+    }
 
-            const timeout = setTimeout(() => {
-                reject(new Error('Timeout lors de la vérification de connexion'));
-            }, this.config.OPTIONS.timeout);
-
-            this.socket.once('connect', () => {
-                clearTimeout(timeout);
-                resolve(true);
-            });
-
-            this.socket.once('connect_error', (error) => {
-                clearTimeout(timeout);
-                reject(error);
-            });
-        });
+    isConnected() {
+        return this.socket?.connected || false;
     }
 }
 
-// 📌 Création d'une instance unique
 const socketManager = new SocketManager();
-
-// 📌 Exportation de l'instance et des types
-export { socketManager as default, CONNECTION_STATES, SOCKET_CONFIG };
+export default socketManager;
