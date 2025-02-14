@@ -1,5 +1,5 @@
 import express from 'express';
-import { createServer } from 'https';
+import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
@@ -18,7 +18,6 @@ const app = express();
 app.use(cors({
     origin: "*", // 🔥 Accepter toutes les requêtes cross-origin
     methods: ["GET", "POST"],
-    credentials: true
 }));
 
 // 📌 Configuration HTTPS (Ajoute tes certificats SSL)
