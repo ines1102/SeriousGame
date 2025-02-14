@@ -232,6 +232,27 @@ async function saveAndConnectUser(userData) {
         throw error;
     }
 }
+// 📌 Fonction pour afficher un message d'erreur
+function showError(message) {
+    console.error(`❌ ${message}`);
+
+    // Vérifier si l'élément existe déjà
+    let errorDiv = document.getElementById('error-message');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'error-message';
+        errorDiv.className = 'error-message';
+        document.body.appendChild(errorDiv);
+    }
+
+    errorDiv.textContent = message;
+    errorDiv.classList.add('show');
+
+    // Masquer l'erreur après 5 secondes
+    setTimeout(() => {
+        errorDiv.classList.remove('show');
+    }, 5000);
+}
 
 // 📌 Redirection vers "choose-mode"
 function redirectToChooseMode() {

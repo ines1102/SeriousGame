@@ -16,9 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initializeSocket(serverIp, serverPort, userData) {
     console.log(`📡 Tentative de connexion au serveur WebSocket: ${serverIp}:${serverPort}`);
 
-    const socket = io(`https://${serverIp}:${serverPort}`, {
+    const socket = io(`https://seriousgame-ds65.onrender.com`, {
         transports: ["websocket", "polling"],
-        secure: true,
+        secure: false,
         rejectUnauthorized: false,
         reconnection: true,
         reconnectionAttempts: 5,
