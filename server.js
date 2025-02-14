@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Deck } from './public/js/deck.js';
+import Deck from './public/js/deck.js';
 
 // 📌 Configuration
 const CONFIG = {
@@ -104,7 +104,14 @@ class GameManager {
     constructor(io, roomManager) {
         this.io = io;
         this.roomManager = roomManager;
-        this.deckManager = new Deck(); // Instance de Deck
+        try {
+            console.log('📦 Initialisation du DeckManager...');
+            this.deckManager = new Deck();
+            console.log('✅ DeckManager initialisé avec succès');
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'initialisation du DeckManager:', error);
+            throw error;
+        }
     }
 
     initializeGame(room) {
