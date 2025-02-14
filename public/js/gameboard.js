@@ -1,6 +1,7 @@
+import { socket } from './websocket.js';
 import Game from './game.js';
 import DragAndDropManager from './dragAndDrop.js';
-import socket from './websocket.js';
+import Deck from './deck.js'; // ✅ Importation corrigée du deck
 
 // Variables globales
 let gameInstance;
@@ -38,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Rejoindre la room
         socket.emit('joinRoom', { ...userData, roomCode: currentRoomId });
 
-        // Configuration des écouteurs Socket.io
+        // Configuration des écouteurs WebSocket
         setupSocketListeners(dragAndDrop);
     } catch (error) {
         console.error("❌ Erreur lors de l'initialisation:", error);
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Configuration des écouteurs Socket.io
+// 📌 Écouteurs WebSocket
 function setupSocketListeners(dragAndDrop) {
     socket.on('updatePlayers', (players) => {
         console.log('🔄 Mise à jour des joueurs:', players);
@@ -64,7 +65,6 @@ function setupSocketListeners(dragAndDrop) {
             return;
         }
     
-        // Identifier les joueurs
         const currentPlayer = data.players.find(player => player.clientId === userData.clientId);
         const opponent = data.players.find(player => player.clientId !== userData.clientId);
     
@@ -72,18 +72,9 @@ function setupSocketListeners(dragAndDrop) {
             console.error("❌ Erreur d'attribution des joueurs.");
             return;
         }
-    
-        console.log(`📌 Vous êtes: ${currentPlayer.name}`);
-        console.log(`🎭 Votre adversaire est: ${opponent.name}`);
 
-        // 🔥 Vérification et affichage de la main
-        if (typeof displayHand === "function") {
-            const myCards = data.hands?.playerHand || [];
-            console.log('📌 Affichage de la main du joueur:', myCards);
-            displayHand(myCards, true);
-        } else {
-            console.error("❌ ERREUR: displayHand n'est pas défini !");
-        }
+        updateOpponentInfo(opponent);
+        displayHand(data.hands?.playerHand || [], true);
     });
 
     socket.on('cardPlayed', (data) => {
@@ -114,7 +105,7 @@ function setupSocketListeners(dragAndDrop) {
     });
 }
 
-// Initialisation de l'interface utilisateur
+// 📌 Initialisation de l'interface utilisateur
 function initializeUI(userData) {
     console.log('🖥️ Initialisation UI pour:', userData.name);
 
@@ -124,10 +115,12 @@ function initializeUI(userData) {
     if (playerAvatar && playerName) {
         playerAvatar.src = userData.avatarSrc || "/Avatars/default-avatar.jpeg";
         playerName.textContent = userData.name;
+    } else {
+        console.error("❌ Éléments UI non trouvés pour le joueur.");
     }
 }
 
-// Mise à jour des informations de l'adversaire
+// 📌 Mise à jour des informations de l'adversaire
 function updateOpponentInfo(opponent) {
     console.log('🔄 Mise à jour infos adversaire:', opponent);
 
@@ -135,7 +128,7 @@ function updateOpponentInfo(opponent) {
     const opponentName = document.getElementById('opponent-name');
 
     if (!opponentAvatar || !opponentName) {
-        console.error("❌ Éléments de l'adversaire non trouvés");
+        console.error("❌ Éléments UI adversaire non trouvés.");
         return;
     }
 
@@ -143,7 +136,7 @@ function updateOpponentInfo(opponent) {
     opponentName.textContent = opponent.name;
 }
 
-// Affichage des cartes en main
+// 📌 Affichage des cartes en main
 function displayHand(cards, isPlayer) {
     const handContainer = document.getElementById(isPlayer ? 'player-hand' : 'opponent-hand');
     if (!handContainer || !Array.isArray(cards)) {
@@ -155,14 +148,6 @@ function displayHand(cards, isPlayer) {
 
     console.log(`📌 Affichage de la main du ${isPlayer ? 'joueur' : 'l\'adversaire'}:`, cards);
 
-    const totalCards = cards.length;
-    if (totalCards === 0) return;
-
-    const radius = 500;  // Rayon de l'arc
-    const totalArc = 30;  // Angle total pour l'effet d'éventail
-    const startAngle = isPlayer ? -totalArc / 2 : totalArc / 2; // Position ajustée
-    const angleStep = totalArc / (totalCards - 1);
-
     cards.forEach((card, index) => {
         const cardElement = document.createElement('div');
         cardElement.className = 'hand-card';
@@ -170,32 +155,11 @@ function displayHand(cards, isPlayer) {
         cardElement.dataset.cardName = card.name;
         cardElement.style.backgroundImage = isPlayer ? `url(${card.name})` : 'url(/Cartes/dos.png)';
 
-        // Position des cartes en éventail (orienté vers le joueur)
-        const angle = startAngle + (angleStep * index);
-        const radian = (angle * Math.PI) / 180;
-        const x = Math.sin(radian) * radius;
-        const y = -Math.cos(radian) * radius + radius; // Correction de la hauteur
-
-        cardElement.style.transform = `translate(${x}px, ${y}px)`;
-        cardElement.style.transformOrigin = 'bottom center';
-        cardElement.style.zIndex = index;
-
-        // Ajout du hover pour agrandir légèrement la carte et la lever
-        cardElement.addEventListener('mouseenter', () => {
-            cardElement.style.transform = `translate(${x}px, ${y - 20}px) scale(1.1)`;
-            cardElement.style.zIndex = 1000;
-        });
-
-        cardElement.addEventListener('mouseleave', () => {
-            cardElement.style.transform = `translate(${x}px, ${y}px)`;
-            cardElement.style.zIndex = index;
-        });
-
         handContainer.appendChild(cardElement);
     });
 }
 
-// Affichage de l'overlay de déconnexion
+// 📌 Affichage de l'overlay de déconnexion
 function showDisconnectOverlay(message) {
     console.log('⚠️ Affichage overlay déconnexion:', message);
     
