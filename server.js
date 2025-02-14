@@ -167,5 +167,5 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Serveur HTTPS disponible sur:`);
     console.log(`- Local: https://localhost:${PORT}`);
-    console.log(`- Réseau: https://${SERVER_IP}:${PORT}`);
+    console.log(`- Réseau: https://${getLocalIP()}:${PORT}`);
 });
