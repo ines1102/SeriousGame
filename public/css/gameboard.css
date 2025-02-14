@@ -514,3 +514,168 @@ button:focus-visible {
     }
 }
 
+/* Styles des profils joueurs */
+.player-profile,
+.opponent-profile {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: var(--card-background);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.player-avatar,
+.opponent-avatar {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin-right: 1rem;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--primary-color);
+}
+
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.avatar-img.placeholder {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+.player-name,
+.opponent-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+/* Animations */
+@keyframes profileEntrance {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes avatarPulse {
+    0% {
+        transform: scale(1);
+        border-color: var(--primary-color);
+    }
+    50% {
+        transform: scale(1.05);
+        border-color: var(--secondary-color);
+    }
+    100% {
+        transform: scale(1);
+        border-color: var(--primary-color);
+    }
+}
+
+.profile-loaded {
+    animation: profileEntrance 0.5s ease forwards;
+}
+
+.profile-loaded .avatar-img:not(.placeholder) {
+    animation: avatarPulse 2s infinite;
+}
+
+/* État actif pour le tour du joueur */
+.profile-active {
+    border: 2px solid var(--secondary-color);
+    box-shadow: 0 0 15px rgba(80, 176, 79, 0.3);
+}
+
+/* Statut en ligne */
+.online-status {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    background-color: var(--secondary-color);
+    border-radius: 50%;
+    border: 2px solid var(--card-background);
+}
+
+/* Overlay de déconnexion */
+.disconnect-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.disconnect-overlay.hidden {
+    display: none;
+}
+
+.disconnect-message {
+    background: var(--card-background);
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+    max-width: 400px;
+}
+
+/* Points de vie et statut du joueur */
+.player-status {
+    display: flex;
+    flex-direction: column;
+    margin-left: auto;
+}
+
+.health-bar {
+    width: 100px;
+    height: 10px;
+    background: #e74c3c;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.health-bar-fill {
+    height: 100%;
+    background: var(--secondary-color);
+    transition: width 0.3s ease;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .player-profile,
+    .opponent-profile {
+        padding: 0.8rem;
+    }
+
+    .player-avatar,
+    .opponent-avatar {
+        width: 45px;
+        height: 45px;
+    }
+
+    .player-name,
+    .opponent-name {
+        font-size: 1rem;
+    }
+
+    .health-bar {
+        width: 80px;
+    }
+}

@@ -32,26 +32,19 @@
 </head>
 <body>
     <main id="game-container" aria-live="polite">
-        <!-- Zone de l'adversaire -->
-        <section id="opponent-zone" class="player-zone opponent" aria-label="Zone adversaire">
-            <img id="opponent-avatar" 
-                 src="/Avatars/default-avatar.jpeg" 
-                 alt="Avatar adversaire" 
-                 class="avatar"
-                 loading="eager">
-            <div class="player-info">
-                <span id="opponent-name" aria-live="polite">En attente...</span>
-                <div class="health-bar" 
-                     role="progressbar" 
-                     aria-valuemin="0" 
-                     aria-valuemax="200" 
-                     aria-valuenow="200"
-                     aria-label="Points de vie adversaire">
-                    <div class="health-bar-fill"></div>
-                    <span class="health-text">200/200</span>
+        <!-- Profil de l'adversaire -->
+        <div class="opponent-profile">
+            <div class="opponent-avatar">
+                <img src="/Avatars/default.jpeg" alt="Avatar de l'adversaire" class="avatar-img">
+                <div class="online-status"></div>
+            </div>
+            <div class="opponent-name">En attente...</div>
+            <div class="player-status">
+                <div class="health-bar">
+                    <div class="health-bar-fill" style="width: 100%"></div>
                 </div>
             </div>
-        </section>
+        </div>
 
         <!-- Main de l'adversaire -->
         <div id="opponent-hand" 
@@ -83,26 +76,19 @@
             </div>
         </section>
 
-        <!-- Zone du joueur -->
-        <section id="player-zone" class="player-zone player" aria-label="Votre zone">
-            <img id="player-avatar" 
-                 src="/Avatars/default-avatar.jpeg" 
-                 alt="Votre avatar" 
-                 class="avatar"
-                 loading="eager">
-            <div class="player-info">
-                <span id="player-name" aria-live="polite">Joueur</span>
-                <div class="health-bar" 
-                     role="progressbar" 
-                     aria-valuemin="0" 
-                     aria-valuemax="200" 
-                     aria-valuenow="200"
-                     aria-label="Vos points de vie">
-                    <div class="health-bar-fill"></div>
-                    <span class="health-text">200/200</span>
+        <!-- Profil du joueur -->
+        <div class="player-profile">
+            <div class="player-avatar">
+                <img src="/Avatars/default.jpeg" alt="Votre avatar" class="avatar-img">
+                <div class="online-status"></div>
+            </div>
+            <div class="player-name">Votre nom</div>
+            <div class="player-status">
+                <div class="health-bar">
+                    <div class="health-bar-fill" style="width: 100%"></div>
                 </div>
             </div>
-        </section>
+        </div>
 
         <!-- Main du joueur -->
         <div id="player-hand" 
@@ -139,15 +125,11 @@
         </div>
     </div>
 
-    <div id="disconnect-overlay" 
-         class="disconnect-overlay hidden" 
-         role="dialog" 
-         aria-modal="true" 
-         aria-label="Message de déconnexion">
-        <div class="disconnect-content">
-            <h2>Déconnexion...</h2>
-            <div class="spinner" role="status" aria-label="Chargement"></div>
-            <p>Redirection vers l'accueil...</p>
+    <!-- Overlay de déconnexion -->
+    <div id="disconnect-overlay" class="disconnect-overlay hidden">
+        <div class="disconnect-message">
+            <h2>Déconnexion</h2>
+            <p>Message de déconnexion...</p>
         </div>
     </div>
 

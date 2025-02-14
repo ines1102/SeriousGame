@@ -1,90 +1,153 @@
-/* choose-mode.css */
-.container {
+/* Variables et Reset */
+:root {
+  --primary-color: #4a90e2;
+  --secondary-color: #50b04f;
+  --background-color: #f5f6fa;
+  --card-background: #ffffff;
+  --text-color: #2d3436;
+  --border-color: #dfe6e9;
+  --hover-color: #357abd;
+  --error-color: #e74c3c;
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s ease;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: var(--background-color);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  padding: 20px;
 }
 
+/* Container principal */
+.container {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Carte de sélection de mode */
 .mode-selection-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--card-background);
   border-radius: 15px;
   padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  width: 90%;
-  max-width: 500px;
+  box-shadow: var(--box-shadow);
+  transform: translateY(0);
+  transition: var(--transition);
 }
 
-.player-profile {
+.mode-selection-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Section info utilisateur */
+.user-info {
   display: flex;
   align-items: center;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 10px;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
 }
 
-.player-avatar img {
+.avatar {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  object-fit: cover;
+  border: 3px solid var(--primary-color);
   margin-right: 1rem;
-  border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  object-fit: cover;
+  transition: var(--transition);
 }
 
-.player-name {
+.avatar:hover {
+  transform: scale(1.05);
+  border-color: var(--secondary-color);
+}
+
+.username {
   font-size: 1.2rem;
   font-weight: bold;
-  color: #2a5298;
+  color: var(--text-color);
 }
 
+/* Titre */
 h2 {
   text-align: center;
-  color: #1e3c72;
+  color: var(--text-color);
   margin-bottom: 2rem;
+  font-size: 1.8rem;
 }
 
-.game-modes {
+/* Boutons de mode */
+.mode-buttons {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.mode-button {
-  padding: 1rem;
-  border: none;
-  border-radius: 8px;
-  background: #2a5298;
-  color: white;
-  font-size: 1rem;
+.btn-mode {
+  padding: 1.2rem;
+  background: var(--card-background);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--transition);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.8rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--text-color);
+  position: relative;
+  overflow: hidden;
 }
 
-.mode-button:hover {
-  background: #1e3c72;
+.btn-mode i {
+  font-size: 1.3rem;
+  color: var(--primary-color);
+  transition: var(--transition);
+}
+
+.btn-mode:hover {
+  border-color: var(--primary-color);
   transform: translateY(-2px);
+  box-shadow: var(--box-shadow);
 }
 
-.mode-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  transform: none;
+.btn-mode:hover i {
+  transform: scale(1.1);
 }
 
-.mode-button i {
-  font-size: 1.2rem;
+.btn-mode::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-color);
+  opacity: 0;
+  transition: var(--transition);
+  pointer-events: none;
 }
 
-/* Overlays */
-.overlay {
+.btn-mode:hover::after {
+  opacity: 0.1;
+}
+
+/* Overlay de chargement */
+.loading-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -95,28 +158,39 @@ h2 {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  opacity: 1;
+  transition: var(--transition);
 }
 
-.overlay.hidden {
-  display: none;
+.loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
-.overlay-content {
-  background: white;
+.loading-content {
+  background: var(--card-background);
   padding: 2rem;
   border-radius: 15px;
   text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: var(--box-shadow);
+}
+
+.loading-content h3 {
+  color: var(--text-color);
+  margin-bottom: 1rem;
 }
 
 /* Spinner */
 .spinner {
   width: 50px;
   height: 50px;
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #2a5298;
+  border: 5px solid var(--border-color);
+  border-top: 5px solid var(--primary-color);
   border-radius: 50%;
+  margin: 1.5rem auto;
   animation: spin 1s linear infinite;
-  margin: 1rem auto;
 }
 
 @keyframes spin {
@@ -124,8 +198,109 @@ h2 {
   100% { transform: rotate(360deg); }
 }
 
-/* Error message */
-#error-message {
-  color: #ff3333;
-  font-weight: bold;
+/* Bouton d'annulation */
+.btn-cancel {
+  margin-top: 1.5rem;
+  padding: 0.8rem 1.5rem;
+  background: var(--error-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.btn-cancel:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+}
+
+/* Toast d'erreur */
+.error-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: var(--error-color);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  box-shadow: var(--box-shadow);
+  opacity: 0;
+  transition: var(--transition);
+  z-index: 1001;
+}
+
+.error-toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.error-toast i {
+  font-size: 1.2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+      padding: 1rem;
+  }
+
+  .mode-selection-card {
+      padding: 1.5rem;
+  }
+
+  .avatar {
+      width: 50px;
+      height: 50px;
+  }
+
+  h2 {
+      font-size: 1.5rem;
+  }
+
+  .btn-mode {
+      padding: 1rem;
+      font-size: 1rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+      opacity: 0;
+      transform: translateY(20px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+.mode-selection-card {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* État des boutons désactivés */
+.btn-mode:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-mode:disabled:hover {
+  border-color: var(--border-color);
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-mode:disabled i {
+  transform: none;
 }
