@@ -159,7 +159,8 @@ setInterval(() => {
 }, 3600000);
 
 // 📌 Démarrage du serveur HTTPS
-server.listen(3443, '0.0.0.0', () => {
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Serveur HTTPS disponible sur:`);
     console.log(`- Local: https://localhost:3443`);
     console.log(`- Réseau: https://${SERVER_IP}:3443`);
