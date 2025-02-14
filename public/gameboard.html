@@ -19,6 +19,16 @@
     <!-- Préchargement des images critiques -->
     <link rel="preload" as="image" href="/Avatars/default-avatar.jpeg">
     <link rel="preload" href="/Cartes/dos.png" as="image">
+
+    <style>
+        body { visibility: hidden; }
+      </style>
+      <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.body.style.visibility = "visible";
+        });
+      </script>
+      
 </head>
 <body>
     <main id="game-container" aria-live="polite">
@@ -157,7 +167,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
     <script type="module" src="/js/deck.js"></script>
     <script type="module" src="/js/game.js"></script>
     <script type="module" src="/js/dragAndDrop.js"></script>
