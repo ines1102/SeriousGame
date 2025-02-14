@@ -28,6 +28,7 @@ const PORT = process.env.PORT || 10000;
 const server = createServer(app);
 const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] },
+    transports: ["websocket", "polling"]
 });
 
 // 📌 Middleware

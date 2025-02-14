@@ -18,11 +18,11 @@ function initializeSocket(serverIp, serverPort, userData) {
 
     const socket = io(`https://seriousgame-ds65.onrender.com`, {
         transports: ["websocket", "polling"],
-        secure: false,
+        secure: true,
         rejectUnauthorized: false,
         reconnection: true,
         reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
+        reconnectionDelay: 2000,
         timeout: 10000
     });
 
