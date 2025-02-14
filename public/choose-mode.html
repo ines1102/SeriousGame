@@ -18,47 +18,45 @@
 <body>
     <div class="container">
         <div class="mode-selection-card">
-            <!-- Section profil joueur -->
-            <div class="player-profile">
-                <div class="player-avatar">
-                    <img src="" alt="Avatar du joueur" />
-                </div>
-                <div class="player-name"></div>
+            <!-- Info utilisateur -->
+            <div class="user-info">
+                <img id="user-avatar" src="" alt="Votre avatar" class="avatar">
+                <span id="user-name" class="username"></span>
             </div>
             
             <h2>Choisissez votre mode de jeu</h2>
             
-            <!-- Section des modes de jeu -->
-            <div class="game-modes">
-                <button id="random-game" class="mode-button">
+            <!-- Boutons de mode -->
+            <div class="mode-buttons">
+                <button id="random-mode" class="btn-mode">
                     <i class="fas fa-random"></i>
-                    Partie Aléatoire
+                    Joueur aléatoire
                 </button>
-                <button id="create-room" class="mode-button">
-                    <i class="fas fa-plus-circle"></i>
-                    Créer une Room
-                </button>
-                <button id="join-room" class="mode-button">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Rejoindre une Room
+                <button id="friend-mode" class="btn-mode">
+                    <i class="fas fa-users"></i>
+                    Jouer entre amis
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Overlays -->
-    <div id="waiting-overlay" class="overlay hidden">
-        <div class="overlay-content">
-            <h2>Recherche d'un adversaire</h2>
+    <!-- Overlay de chargement -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <h3>Recherche d'un adversaire</h3>
             <div class="spinner"></div>
             <p>Veuillez patienter...</p>
+            <button id="cancel-search" class="btn-cancel">
+                <i class="fas fa-times"></i>
+                Annuler la recherche
+            </button>
         </div>
     </div>
 
-    <div id="error-overlay" class="overlay hidden">
-        <div class="overlay-content">
-            <p id="error-message"></p>
-        </div>
+    <!-- Toast d'erreur -->
+    <div id="error-toast" class="error-toast">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="error-message"></span>
     </div>
 
     <!-- Scripts -->
