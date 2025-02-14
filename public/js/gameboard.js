@@ -4,184 +4,260 @@ import DragAndDropManager from './dragAndDrop.js';
 import Deck from './deck.js';
 import socket from './websocket.js';
 
-// Variables globales
-let gameInstance;
-let currentRoomId;
-let userData;
+// 📌 Configuration
+const CONFIG = {
+    RECONNECTION_DELAY: 3000,
+    DEFAULT_AVATAR: "/Avatars/default-avatar.jpeg",
+    CARD_BACK_IMAGE: "/Cartes/dos.png",
+    ROUTES: {
+        HOME: '/',
+        CHOOSE_MODE: '/choose-mode'
+    }
+};
 
-// 📌 Initialisation du jeu
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🔄 Initialisation du jeu...');
-    
-    // Récupération des données utilisateur et room
-    userData = JSON.parse(localStorage.getItem('userData'));
-    currentRoomId = new URLSearchParams(window.location.search).get('roomId');
-
-    if (!userData || !currentRoomId) {
-        console.error('❌ Données utilisateur ou roomId manquants');
-        window.location.href = '/';
-        return;
+// 📌 Gestionnaire d'état du jeu
+class GameState {
+    constructor() {
+        this.gameInstance = null;
+        this.currentRoomId = null;
+        this.userData = null;
+        this.dragAndDrop = null;
     }
 
-    console.log('📌 Données de session:', { userData, currentRoomId });
-
-    try {
-        // Initialisation de l'interface utilisateur
-        initializeUI(userData);
-
-        // Création de l'instance du jeu
-        gameInstance = new Game(socket);
-        window.gameInstance = gameInstance;
-
-        // Initialiser le drag & drop
-        const dragAndDrop = new DragAndDropManager(gameInstance, socket);
-        dragAndDrop.initialize();
-
-        // Rejoindre la room
-        socket.emit('joinRoom', { ...userData, roomCode: currentRoomId });
-
-        // Configuration des écouteurs Socket.io
-        setupSocketListeners(dragAndDrop);
-    } catch (error) {
-        console.error("❌ Erreur lors de l'initialisation:", error);
-        showDisconnectOverlay("Erreur lors de l'initialisation du jeu");
+    initialize() {
+        this.userData = this.loadUserData();
+        this.currentRoomId = this.getRoomIdFromURL();
+        
+        if (!this.validateInitialState()) {
+            throw new Error("État initial invalide");
+        }
+        
+        return true;
     }
-});
 
-// 📌 Configuration des écouteurs WebSocket
-function setupSocketListeners(dragAndDrop) {
-    socket.on('updatePlayers', (players) => {
-        console.log('🔄 Mise à jour des joueurs:', players);
-        const opponent = players.find(player => player.clientId !== userData.clientId);
-        if (opponent) {
-            updateOpponentInfo(opponent);
+    loadUserData() {
+        try {
+            return JSON.parse(localStorage.getItem('userData'));
+        } catch (error) {
+            console.error("❌ Erreur lors du chargement des données utilisateur:", error);
+            return null;
         }
-    });
+    }
 
-    socket.on('gameStart', (data) => {
-        console.log('🎮 Début de la partie:', data);
-    
-        if (!data.players || data.players.length < 2) {
-            console.error("❌ Problème: pas assez de joueurs pour démarrer.");
+    getRoomIdFromURL() {
+        return new URLSearchParams(window.location.search).get('roomId');
+    }
+
+    validateInitialState() {
+        return this.userData && this.currentRoomId;
+    }
+}
+
+// 📌 Gestionnaire de l'interface utilisateur
+class UIManager {
+    static updatePlayerInfo(userData, isOpponent = false) {
+        const prefix = isOpponent ? 'opponent' : 'player';
+        const avatar = document.getElementById(`${prefix}-avatar`);
+        const name = document.getElementById(`${prefix}-name`);
+
+        if (!avatar || !name) {
+            throw new Error(`Éléments ${prefix} non trouvés`);
+        }
+
+        avatar.src = userData.avatarSrc || CONFIG.DEFAULT_AVATAR;
+        name.textContent = userData.name;
+    }
+
+    static displayHand(cards, isPlayer) {
+        if (!Array.isArray(cards)) {
+            throw new Error("Format de cartes invalide");
+        }
+
+        const containerId = isPlayer ? 'player-hand' : 'opponent-hand';
+        const container = document.getElementById(containerId);
+        
+        if (!container) {
+            throw new Error(`Conteneur ${containerId} non trouvé`);
+        }
+
+        container.innerHTML = '';
+
+        cards.forEach(card => {
+            const cardElement = this.createCardElement(card, isPlayer);
+            container.appendChild(cardElement);
+        });
+    }
+
+    static createCardElement(card, isPlayer) {
+        const element = document.createElement('div');
+        element.className = 'hand-card';
+        element.dataset.cardId = card.id;
+        element.dataset.cardName = card.name;
+        element.style.backgroundImage = isPlayer 
+            ? `url(${card.name})` 
+            : `url(${CONFIG.CARD_BACK_IMAGE})`;
+        return element;
+    }
+
+    static showDisconnectOverlay(message) {
+        const overlay = document.getElementById('disconnect-overlay');
+        if (!overlay) {
+            console.error("❌ Overlay de déconnexion non trouvé");
             return;
         }
-    
-        // Identifier les joueurs
-        const currentPlayer = data.players.find(player => player.clientId === userData.clientId);
-        const opponent = data.players.find(player => player.clientId !== userData.clientId);
-    
-        if (!currentPlayer || !opponent) {
-            console.error("❌ Erreur d'attribution des joueurs.");
+
+        const messageElement = overlay.querySelector('p');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+
+        overlay.classList.remove('hidden');
+
+        setTimeout(() => {
+            window.location.href = CONFIG.ROUTES.CHOOSE_MODE;
+        }, CONFIG.RECONNECTION_DELAY);
+    }
+}
+
+// 📌 Gestionnaire des événements Socket
+class SocketEventHandler {
+    constructor(gameState, dragAndDrop) {
+        this.gameState = gameState;
+        this.dragAndDrop = dragAndDrop;
+    }
+
+    setupListeners() {
+        socket.on('updatePlayers', this.handleUpdatePlayers.bind(this));
+        socket.on('gameStart', this.handleGameStart.bind(this));
+        socket.on('cardPlayed', this.handleCardPlayed.bind(this));
+        socket.on('opponentLeft', this.handleOpponentLeft.bind(this));
+        socket.on('disconnect', this.handleDisconnect.bind(this));
+        socket.on('error', this.handleError.bind(this));
+    }
+
+    handleUpdatePlayers(players) {
+        try {
+            const opponent = players.find(
+                player => player.clientId !== this.gameState.userData.clientId
+            );
+            if (opponent) {
+                UIManager.updatePlayerInfo(opponent, true);
+            }
+        } catch (error) {
+            console.error("❌ Erreur lors de la mise à jour des joueurs:", error);
+        }
+    }
+
+    handleGameStart(data) {
+        if (!this.validateGameStartData(data)) {
             return;
         }
-    
+
+        const { currentPlayer, opponent } = this.identifyPlayers(data.players);
+        
         console.log(`📌 Vous êtes: ${currentPlayer.name}`);
         console.log(`🎭 Votre adversaire est: ${opponent.name}`);
 
-        // 🔥 Vérification et affichage de la main
-        if (typeof displayHand === "function") {
-            const myCards = data.hands?.playerHand || [];
-            console.log('📌 Affichage de la main du joueur:', myCards);
-            displayHand(myCards, true);
-        } else {
-            console.error("❌ ERREUR: displayHand n'est pas défini !");
+        if (data.hands?.playerHand) {
+            UIManager.displayHand(data.hands.playerHand, true);
         }
-    });
+    }
 
-    socket.on('cardPlayed', (data) => {
-        console.log('🃏 Carte jouée reçue:', data);
-        if (!data.cardId || !data.slot) {
-            console.error("❌ Données de carte invalides reçues:", data);
+    validateGameStartData(data) {
+        if (!data.players || data.players.length < 2) {
+            console.error("❌ Données de démarrage invalides");
+            return false;
+        }
+        return true;
+    }
+
+    identifyPlayers(players) {
+        const currentPlayer = players.find(
+            player => player.clientId === this.gameState.userData.clientId
+        );
+        const opponent = players.find(
+            player => player.clientId !== this.gameState.userData.clientId
+        );
+
+        if (!currentPlayer || !opponent) {
+            throw new Error("Impossible d'identifier les joueurs");
+        }
+
+        return { currentPlayer, opponent };
+    }
+
+    handleCardPlayed(data) {
+        if (!this.validateCardPlayData(data)) {
             return;
         }
 
         const dropZone = document.querySelector(`[data-slot="${data.slot}"]`);
         if (dropZone) {
-            dragAndDrop.processDrop({
+            this.dragAndDrop.processDrop({
                 cardId: data.cardId,
                 cardSrc: data.cardSrc || `url(${data.name})`,
                 name: data.cardName || data.name
             }, dropZone);
         }
-    });
+    }
 
-    socket.on('opponentLeft', () => {
-        console.log('👋 Adversaire déconnecté');
-        showDisconnectOverlay("Votre adversaire a quitté la partie.");
-    });
+    validateCardPlayData(data) {
+        if (!data.cardId || !data.slot) {
+            console.error("❌ Données de carte invalides:", data);
+            return false;
+        }
+        return true;
+    }
 
-    socket.on('disconnect', () => {
-        console.log('🔌 Déconnexion du serveur');
-        showDisconnectOverlay("Déconnecté du serveur...");
-    });
-}
+    handleOpponentLeft() {
+        UIManager.showDisconnectOverlay("Votre adversaire a quitté la partie.");
+    }
 
-// 📌 Initialisation de l'interface utilisateur
-function initializeUI(userData) {
-    console.log('🖥️ Initialisation UI pour:', userData.name);
+    handleDisconnect() {
+        UIManager.showDisconnectOverlay("Déconnecté du serveur...");
+    }
 
-    const playerAvatar = document.getElementById('player-avatar');
-    const playerName = document.getElementById('player-name');
-
-    if (playerAvatar && playerName) {
-        playerAvatar.src = userData.avatarSrc || "/Avatars/default-avatar.jpeg";
-        playerName.textContent = userData.name;
+    handleError(error) {
+        console.error("❌ Erreur socket:", error);
+        UIManager.showDisconnectOverlay("Une erreur est survenue");
     }
 }
 
-// 📌 Mise à jour des informations de l'adversaire
-function updateOpponentInfo(opponent) {
-    console.log('🔄 Mise à jour infos adversaire:', opponent);
+// 📌 Initialisation principale
+async function initializeGame() {
+    console.log('🔄 Initialisation du jeu...');
 
-    const opponentAvatar = document.getElementById('opponent-avatar');
-    const opponentName = document.getElementById('opponent-name');
-
-    if (!opponentAvatar || !opponentName) {
-        console.error("❌ Éléments de l'adversaire non trouvés");
-        return;
-    }
-
-    opponentAvatar.src = opponent.avatarSrc || "/Avatars/default-avatar.jpeg";
-    opponentName.textContent = opponent.name;
-}
-
-// 📌 Affichage des cartes en main
-function displayHand(cards, isPlayer) {
-    const handContainer = document.getElementById(isPlayer ? 'player-hand' : 'opponent-hand');
-    if (!handContainer || !Array.isArray(cards)) {
-        console.error("❌ Problème avec le conteneur de la main ou les cartes:", { handContainer, cards });
-        return;
-    }
-
-    handContainer.innerHTML = '';
-
-    console.log(`📌 Affichage de la main du ${isPlayer ? 'joueur' : 'l\'adversaire'}:`, cards);
-
-    cards.forEach((card, index) => {
-        const cardElement = document.createElement('div');
-        cardElement.className = 'hand-card';
-        cardElement.dataset.cardId = card.id;
-        cardElement.dataset.cardName = card.name;
-        cardElement.style.backgroundImage = isPlayer ? `url(${card.name})` : 'url(/Cartes/dos.png)';
-
-        handContainer.appendChild(cardElement);
-    });
-}
-
-// 📌 Affichage de l'overlay de déconnexion
-function showDisconnectOverlay(message) {
-    console.log('⚠️ Affichage overlay déconnexion:', message);
+    const gameState = new GameState();
     
-    const overlay = document.getElementById('disconnect-overlay');
-    if (overlay) {
-        const messageElement = overlay.querySelector('p');
-        if (messageElement) messageElement.textContent = message;
-        overlay.classList.remove('hidden');
+    try {
+        if (!gameState.initialize()) {
+            window.location.href = CONFIG.ROUTES.HOME;
+            return;
+        }
 
-        setTimeout(() => {
-            window.location.href = '/choose-mode';
-        }, 3000);
+        UIManager.updatePlayerInfo(gameState.userData);
+
+        gameState.gameInstance = new Game(socket);
+        window.gameInstance = gameState.gameInstance;
+
+        const dragAndDrop = new DragAndDropManager(gameState.gameInstance, socket);
+        dragAndDrop.initialize();
+
+        const socketHandler = new SocketEventHandler(gameState, dragAndDrop);
+        socketHandler.setupListeners();
+
+        socket.emit('joinRoom', {
+            ...gameState.userData,
+            roomCode: gameState.currentRoomId
+        });
+
+    } catch (error) {
+        console.error("❌ Erreur d'initialisation:", error);
+        UIManager.showDisconnectOverlay("Erreur lors de l'initialisation du jeu");
     }
 }
 
-export { updateOpponentInfo, showDisconnectOverlay };
+// 📌 Démarrage au chargement du DOM
+document.addEventListener('DOMContentLoaded', initializeGame);
+
+export { UIManager };
