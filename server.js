@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Deck } from './public/js/deck';
 
 // 📌 Configuration
 const CONFIG = {
@@ -103,11 +104,13 @@ class GameManager {
     constructor(io, roomManager) {
         this.io = io;
         this.roomManager = roomManager;
+        this.deck = new Deck(); // Instance de Deck créée dans le constructeur
     }
 
     initializeGame(room) {
         try {
-            const decks = this.createInitialDecks();
+            console.log('🎮 Initialisation du jeu pour la room:', room.code);
+            const decks = this.deck.creerDecksJoueurs(); // Utilisation de this.deck au lieu de créer une nouvelle instance
             
             room.gameState = {
                 ...room.gameState,
@@ -130,7 +133,7 @@ class GameManager {
                     }
                 });
             });
-
+            console.log('✅ Jeu initialisé avec succès pour la room:', room.code);
             return true;
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation du jeu:', error);
@@ -175,8 +178,7 @@ class GameManager {
     }
 
     createInitialDecks() {
-        const deckManager = new Deck();
-        return deckManager.creerDecksJoueurs();
+        return this.deck.creerDecksJoueurs(); // Utilisation de this.deck
     }
 }
 
