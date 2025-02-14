@@ -1,4 +1,4 @@
-const socket = io(`http://seriousgame-ds65.onrender.com`, {
+const socket = io(`https://seriousgame-ds65.onrender.com`, {
     secure: true,
     rejectUnauthorized: false,
     transports: ['websocket']
