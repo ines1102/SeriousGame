@@ -1,158 +1,124 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    const userData = loadUserData();
-    if (!userData) return redirectToHome();
+const socket = io(`https://seriousgame-ds65.onrender.com`, {
+    secure: true,
+    rejectUnauthorized: false,
+    transports: ['websocket']
+});
 
+document.addEventListener('DOMContentLoaded', () => {
     try {
-        const serverConfig = await fetchServerConfig();
-        initializeSocket(serverConfig.serverIp, serverConfig.serverPort, userData);
-        setupUI(userData);
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        
+        if (!userData) {
+            console.error('🚨 Aucune donnée utilisateur, retour à l\'accueil.');
+            window.location.href = '/';
+            return;
+        }
+
+        console.log('🔒 Données utilisateur chargées:', userData);
+
+        initializeUI(userData);
+        setupEventListeners(userData);
+        setupSocketListeners();
+        socket.emit('userConnected', userData);
     } catch (error) {
-        console.error('❌ Erreur d\'initialisation:', error);
-        showError('Erreur de connexion au serveur');
+        console.error('❌ Erreur lors du chargement:', error);
     }
 });
 
-// 📌 Connexion WebSocket optimisée (compatible Chrome, Firefox, Safari)
-function initializeSocket(serverIp, serverPort, userData) {
-    console.log(`📡 Tentative de connexion au serveur WebSocket: ${serverIp}:${serverPort}`);
+function initializeUI(userData) {
+    const userAvatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+    
+    if (userAvatar && userName) {
+        userAvatar.src = userData.avatarSrc;
+        userName.textContent = userData.name;
+    } else {
+        console.error('❌ Éléments UI non trouvés');
+    }
+}
 
-    const socket = io(`https://seriousgame-ds65.onrender.com`, {
-        transports: ["polling"],
-        secure: true,
-        rejectUnauthorized: false,
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 2000,
-        timeout: 10000
-    });
+function setupEventListeners(userData) {
+    const randomModeBtn = document.getElementById('random-mode');
+    const friendModeBtn = document.getElementById('friend-mode');
+    const cancelSearchBtn = document.getElementById('cancel-search');
 
+    if (randomModeBtn) {
+        randomModeBtn.addEventListener('click', () => {
+            console.log('🎲 Recherche de partie aléatoire...');
+            localStorage.setItem('gameMode', 'random');
+            showLoadingScreen();
+            socket.emit('findRandomGame', userData);
+        });
+    }
+
+    if (friendModeBtn) {
+        friendModeBtn.addEventListener('click', () => {
+            console.log('👥 Mode ami sélectionné');
+            localStorage.setItem('gameMode', 'friend');
+            window.location.href = '/room-choice';
+        });
+    }
+
+    if (cancelSearchBtn) {
+        cancelSearchBtn.addEventListener('click', () => {
+            console.log('🛑 Recherche annulée');
+            hideLoadingScreen();
+            socket.emit('cancelSearch');
+            window.location.reload();
+        });
+    }
+}
+
+function setupSocketListeners() {
     socket.on('connect', () => {
-        console.log(`✅ Connecté au serveur (${serverIp})`);
-        document.body.classList.remove('offline');
-    });
-
-    socket.on('disconnect', () => {
-        console.log('🔌 Déconnecté du serveur');
-        document.body.classList.add('offline');
+        console.log('✅ Connecté au serveur');
     });
 
     socket.on('connect_error', (error) => {
         console.error('❌ Erreur de connexion:', error);
-        showError('Erreur de connexion au serveur');
+        alert('Impossible de se connecter au serveur. Vérifiez votre connexion.');
+        hideLoadingScreen();
     });
 
-    socket.on('waitingForOpponent', () => showLoadingScreen('Recherche d\'un adversaire...'));
+    socket.on('waitingForOpponent', () => {
+        console.log('⌛ En attente d\'un adversaire');
+        showLoadingScreen();
+    });
 
-    socket.on('gameStart', ({ roomCode }) => {
-        console.log(`🎮 Partie trouvée, redirection vers gameboard (Room: ${roomCode})`);
+    socket.on('gameStart', (data) => {
+        console.log('🎮 Début de partie:', data);
         hideLoadingScreen();
-        window.location.href = `/gameboard?roomId=${roomCode}`;
+        window.location.href = `/gameboard?roomId=${data.roomCode}`;
     });
 
     socket.on('error', (error) => {
+        console.error('❌ Erreur:', error);
         hideLoadingScreen();
-        showError(error.message || 'Une erreur est survenue');
+        alert(error.message || 'Une erreur est survenue');
     });
 
-    setupEventListeners(socket, userData);
+    socket.on('disconnect', () => {
+        console.log('🔌 Déconnecté du serveur');
+        hideLoadingScreen();
+        alert('Déconnecté du serveur. Rechargement...');
+        window.location.reload();
+    });
 }
 
-// 📌 Configuration de l'interface utilisateur
-function setupUI(userData) {
-    const userAvatar = document.getElementById('user-avatar');
-    const userName = document.getElementById('user-name');
-
-    if (userAvatar && userName) {
-        userAvatar.src = userData.avatarSrc;
-        userAvatar.alt = `Avatar de ${userData.name}`;
-        userName.textContent = userData.name;
+function showLoadingScreen() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('hidden');
     } else {
-        console.error('❌ Éléments de l\'interface utilisateur introuvables.');
+        console.error('❌ Élément loading-overlay non trouvé');
     }
-}
-
-// 📌 Gestion des événements de l'interface
-function setupEventListeners(socket, userData) {
-    // 🔹 Recherche de partie aléatoire
-    const randomGameBtn = document.getElementById('random-game');
-    if (randomGameBtn) {
-        randomGameBtn.addEventListener('click', () => {
-            console.log('🔍 Recherche d\'un adversaire...');
-            showLoadingScreen('Recherche d\'un adversaire...');
-            socket.emit('findRandomGame', userData);
-        });
-    } else {
-        console.warn('⚠️ Bouton "random-game" introuvable.');
-    }
-
-    // 🔹 Création d'une room privée
-    const createRoomBtn = document.getElementById('create-room');
-    if (createRoomBtn) {
-        createRoomBtn.addEventListener('click', () => {
-            console.log('🏠 Création d\'une room privée.');
-            window.location.href = '/room-choice';
-        });
-    } else {
-        console.warn('⚠️ Bouton "create-room" introuvable.');
-    }
-
-    // 🔹 Annulation de la recherche
-    const cancelSearchBtn = document.getElementById('cancel-search');
-    if (cancelSearchBtn) {
-        cancelSearchBtn.addEventListener('click', () => {
-            console.log('❌ Annulation de la recherche.');
-            socket.emit('cancelSearch');
-            hideLoadingScreen();
-        });
-    } else {
-        console.warn('⚠️ Bouton "cancel-search" introuvable.');
-    }
-}
-
-// 📌 Chargement des données utilisateur
-function loadUserData() {
-    try {
-        return JSON.parse(localStorage.getItem('userData'));
-    } catch {
-        console.error('❌ Erreur lors du chargement des données utilisateur.');
-        return null;
-    }
-}
-
-// 📌 Redirection si l'utilisateur n'est pas connecté
-function redirectToHome() {
-    console.warn('🔄 Redirection vers la page d\'accueil.');
-    window.location.href = '/';
-}
-
-// 📌 Récupération de l'IP et du port du serveur
-async function fetchServerConfig() {
-    try {
-        const response = await fetch('/server-config');
-        const config = await response.json();
-        console.log(`📡 Serveur WebSocket détecté sur: ${config.serverIp}:${config.serverPort}`);
-        return config;
-    } catch (error) {
-        console.error('❌ Erreur récupération IP serveur:', error);
-        return { serverIp: 'localhost', serverPort: 10000 };
-    }
-}
-
-// 📌 Gestion du chargement
-function showLoadingScreen(message) {
-    const overlay = document.getElementById('loading-overlay');
-    const messageElement = document.getElementById('loading-message');
-
-    if (overlay) overlay.classList.remove('hidden');
-    if (messageElement) messageElement.textContent = message;
 }
 
 function hideLoadingScreen() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) overlay.classList.add('hidden');
-}
-
-// 📌 Affichage d'une erreur simple
-function showError(message) {
-    alert(`⚠️ ${message}`);
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('hidden');
+    } else {
+        console.error('❌ Élément loading-overlay non trouvé');
+    }
 }

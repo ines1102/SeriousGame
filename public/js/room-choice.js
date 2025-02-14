@@ -1,128 +1,142 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    const userData = loadUserData();
-    if (!userData) return redirectToHome();
-
-    const serverConfig = await fetchServerConfig();
-    initializeSocket(serverConfig.serverIp, userData);
-    setupUI(userData);
+const socket = io(`https://seriousgame-ds65.onrender.com`, {
+    secure: true,
+    rejectUnauthorized: false,
+    transports: ['websocket']
 });
 
-// 📌 Connexion WebSocket optimisée
-function initializeSocket(serverIp, userData) {
-    const socket = io("https://seriousgame.onrender.com", {
-        transports: ["polling"],
-        secure: true,
-        rejectUnauthorized: false,
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    
+    if (!userData) {
+        console.error('🚨 Données utilisateur manquantes, retour à l\'accueil.');
+        window.location.href = '/';
+        return;
+    }
 
-    socket.on('connect', () => console.log(`✅ Connecté au serveur (${serverIp})`));
-    socket.on('disconnect', () => console.log('🔌 Déconnecté du serveur'));
+    console.log('🔒 Chargement des données utilisateur:', userData);
 
-    // 📌 Création de la room
-    document.getElementById('create-room')?.addEventListener('click', () => {
-        showLoadingScreen('Création de la room...');
-        socket.emit('createRoom', userData);
-    });
+    initializeUI(userData);
+    setupEventListeners(userData);
+    setupSocketListeners();
 
-    // 📌 Réception du code de room après création
-    socket.on('roomCreated', ({ roomCode }) => {
-        hideLoadingScreen();
-        updateRoomCode(roomCode);
-    });
+    socket.emit('userConnected', userData);
+});
 
-    // 📌 Rejoindre une room
-    document.getElementById('join-room')?.addEventListener('click', () => {
-        const roomCode = document.getElementById('room-code')?.value.trim();
-        if (!roomCode || !/^\d{4}$/.test(roomCode)) {
-            showError('Le code doit contenir 4 chiffres');
-            return;
-        }
-
-        showLoadingScreen('Connexion à la room...');
-        socket.emit('joinRoom', { ...userData, roomCode });
-    });
-
-    // 📌 Démarrage de la partie après que deux joueurs sont connectés
-    socket.on('gameStart', ({ roomCode }) => {
-        hideLoadingScreen();
-        window.location.href = `/gameboard?roomId=${roomCode}`;
-    });
-
-    // 📌 Gestion des erreurs
-    socket.on('error', (error) => {
-        hideLoadingScreen();
-        showError(error.message || 'Une erreur est survenue');
-    });
-}
-
-function setupUI(userData) {
+function initializeUI(userData) {
     const userAvatar = document.getElementById('user-avatar');
     const userName = document.getElementById('user-name');
 
     if (userAvatar && userName) {
         userAvatar.src = userData.avatarSrc;
-        userAvatar.alt = `Avatar de ${userData.name}`;
         userName.textContent = userData.name;
+    } else {
+        console.error('❌ Éléments UI utilisateur non trouvés');
     }
 }
 
-// 📌 Affichage du code de room
-function updateRoomCode(code) {
-    const displayCode = document.getElementById('display-code');
-    const roomCodeDisplay = document.getElementById('room-code-display');
+function setupEventListeners(userData) {
+    const createRoomBtn = document.getElementById('create-room');
+    const joinRoomBtn = document.getElementById('join-room');
+    const roomCodeInput = document.getElementById('room-code');
+    const copyCodeBtn = document.getElementById('copy-code');
+    const cancelWaitBtn = document.getElementById('cancel-wait');
 
-    if (displayCode && roomCodeDisplay) {
-        displayCode.textContent = code;
-        roomCodeDisplay.classList.remove('hidden');
+    if (createRoomBtn) {
+        createRoomBtn.addEventListener('click', () => {
+            console.log('🎲 Création de room...');
+            showLoadingScreen();
+            socket.emit('createRoom', userData);
+        });
+    }
+
+    if (joinRoomBtn && roomCodeInput) {
+        joinRoomBtn.addEventListener('click', () => {
+            const roomCode = roomCodeInput.value.trim();
+            if (roomCode.length !== 4) {
+                alert('⚠️ Veuillez entrer un code de room valide (4 chiffres)');
+                return;
+            }
+            
+            console.log('🔍 Tentative de rejoindre la room:', roomCode);
+            showLoadingScreen();
+            socket.emit('joinRoom', { ...userData, roomCode });
+        });
+    }
+
+    if (copyCodeBtn) {
+        copyCodeBtn.addEventListener('click', () => {
+            const codeElement = document.getElementById('display-code');
+            if (codeElement) {
+                navigator.clipboard.writeText(codeElement.textContent)
+                    .then(() => alert('📋 Code copié !'))
+                    .catch(err => console.error('❌ Erreur de copie:', err));
+            }
+        });
+    }
+
+    if (cancelWaitBtn) {
+        cancelWaitBtn.addEventListener('click', () => {
+            console.log('🛑 Recherche annulée');
+            hideLoadingScreen();
+            socket.emit('cancelWaitingRoom');
+            window.location.reload();
+        });
     }
 }
 
-// 📌 Chargement des données utilisateur
-function loadUserData() {
-    try {
-        return JSON.parse(localStorage.getItem('userData'));
-    } catch {
-        return null;
-    }
+function setupSocketListeners() {
+    socket.on('connect', () => {
+        console.log('✅ Connecté au serveur');
+    });
+
+    socket.on('roomCreated', (data) => {
+        console.log('🏠 Room créée:', data);
+    
+        const displayCode = document.getElementById('display-code');
+        const roomCodeDisplay = document.getElementById('room-code-display');
+    
+        if (displayCode && roomCodeDisplay) {
+            displayCode.textContent = data.roomCode;
+            roomCodeDisplay.classList.remove('hidden');  // Afficher la div
+            console.log('✅ Code de room affiché:', data.roomCode);
+        } else {
+            console.error('❌ Élément `#display-code` ou `#room-code-display` manquant');
+        }
+    });
+
+    socket.on('gameStart', (data) => {
+        console.log('🎮 Début de partie:', data);
+        window.location.href = `/gameboard?roomId=${data.roomCode}`;
+    });
+
+    socket.on('roomError', (error) => {
+        console.error('❌ Erreur de room:', error);
+        hideLoadingScreen();
+        alert(error);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('🔌 Déconnecté du serveur');
+        hideLoadingScreen();
+        alert('🔄 Déconnecté du serveur. Rechargement...');
+        window.location.reload();
+    });
 }
 
-// 📌 Redirection si l'utilisateur n'est pas connecté
-function redirectToHome() {
-    window.location.href = '/';
-}
-
-// 📌 Récupération de l'IP du serveur
-async function fetchServerConfig() {
-    try {
-        const response = await fetch('/server-config');
-        const config = await response.json();
-        console.log(`📡 Serveur WebSocket détecté sur: ${config.serverIp}`);
-        return config;
-    } catch (error) {
-        console.error('❌ Erreur récupération IP serveur:', error);
-        return { serverIp: 'localhost' };
-    }
-}
-
-// 📌 Gestion du chargement
-function showLoadingScreen(message) {
-    const loading = document.getElementById('loading-overlay');
-    if (loading) {
-        document.getElementById('loading-message').textContent = message;
-        loading.classList.remove('hidden');
+function showLoadingScreen() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('hidden');
+    } else {
+        console.error('❌ Élément #loading-overlay non trouvé');
     }
 }
 
 function hideLoadingScreen() {
-    const loading = document.getElementById('loading-overlay');
-    if (loading) loading.classList.add('hidden');
-}
-
-// 📌 Affichage des erreurs
-function showError(message) {
-    alert(`⚠️ ${message}`);
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('hidden');
+    } else {
+        console.error('❌ Élément #loading-overlay non trouvé');
+    }
 }
