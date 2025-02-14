@@ -55,7 +55,7 @@ async function initSocket(serverIp) {
         socket = io(`https://${serverIp}:10000`, {
             secure: true,
             rejectUnauthorized: false,
-            transports: ['websocket', 'polling'],
+            transports: ['polling'],
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,

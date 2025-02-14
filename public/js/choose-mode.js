@@ -17,7 +17,7 @@ function initializeSocket(serverIp, serverPort, userData) {
     console.log(`📡 Tentative de connexion au serveur WebSocket: ${serverIp}:${serverPort}`);
 
     const socket = io(`https://seriousgame-ds65.onrender.com`, {
-        transports: ["websocket", "polling"],
+        transports: ["polling"],
         secure: true,
         rejectUnauthorized: false,
         reconnection: true,

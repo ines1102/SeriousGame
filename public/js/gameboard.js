@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // 📌 Connexion WebSocket optimisée
 function initializeSocket(serverIp, userData) {
     const socket = io("https://seriousgame.onrender.com", {
-        transports: ["websocket", "polling"],
+        transports: ["polling"],
         secure: true,
         rejectUnauthorized: false,
         reconnection: true,
