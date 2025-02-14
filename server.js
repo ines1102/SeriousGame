@@ -1,5 +1,5 @@
 import express from 'express';
-import { createServer } from 'https';
+import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
@@ -32,7 +32,7 @@ const options = {
 
 // 📌 Initialisation du serveur Express et WebSocket
 const app = express();
-const server = createServer(options, app);
+const server = createServer(app);
 const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] },
     transports: ['websocket', 'polling'],
@@ -57,7 +57,7 @@ const rooms = new Map();
 
 // 📌 Gestion des connexions WebSocket
 io.on('connection', (socket) => {
-    console.log(`🔗 Connexion: ${socket.id}`);
+    console.log(`🔗 Nouvelle connexion: ${socket.id}`);
 
     // 📌 Création d'une room
     socket.on('createRoom', (userData) => {
@@ -148,6 +148,10 @@ io.on('connection', (socket) => {
     });
 });
 
+io.engine.on("headers", (headers, req) => {
+    headers["Access-Control-Allow-Origin"] = "*"; // 🔥 Fix CORS pour WebSockets
+});
+
 // 📌 Nettoyage automatique des rooms vides
 setInterval(() => {
     for (const [roomCode, room] of rooms) {
@@ -162,6 +166,6 @@ setInterval(() => {
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Serveur HTTPS disponible sur:`);
-    console.log(`- Local: https://localhost:3443`);
-    console.log(`- Réseau: https://${SERVER_IP}:3443`);
+    console.log(`- Local: https://localhost:${PORT}`);
+    console.log(`- Réseau: https://${SERVER_IP}:${PORT}`);
 });
