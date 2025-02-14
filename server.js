@@ -4,7 +4,6 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import rateLimit from 'express-rate-limit';
 
 // Configuration des chemins
 const __filename = fileURLToPath(import.meta.url);
