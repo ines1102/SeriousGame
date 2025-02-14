@@ -1,19 +1,11 @@
 import Game from './game.js';
 import DragAndDropManager from './dragAndDrop.js';
+import socket from './websocket.js';
 
 // Variables globales
 let gameInstance;
 let currentRoomId;
 let userData;
-
-// Configuration Socket.io
-const socket = io("wss://seriousgame-ds65.onrender.com", {
-    secure: true,
-    transports: ["websocket"],
-    reconnection: true,
-    reconnectionAttempts: 5,
-    timeout: 10000
-});
 
 // Initialisation du jeu
 document.addEventListener('DOMContentLoaded', async () => {

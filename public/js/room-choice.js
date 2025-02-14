@@ -1,29 +1,27 @@
-const socket = io("wss://seriousgame-ds65.onrender.com", {
-    secure: true,
-    transports: ["websocket"],
-    reconnection: true,
-    reconnectionAttempts: 5,
-    timeout: 10000
-});
+import { socket } from './websocket.js'; // ✅ Importation du WebSocket centralisé
 
 document.addEventListener('DOMContentLoaded', () => {
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    
-    if (!userData) {
-        console.error('🚨 Données utilisateur manquantes, retour à l\'accueil.');
-        window.location.href = '/';
-        return;
+    try {
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        
+        if (!userData) {
+            console.error('🚨 Aucune donnée utilisateur, retour à l\'accueil.');
+            window.location.href = '/';
+            return;
+        }
+
+        console.log('🔒 Données utilisateur chargées:', userData);
+
+        initializeUI(userData);
+        setupEventListeners(userData);
+        setupSocketListeners(userData);
+        socket.emit('userConnected', userData);
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement:', error);
     }
-
-    console.log('🔒 Chargement des données utilisateur:', userData);
-
-    initializeUI(userData);
-    setupEventListeners(userData);
-    setupSocketListeners();
-
-    socket.emit('userConnected', userData);
 });
 
+// 📌 Initialisation de l'UI avec les infos de l'utilisateur
 function initializeUI(userData) {
     const userAvatar = document.getElementById('user-avatar');
     const userName = document.getElementById('user-name');
@@ -36,6 +34,7 @@ function initializeUI(userData) {
     }
 }
 
+// 📌 Ajout des écouteurs d'événements pour la gestion des rooms
 function setupEventListeners(userData) {
     const createRoomBtn = document.getElementById('create-room');
     const joinRoomBtn = document.getElementById('join-room');
@@ -58,7 +57,7 @@ function setupEventListeners(userData) {
                 alert('⚠️ Veuillez entrer un code de room valide (4 chiffres)');
                 return;
             }
-            
+
             console.log('🔍 Tentative de rejoindre la room:', roomCode);
             showLoadingScreen();
             socket.emit('joinRoom', { ...userData, roomCode });
@@ -86,17 +85,18 @@ function setupEventListeners(userData) {
     }
 }
 
-function setupSocketListeners() {
+// 📌 Gestion des événements WebSocket
+function setupSocketListeners(userData) {
     socket.on('connect', () => {
         console.log('✅ Connecté au serveur');
     });
 
     socket.on('roomCreated', (data) => {
         console.log('🏠 Room créée:', data);
-    
+
         const displayCode = document.getElementById('display-code');
         const roomCodeDisplay = document.getElementById('room-code-display');
-    
+
         if (displayCode && roomCodeDisplay) {
             displayCode.textContent = data.roomCode;
             roomCodeDisplay.classList.remove('hidden');  // Afficher la div
@@ -125,6 +125,7 @@ function setupSocketListeners() {
     });
 }
 
+// 📌 Gestion de l'affichage du chargement
 function showLoadingScreen() {
     const loadingOverlay = document.getElementById('loading-overlay');
     if (loadingOverlay) {

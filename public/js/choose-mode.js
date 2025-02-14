@@ -1,15 +1,9 @@
-const socket = io("wss://seriousgame-ds65.onrender.com", {
-    secure: true,
-    transports: ["websocket"],
-    reconnection: true,
-    reconnectionAttempts: 5,
-    timeout: 10000
-});
+import { socket } from './websocket.js'; // ✅ Importation du WebSocket centralisé
 
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const userData = JSON.parse(localStorage.getItem('userData'));
-        
+
         if (!userData) {
             console.error('🚨 Aucune donnée utilisateur, retour à l\'accueil.');
             window.location.href = '/';
@@ -27,34 +21,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// 📌 Initialisation de l'UI avec les infos de l'utilisateur
 function initializeUI(userData) {
     const userAvatar = document.getElementById('user-avatar');
     const userName = document.getElementById('user-name');
-    
+
     if (userAvatar && userName) {
         userAvatar.src = userData.avatarSrc;
         userName.textContent = userData.name;
     } else {
-        console.error('❌ Éléments UI non trouvés');
+        console.error('❌ Éléments UI utilisateur non trouvés');
     }
 }
 
+// 📌 Ajout des écouteurs d'événements pour la gestion des modes de jeu
 function setupEventListeners(userData) {
-    const randomModeBtn = document.getElementById('random-mode');
-    const friendModeBtn = document.getElementById('friend-mode');
+    const randomGameBtn = document.getElementById('random-game');
+    const friendGameBtn = document.getElementById('friend-game');
     const cancelSearchBtn = document.getElementById('cancel-search');
 
-    if (randomModeBtn) {
-        randomModeBtn.addEventListener('click', () => {
+    if (randomGameBtn) {
+        randomGameBtn.addEventListener('click', () => {
             console.log('🎲 Recherche de partie aléatoire...');
             localStorage.setItem('gameMode', 'random');
-            showLoadingScreen();
+            showLoadingScreen('Recherche d\'un adversaire...');
             socket.emit('findRandomGame', userData);
         });
     }
 
-    if (friendModeBtn) {
-        friendModeBtn.addEventListener('click', () => {
+    if (friendGameBtn) {
+        friendGameBtn.addEventListener('click', () => {
             console.log('👥 Mode ami sélectionné');
             localStorage.setItem('gameMode', 'friend');
             window.location.href = '/room-choice';
@@ -71,20 +67,15 @@ function setupEventListeners(userData) {
     }
 }
 
+// 📌 Gestion des événements WebSocket
 function setupSocketListeners() {
     socket.on('connect', () => {
         console.log('✅ Connecté au serveur');
     });
 
-    socket.on('connect_error', (error) => {
-        console.error('❌ Erreur de connexion:', error);
-        alert('Impossible de se connecter au serveur. Vérifiez votre connexion.');
-        hideLoadingScreen();
-    });
-
     socket.on('waitingForOpponent', () => {
         console.log('⌛ En attente d\'un adversaire');
-        showLoadingScreen();
+        showLoadingScreen('Recherche d\'un adversaire...');
     });
 
     socket.on('gameStart', (data) => {
@@ -93,34 +84,37 @@ function setupSocketListeners() {
         window.location.href = `/gameboard?roomId=${data.roomCode}`;
     });
 
-    socket.on('error', (error) => {
+    socket.on('roomError', (error) => {
         console.error('❌ Erreur:', error);
         hideLoadingScreen();
-        alert(error.message || 'Une erreur est survenue');
+        alert(error);
     });
 
     socket.on('disconnect', () => {
         console.log('🔌 Déconnecté du serveur');
         hideLoadingScreen();
-        alert('Déconnecté du serveur. Rechargement...');
+        alert('🔄 Déconnecté du serveur. Rechargement...');
         window.location.reload();
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('❌ Erreur de connexion:', error);
+        alert('Impossible de se connecter au serveur. Vérifiez votre connexion.');
+        hideLoadingScreen();
     });
 }
 
-function showLoadingScreen() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    if (loadingOverlay) {
-        loadingOverlay.classList.remove('hidden');
-    } else {
-        console.error('❌ Élément loading-overlay non trouvé');
-    }
+// 📌 Affichage du message de chargement
+function showLoadingScreen(message) {
+    const overlay = document.getElementById('loading-overlay');
+    const messageElement = document.getElementById('loading-message');
+
+    if (overlay) overlay.classList.remove('hidden');
+    if (messageElement) messageElement.textContent = message;
 }
 
+// 📌 Masquer l'écran de chargement
 function hideLoadingScreen() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    if (loadingOverlay) {
-        loadingOverlay.classList.add('hidden');
-    } else {
-        console.error('❌ Élément loading-overlay non trouvé');
-    }
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.classList.add('hidden');
 }
