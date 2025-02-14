@@ -59,6 +59,17 @@ function initializeSocket(serverIp, userData) {
     });
 }
 
+function setupUI(userData) {
+    const userAvatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+
+    if (userAvatar && userName) {
+        userAvatar.src = userData.avatarSrc;
+        userAvatar.alt = `Avatar de ${userData.name}`;
+        userName.textContent = userData.name;
+    }
+}
+
 // 📌 Affichage du code de room
 function updateRoomCode(code) {
     const displayCode = document.getElementById('display-code');

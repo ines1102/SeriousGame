@@ -4,7 +4,9 @@ import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import cors from 'cors';
 import Deck from './public/js/deck.js';
+import { c } from 'docker/src/languages.js';
 
 // 📌 Détection de l'IP locale pour une connexion réseau
 function getLocalIP() {
@@ -28,7 +30,7 @@ const PORT = process.env.PORT || 10000;
 const server = createServer(app);
 const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] },
-    transports: ["polling"]
+    transports: ["websocket","polling"]
 });
 
 // 📌 Middleware
@@ -42,7 +44,7 @@ app.get('/room-choice', (req, res) => res.sendFile(path.resolve('public/room-cho
 app.get('/gameboard', (req, res) => res.sendFile(path.resolve('public/gameboard.html')));
 
 app.get('/server-config', (req, res) => {
-    res.json({ serverIp: getLocalIP(), serverPort: PORT });
+    res.json({ serverIp: "seriousgame-ds65.onrender.com" });
 });
 
 // 📌 Stockage des rooms et joueurs
@@ -157,7 +159,5 @@ setInterval(() => {
 
 // 📌 Démarrage du serveur HTTPS
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Serveur HTTPS disponible sur:`);
-    console.log(`- Local: https://localhost:${PORT}`);
-    console.log(`- Réseau: https://${getLocalIP()}:${PORT}`);
+    console.log(`✅ Serveur disponible sur https://seriousgame-ds65.onrender.com`);
 });
