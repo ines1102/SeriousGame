@@ -141,6 +141,15 @@ io.on('connection', (socket) => {
     });
 });
 
+// 🔥 Forcer le type MIME pour JavaScript
+app.use('/js', express.static(path.join(__dirname, 'public/js'), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+    }
+}));
+
 // 📌 Nettoyage des rooms inactives toutes les heures
 setInterval(() => {
     const now = Date.now();
