@@ -1,210 +1,263 @@
-// ✅ Importation correcte du deck
-import Deck from './deck.js'; 
-import socket from './websocket.js';
+import Deck from './deck.js';
+import { EventEmitter } from 'events';
 
-// ✅ Création de l'instance du deck (évite les problèmes de référence)
-const deckInstance = new Deck();
+// 📌 Configuration du jeu
+const GAME_CONFIG = {
+    MAX_PLAYERS: 2,
+    MAX_CARDS_IN_HAND: 5,
+    MAX_SLOTS: 9
+};
 
-class Game {
+// 📌 États du jeu
+const GAME_STATES = {
+    WAITING: 'waiting',
+    INITIALIZED: 'initialized',
+    PLAYING: 'playing',
+    FINISHED: 'finished'
+};
+
+// 📌 Types d'événements
+const GAME_EVENTS = {
+    CARD_PLAYED: 'cardPlayed',
+    STATE_UPDATED: 'stateUpdated',
+    TURN_CHANGED: 'turnChanged',
+    ERROR: 'error'
+};
+
+class GameError extends Error {
+    constructor(message, code) {
+        super(message);
+        this.name = 'GameError';
+        this.code = code;
+    }
+}
+
+class GameState {
+    constructor() {
+        this.playerCards = [];
+        this.opponentCards = [];
+        this.playedCards = new Map();
+        this.currentTurn = null;
+        this.status = GAME_STATES.WAITING;
+        this.lastAction = null;
+        this.turnNumber = 0;
+    }
+
+    clone() {
+        const newState = new GameState();
+        newState.playerCards = [...this.playerCards];
+        newState.opponentCards = [...this.opponentCards];
+        newState.playedCards = new Map(this.playedCards);
+        newState.currentTurn = this.currentTurn;
+        newState.status = this.status;
+        newState.lastAction = this.lastAction;
+        newState.turnNumber = this.turnNumber;
+        return newState;
+    }
+}
+
+class Game extends EventEmitter {
     constructor(socket) {
-        if (!socket) {
-            throw new Error('⚠️ Socket est requis pour initialiser le jeu');
-        }
-
+        super();
+        this.validateSocket(socket);
+        
         this.socket = socket;
-        this.deck = deckInstance; // Utilisation directe de l'instance
-        this.gameState = {
-            playerCards: [],
-            opponentCards: [],
-            playedCards: new Map(),
-            currentTurn: null,
-            isInitialized: false
+        this.deck = new Deck();
+        this.state = new GameState();
+        this.setupSocketListeners();
+    }
+
+    validateSocket(socket) {
+        if (!socket || typeof socket.emit !== 'function') {
+            throw new GameError('Socket invalide ou manquant', 'INVALID_SOCKET');
+        }
+    }
+
+    setupSocketListeners() {
+        this.socket.on('gameStateUpdate', (newState) => {
+            this.handleStateUpdate(newState);
+        });
+
+        this.socket.on('turnUpdate', (playerId) => {
+            this.handleTurnUpdate(playerId);
+        });
+    }
+
+    // 📌 Initialisation et gestion d'état
+    async initializeGame() {
+        try {
+            console.log('🔄 Initialisation du jeu...');
+            
+            const initialState = await this.createInitialState();
+            this.updateGameState(initialState);
+            
+            this.state.status = GAME_STATES.INITIALIZED;
+            this.emit(GAME_EVENTS.STATE_UPDATED, this.getPublicGameState());
+            
+            return {
+                playerCards: this.state.playerCards,
+                opponentCards: this.state.opponentCards
+            };
+        } catch (error) {
+            this.handleError('Échec de l\'initialisation', error);
+            throw error;
+        }
+    }
+
+    async createInitialState() {
+        const { joueur1, joueur2 } = this.deck.creerDecksJoueurs();
+        return {
+            playerCards: joueur1.main,
+            opponentCards: joueur2.main,
+            currentTurn: this.socket.id,
+            status: GAME_STATES.INITIALIZED
         };
     }
 
-    /**
-     * ✅ Initialise la partie et retourne les mains des joueurs.
-     */
-    initializeGame() {
-        try {
-            console.log('🔄 Initialisation du jeu...');
-            const partieInitiale = this.deck.creerDecksJoueurs();
-
-            this.gameState = {
-                ...this.gameState,
-                playerCards: partieInitiale.joueur1.main,
-                opponentCards: partieInitiale.joueur2.main,
-                isInitialized: true
-            };
-
-            console.log('🃏 Mains initialisées:', {
-                player: this.gameState.playerCards,
-                opponent: this.gameState.opponentCards
-            });
-
-            return {
-                playerCards: this.gameState.playerCards,
-                opponentCards: this.gameState.opponentCards
-            };
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'initialisation du jeu:', error);
-            throw new Error('Échec de l\'initialisation du jeu');
-        }
-    }
-
-    /**
-     * ✅ Joue une carte et met à jour l'état du jeu.
-     */
+    // 📌 Gestion des cartes
     playCard(cardId, slot) {
         try {
-            if (!this.validateCardPlay(cardId, slot)) {
-                return false;
-            }
+            this.validatePlayAction(cardId, slot);
 
             const card = this.findCard(cardId);
-            if (!card) return false;
+            const newState = this.state.clone();
+            
+            newState.playedCards.set(slot, card);
+            newState.playerCards = this.state.playerCards.filter(c => c.id !== cardId);
+            newState.lastAction = { type: 'PLAY', cardId, slot };
+            newState.turnNumber++;
 
-            this.gameState.playedCards.set(slot, card);
-            this.removeCardFromHand(cardId);
-
-            // 🎯 Émet l'événement au serveur
+            this.updateGameState(newState);
             this.emitCardPlayed(card, slot);
-
-            console.log(`🃏 Carte jouée: ${card.name} sur slot ${slot}`);
 
             return {
                 success: true,
                 card,
                 slot,
-                newPlayerCards: this.gameState.playerCards
+                newPlayerCards: this.state.playerCards
             };
         } catch (error) {
-            console.error('❌ Erreur lors du jeu de la carte:', error);
-            return false;
+            this.handleError('Erreur lors du jeu de la carte', error);
+            return { success: false, error: error.message };
         }
     }
 
-    /**
-     * ✅ Vérifie si le jeu d'une carte est valide.
-     */
-    validateCardPlay(cardId, slot) {
-        return cardId && 
-               slot && 
-               !this.gameState.playedCards.has(slot) &&
-               this.findCard(cardId) !== undefined;
+    validatePlayAction(cardId, slot) {
+        if (!this.isPlayerTurn()) {
+            throw new GameError('Ce n\'est pas votre tour', 'NOT_YOUR_TURN');
+        }
+        if (!this.isValidSlot(slot)) {
+            throw new GameError('Slot invalide', 'INVALID_SLOT');
+        }
+        if (!this.isSlotAvailable(slot)) {
+            throw new GameError('Slot déjà occupé', 'SLOT_OCCUPIED');
+        }
+        if (!this.findCard(cardId)) {
+            throw new GameError('Carte non trouvée', 'CARD_NOT_FOUND');
+        }
     }
 
-    /**
-     * ✅ Trouve une carte dans la main du joueur.
-     */
+    isValidSlot(slot) {
+        return typeof slot === 'number' && 
+               slot >= 0 && 
+               slot < GAME_CONFIG.MAX_SLOTS;
+    }
+
+    // 📌 Helpers et utilitaires
     findCard(cardId) {
-        return this.gameState.playerCards.find(card => card.id === cardId);
+        return this.state.playerCards.find(card => card.id === cardId);
     }
 
-    /**
-     * ✅ Retire une carte de la main du joueur.
-     */
-    removeCardFromHand(cardId) {
-        this.gameState.playerCards = this.gameState.playerCards.filter(
-            card => card.id !== cardId
-        );
+    isSlotAvailable(slot) {
+        return !this.state.playedCards.has(slot);
     }
 
-    /**
-     * ✅ Envoie un événement au serveur lorsqu'une carte est jouée.
-     */
+    isPlayerTurn() {
+        return this.state.currentTurn === this.socket.id;
+    }
+
+    // 📌 Communication réseau
     emitCardPlayed(card, slot) {
-        this.socket.emit('cardPlayed', {
+        this.socket.emit(GAME_EVENTS.CARD_PLAYED, {
             cardId: card.id,
-            slot: slot,
-            cardData: card
+            slot,
+            cardData: card,
+            turnNumber: this.state.turnNumber
         });
     }
 
-    /**
-     * ✅ Retourne les cartes jouées.
-     */
-    getPlayedCards() {
-        return Object.fromEntries(this.gameState.playedCards);
-    }
-
-    /**
-     * ✅ Retourne les cartes du joueur actuel.
-     */
-    getCurrentPlayerCards() {
-        return this.gameState.playerCards;
-    }
-
-    /**
-     * ✅ Retourne les cartes de l'adversaire.
-     */
-    getCurrentOpponentCards() {
-        return this.gameState.opponentCards;
-    }
-
-    /**
-     * ✅ Définit le tour en cours.
-     */
-    setCurrentTurn(socketId) {
-        this.gameState.currentTurn = socketId;
-    }
-
-    /**
-     * ✅ Vérifie si c'est le tour du joueur.
-     */
-    isPlayerTurn() {
-        return this.gameState.currentTurn === this.socket.id;
-    }
-
-    /**
-     * ✅ Met à jour l'état du jeu après un événement serveur.
-     */
+    // 📌 Gestion d'état et mise à jour
     updateGameState(newState) {
+        const oldState = this.state.clone();
+        
+        Object.entries(newState).forEach(([key, value]) => {
+            if (this.state.hasOwnProperty(key)) {
+                this.state[key] = value;
+            }
+        });
+
+        this.emit(GAME_EVENTS.STATE_UPDATED, {
+            oldState,
+            newState: this.state.clone()
+        });
+    }
+
+    handleStateUpdate(newState) {
         try {
-            if (!newState) return;
-
-            Object.entries(newState).forEach(([key, value]) => {
-                if (this.gameState.hasOwnProperty(key)) {
-                    this.gameState[key] = value;
-                }
-            });
-
-            console.log('🔄 État du jeu mis à jour:', this.gameState);
+            this.validateStateUpdate(newState);
+            this.updateGameState(newState);
         } catch (error) {
-            console.error('❌ Erreur lors de la mise à jour de l\'état:', error);
-            throw new Error('Échec de la mise à jour de l\'état du jeu');
+            this.handleError('Erreur lors de la mise à jour de l\'état', error);
         }
     }
 
-    /**
-     * ✅ Réinitialise le jeu.
-     */
-    reset() {
-        console.log('🔄 Réinitialisation du jeu...');
-        this.gameState = {
-            playerCards: [],
-            opponentCards: [],
-            playedCards: new Map(),
-            currentTurn: null,
-            isInitialized: false
+    validateStateUpdate(newState) {
+        if (!newState || typeof newState !== 'object') {
+            throw new GameError('État invalide', 'INVALID_STATE');
+        }
+    }
+
+    handleTurnUpdate(playerId) {
+        if (typeof playerId !== 'string') {
+            this.handleError('ID de joueur invalide', new Error('Invalid player ID'));
+            return;
+        }
+        
+        this.state.currentTurn = playerId;
+        this.emit(GAME_EVENTS.TURN_CHANGED, playerId);
+    }
+
+    // 📌 Gestion des erreurs
+    handleError(context, error) {
+        const gameError = error instanceof GameError ? error : new GameError(
+            error.message,
+            'INTERNAL_ERROR'
+        );
+
+        console.error(`❌ ${context}:`, gameError);
+        this.emit(GAME_EVENTS.ERROR, {
+            context,
+            error: gameError
+        });
+    }
+
+    // 📌 État public du jeu
+    getPublicGameState() {
+        return {
+            playedCards: Object.fromEntries(this.state.playedCards),
+            currentTurn: this.state.currentTurn,
+            status: this.state.status,
+            turnNumber: this.state.turnNumber,
+            lastAction: this.state.lastAction
         };
     }
 
-    /**
-     * ✅ Vérifie si une carte peut être jouée.
-     */
-    isCardPlayable(cardId) {
-        if (!this.isPlayerTurn()) return false;
-        return this.findCard(cardId) !== undefined;
-    }
-
-    /**
-     * ✅ Vérifie si un slot est disponible.
-     */
-    isSlotAvailable(slot) {
-        return !this.gameState.playedCards.has(slot);
+    // 📌 Réinitialisation
+    reset() {
+        console.log('🔄 Réinitialisation du jeu...');
+        this.state = new GameState();
+        this.emit(GAME_EVENTS.STATE_UPDATED, this.getPublicGameState());
     }
 }
 
-// ✅ Exportation correcte de la classe Game
-export default Game;
+export { Game, GAME_STATES, GAME_EVENTS, GameError };

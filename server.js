@@ -58,12 +58,6 @@ const RoomManager = {
 // Création de l'application Express
 const app = express();
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.'
-});
 
 app.use(limiter);
 
