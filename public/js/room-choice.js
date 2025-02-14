@@ -9,10 +9,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 📌 Connexion WebSocket optimisée
 function initializeSocket(serverIp, userData) {
-    const socket = io(`https://${serverIp}:3443`, {
+    const socket = io("https://seriousgame.onrender.com", {
+        transports: ["websocket", "polling"],
         secure: true,
-        rejectUnauthorized: false, // 🔥 SSL auto-signé supporté
-        transports: ['websocket', 'polling'],
+        rejectUnauthorized: false,
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
