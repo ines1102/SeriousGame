@@ -5,7 +5,6 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomInt } from 'crypto';
-import Deck from './public/js/deck.js';
 
 // 📌 Configuration des chemins
 const __filename = fileURLToPath(import.meta.url);
@@ -18,8 +17,10 @@ const CONFIG = {
     STATIC_PATHS: {
         PUBLIC: path.join(__dirname, 'public'),
         AVATARS: path.join(__dirname, 'public', 'Avatars'),
-        CARTES: path.join(__dirname, 'public', 'Cartes'),
-        FAVICON: path.join(__dirname, 'public', 'favicon_io')
+        JS: path.join(__dirname, 'public', 'js'),
+        CSS: path.join(__dirname, 'public', 'css'),
+        FAVICON: path.join(__dirname, 'public', 'favicon_io'),
+        CARTES: path.join(__dirname, 'public', 'Cartes')
     },
     CORS_OPTIONS: {
         origin: "https://seriousgame-ds65.onrender.com",
@@ -33,17 +34,7 @@ const CONFIG = {
     }
 };
 
-// 📌 Fonction pour valider les données utilisateur
-function validateUserData(userData) {
-    return userData &&
-        typeof userData.name === 'string' &&
-        userData.name.length >= 2 &&
-        userData.name.length <= 20 &&
-        ['male', 'female'].includes(userData.sex) &&
-        typeof userData.avatarId === 'string';
-}
-
-// 📌 Gestionnaire des Rooms
+// 📌 Gestion des Rooms
 class RoomManager {
     constructor() {
         this.rooms = new Map();
@@ -57,7 +48,6 @@ class RoomManager {
             players: [creator],
             gameState: {
                 status: 'waiting',
-                turn: creator.id,
                 startTime: Date.now()
             },
             createdAt: Date.now()
@@ -71,7 +61,9 @@ class RoomManager {
 
     joinRoom(roomCode, player) {
         const room = this.rooms.get(roomCode);
-        if (!room || room.players.length >= CONFIG.GAME.MAX_PLAYERS_PER_ROOM) return null;
+        if (!room || room.players.length >= CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
+            return null;
+        }
 
         room.players.push(player);
         this.playerRooms.set(player.id, roomCode);
@@ -91,14 +83,13 @@ class RoomManager {
 
         if (room.players.length === 0) {
             this.rooms.delete(roomCode);
-            console.log(`🗑️ Room ${roomCode} supprimée`);
+            console.log(`🗑️ Room ${roomCode} supprimée (vide)`);
         }
     }
 
     cleanInactiveRooms() {
         const now = Date.now();
         let cleanedCount = 0;
-
         for (const [roomCode, room] of this.rooms) {
             if (now - room.createdAt > CONFIG.GAME.MAX_INACTIVE_TIME) {
                 this.rooms.delete(roomCode);
@@ -106,23 +97,21 @@ class RoomManager {
                 cleanedCount++;
             }
         }
-
         if (cleanedCount > 0) {
-            console.log(`🧹 ${cleanedCount} rooms inactives supprimées`);
+            console.log(`🧹 ${cleanedCount} rooms inactives nettoyées`);
         }
     }
 }
 
-// 📌 Initialisation du serveur
+// 📌 Initialisation du serveur Express
 const app = express();
 app.use(cors(CONFIG.CORS_OPTIONS));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(CONFIG.STATIC_PATHS.PUBLIC));
 app.use('/Avatars', express.static(CONFIG.STATIC_PATHS.AVATARS));
-app.use('/Cartes', express.static(CONFIG.STATIC_PATHS.CARTES));
-app.use('/favicon_io', express.static(CONFIG.STATIC_PATHS.FAVICON));
 
-// 📌 Routes HTML
+// 📌 Routes pour servir les fichiers HTML
 const routes = [
     { path: '/', file: 'index.html' },
     { path: '/choose-mode', file: 'choose-mode.html' },
@@ -136,7 +125,7 @@ routes.forEach(route => {
     });
 });
 
-// 📌 Route pour vérifier le statut du serveur
+// 🔍 Route de monitoring
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
 });
@@ -151,11 +140,14 @@ const io = new Server(server, {
 // 📌 Gestion des Rooms
 const roomManager = new RoomManager();
 
+let waitingPlayers = []; // 🔄 Liste des joueurs en attente
+
 io.on('connection', (socket) => {
     console.log(`✅ Joueur connecté: ${socket.id}`);
 
-    socket.on('createRoom', (userData) => {
-        if (!validateUserData(userData)) {
+    // 🔹 Création d'une room entre amis
+    socket.on('createFriendRoom', (userData) => {
+        if (!userData || !userData.name || !userData.avatarId || !userData.sex) {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
@@ -170,8 +162,9 @@ io.on('connection', (socket) => {
         socket.emit('roomCreated', { roomCode });
     });
 
-    socket.on('joinRoom', (data) => {
-        if (!validateUserData(data)) {
+    // 🔹 Rejoindre une room entre amis
+    socket.on('joinFriendRoom', (data) => {
+        if (!data || !data.roomCode) {
             socket.emit('roomError', 'Données invalides');
             return;
         }
@@ -183,23 +176,22 @@ io.on('connection', (socket) => {
         }
 
         socket.join(data.roomCode);
-        if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
-            io.to(room.code).emit('gameStart', { roomCode });
-        }
+        io.to(data.roomCode).emit('updatePlayers', room.players);
     });
 
-    // 📌 Matchmaking aléatoire
+    // 🔹 Matchmaking aléatoire
     socket.on('findRandomGame', (userData) => {
-        if (!validateUserData(userData)) {
+        if (!userData || !userData.name || !userData.avatarId || !userData.sex) {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
 
         console.log(`🎲 ${userData.name} cherche une partie aléatoire...`);
 
-        if (roomManager.waitingPlayers.length > 0) {
-            const opponent = roomManager.waitingPlayers.shift();
+        if (waitingPlayers.length > 0) {
+            const opponent = waitingPlayers.shift();
             let roomCode = randomInt(1000, 9999).toString();
+
             const room = roomManager.createRoom(roomCode, opponent);
             roomManager.joinRoom(roomCode, { id: socket.id, ...userData });
 
@@ -209,22 +201,23 @@ io.on('connection', (socket) => {
 
             console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans la room ${roomCode}`);
         } else {
-            roomManager.waitingPlayers.push({ id: socket.id, ...userData });
+            waitingPlayers.push({ id: socket.id, ...userData });
             socket.emit('waitingForOpponent');
             console.log(`⌛ ${userData.name} est en attente d'un adversaire...`);
         }
     });
 
+    // 🔹 Gérer la déconnexion d'un joueur
     socket.on('disconnect', () => {
-        roomManager.waitingPlayers = roomManager.waitingPlayers.filter(p => p.id !== socket.id);
         roomManager.leaveRoom(socket.id);
+        waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);
     });
 });
 
-// 🔄 Nettoyage des rooms inactives
+// 🔄 Nettoyage périodique des rooms inactives
 setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
 
-// 🚀 Lancement du serveur
+// 🚀 Démarrage du serveur
 server.listen(CONFIG.PORT, '0.0.0.0', () => {
-    console.log(`🚀 Serveur en ligne sur le port ${CONFIG.PORT}`);
+    console.log(`🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
 });
