@@ -1,79 +1,73 @@
 import { updatePlayerProfile } from './uiManager.js';
 import { enableDragAndDrop } from './dragAndDrop.js';
 
-// 📌 Connexion au serveur WebSocket
-const socket = io({
-    transports: ['websocket'],
-    upgrade: false,
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
-    timeout: 10000
-});
-
-// 📌 Variables globales
-let userData = JSON.parse(localStorage.getItem('userData')) || {};
+// Variables globales
+let socket;
+let userData = null;
 let opponentData = null;
 let currentRoomId = null;
-let playerHand = [];
-let opponentHand = [];
 
-// 📌 Initialisation du jeu
+/// Initialisation
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🔄 Initialisation du jeu...");
-
+    
+    // Récupérer les données utilisateur
+    userData = JSON.parse(localStorage.getItem('userData'));
     if (!userData || !userData.name) {
         console.error("❌ Données utilisateur manquantes !");
+        window.location.href = '/';
         return;
     }
 
     console.log("📌 Données utilisateur récupérées:", userData);
 
-    socket.emit('requestOpponent');
-
-    // 📌 Mise à jour du profil joueur
+    // Initialiser le socket
+    initializeSocket();
+    
+    // Mettre à jour le profil du joueur
     updatePlayerProfile(userData, false);
-
-    // 📌 Écoute des événements WebSocket
-    setupSocketListeners();
 });
 
-// 📌 Configuration des événements WebSocket
-function setupSocketListeners() {
-    // Gestion des erreurs et de la connexion
-    socket.on('connect_error', (error) => {
-        console.error("❌ Erreur de connexion socket:", error);
-        showErrorMessage("Problème de connexion au serveur. Tentative de reconnexion...");
-    });
-    
-    socket.on('connect', () => {
-        console.log("✅ Connecté au serveur");
-        hideErrorMessage();
-        // Demander les informations de l'adversaire après la connexion
-        socket.emit('requestOpponent');
+function initializeSocket() {
+    socket = io({
+        transports: ['websocket'],
+        upgrade: false
     });
 
-    // Gestion de la partie et de l'adversaire
+    setupSocketListeners();
+}
+
+function setupSocketListeners() {
+    socket.on('connect', () => {
+        console.log("✅ Connecté au serveur");
+        // Envoyer immédiatement une demande de mise à jour de l'adversaire
+        requestOpponentUpdate();
+    });
+
     socket.on('gameStart', (data) => {
         console.log("🎮 Partie démarrée:", data);
-        currentRoomId = data.roomCode;
-        
-        const opponent = data.players.find(p => p.id !== socket.id);
-        if (opponent) {
-            opponentData = opponent;
-            updatePlayerProfile(opponent, true);
-        }
-    });
-    
-    socket.on('updateOpponent', (opponent) => {
-        if (!opponent) {
-            console.warn("⚠️ Données de l'adversaire manquantes");
+        if (!data || !data.players) {
+            console.error("❌ Données de partie invalides");
             return;
         }
+
+        currentRoomId = data.roomCode;
         
-        opponentData = opponent;
-        console.log("📌 Adversaire mis à jour:", opponentData);
-        updatePlayerProfile(opponentData, true);
+        // Trouver et mettre à jour l'adversaire
+        const opponent = data.players.find(p => p.id !== socket.id);
+        if (opponent) {
+            console.log("👥 Adversaire trouvé dans gameStart:", opponent);
+            updateOpponentData(opponent);
+        }
+    });
+
+    socket.on('updateOpponent', (opponent) => {
+        console.log("📌 Réception updateOpponent:", opponent);
+        if (!opponent) {
+            console.warn("⚠️ Données adversaire invalides");
+            return;
+        }
+        updateOpponentData(opponent);
     });
 
     // Gestion des cartes et du jeu
@@ -170,4 +164,23 @@ function updateTurnIndicator(turnPlayerId) {
 function showDisconnectOverlay() {
     const disconnectOverlay = document.getElementById('disconnect-overlay');
     disconnectOverlay.classList.remove('hidden');
+}
+
+function updateOpponentData(opponent) {
+    opponentData = opponent;
+    console.log("🔄 Mise à jour des données adversaire:", opponentData);
+    
+    // Formater les données pour updatePlayerProfile
+    const formattedOpponent = {
+        name: opponent.name,
+        sex: opponent.sex,
+        avatarId: opponent.avatarId
+    };
+    
+    updatePlayerProfile(formattedOpponent, true);
+}
+
+function requestOpponentUpdate() {
+    console.log("📤 Demande de mise à jour de l'adversaire");
+    socket.emit('requestOpponent');
 }

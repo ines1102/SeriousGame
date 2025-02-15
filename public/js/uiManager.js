@@ -41,40 +41,34 @@ export function updatePlayerProfile(player, isOpponent = false) {
         return;
     }
 
+    console.log(`🔄 Mise à jour du profil ${isOpponent ? 'opponent' : 'player'}:`, player);
+
     const prefix = isOpponent ? 'opponent' : 'player';
-    console.log(`🔄 Mise à jour du profil ${prefix}:`, player);
+    const profileContainer = document.querySelector(`.${prefix}-profile`);
+    
+    if (!profileContainer) {
+        console.error(`❌ Container ${prefix}-profile non trouvé`);
+        return;
+    }
 
     try {
-        // Sélectionner les éléments avec une meilleure gestion d'erreur
-        const profileContainer = document.querySelector(`.${prefix}-profile`);
-        if (!profileContainer) {
-            throw new Error(`Container ${prefix}-profile non trouvé`);
+        // Mise à jour du nom
+        const nameElement = profileContainer.querySelector(`.${prefix}-name`);
+        if (nameElement) {
+            nameElement.textContent = player.name || 'Joueur inconnu';
         }
 
-        // Mettre à jour l'avatar
+        // Mise à jour de l'avatar
         const avatarImg = profileContainer.querySelector(`.${prefix}-avatar img`);
         if (avatarImg) {
             const avatarPath = getAvatarPath(player.sex, player.avatarId);
             avatarImg.src = avatarPath;
             avatarImg.alt = `Avatar de ${player.name}`;
             
-            // Gérer les erreurs de chargement d'image
             avatarImg.onerror = () => {
                 console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
                 avatarImg.src = AVATAR_CONFIG.default;
             };
-        }
-
-        // Mettre à jour le nom
-        const nameElement = profileContainer.querySelector(`.${prefix}-name`);
-        if (nameElement) {
-            nameElement.textContent = player.name;
-        }
-
-        // Mettre à jour la barre de vie si nécessaire
-        const healthBar = profileContainer.querySelector(`.${prefix}-health-bar-fill`);
-        if (healthBar) {
-            healthBar.style.width = '100%';
         }
 
         console.log(`✅ Profil ${prefix} mis à jour:`, {

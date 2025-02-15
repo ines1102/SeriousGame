@@ -216,11 +216,11 @@ io.on('connection', (socket) => {
 
     // 📌 Mise à jour des profils joueurs/adversaire
     socket.on('requestOpponent', () => {
-        console.log(`🔍 Demande d'informations adversaire de ${socket.id}`);
+        console.log(`📥 Demande d'informations adversaire reçue de ${socket.id}`);
         
         const roomCode = roomManager.playerRooms.get(socket.id);
         if (!roomCode) {
-            console.log(`⚠️ Pas de room trouvée pour ${socket.id}`);
+            console.log(`⚠️ Joueur ${socket.id} n'est dans aucune room`);
             return;
         }
     
@@ -237,8 +237,7 @@ io.on('connection', (socket) => {
                 id: opponent.id,
                 name: opponent.name,
                 sex: opponent.sex,
-                avatarId: opponent.avatarId,
-                avatarSrc: opponent.avatarSrc
+                avatarId: opponent.avatarId
             });
         } else {
             console.log(`⚠️ Pas d'adversaire trouvé dans la room ${roomCode}`);
