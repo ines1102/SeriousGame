@@ -143,7 +143,7 @@ io.on('connection', (socket) => {
         socket.join(roomCode);
         socket.emit('roomCreated', { roomCode });
     
-        // 📌 Mise à jour immédiate des joueurs présents
+        // 📌 Envoi de la mise à jour des joueurs immédiatement
         io.to(roomCode).emit('updatePlayers', room.players);
     });
     
@@ -161,7 +161,7 @@ io.on('connection', (socket) => {
     
         socket.join(data.roomCode);
     
-        // 📌 Mise à jour immédiate des joueurs présents
+        // 📌 Envoi immédiat des informations des joueurs
         io.to(room.code).emit('updatePlayers', room.players);
     
         if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {

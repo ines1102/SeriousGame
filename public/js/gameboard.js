@@ -22,15 +22,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         await socket.waitForConnection();
         console.log('✅ Connecté au serveur');
 
-        // Mise à jour du profil joueur
+        // 📌 Mise à jour du profil joueur
         updatePlayerProfile(userData, false);
 
-        // 📌 Attente de l'adversaire et mise à jour du profil
+        // 📌 Attente et mise à jour de l'adversaire dès qu'il rejoint
         socket.on('updatePlayers', (players) => {
+            console.log("📌 Mise à jour des joueurs en cours...", players);
+
             const opponent = players.find(p => p.clientId !== userData.clientId);
             if (opponent) {
                 console.log(`📌 Mise à jour du profil adversaire: ${opponent.name}`);
                 updateOpponentProfile(opponent);
+            } else {
+                console.warn("⚠️ Aucun adversaire détecté.");
             }
         });
 
