@@ -41,6 +41,11 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("🔄 Recherche d'une room aléatoire...");
         loadingOverlay.classList.remove("hidden");
 
+        console.log("📌 Envoi de `find_random_room` avec : ", {
+            name: userName,
+            avatar: userAvatar
+        });
+
         socket.emit("find_random_room", { name: userName, avatar: userAvatar });
 
         socket.once("room_found", (roomId) => {
@@ -55,15 +60,22 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("📌 `userName` enregistré :", sessionStorage.getItem("userName"));
             console.log("📌 `userAvatar` enregistré :", sessionStorage.getItem("userAvatar"));
 
-            window.location.href = "/gameboard.html";
+            // ✅ Vérification immédiate du stockage avant redirection
+            setTimeout(() => {
+                console.log("✅ `sessionStorage` après 500ms : ", {
+                    roomId: sessionStorage.getItem("roomId"),
+                    userName: sessionStorage.getItem("userName"),
+                    userAvatar: sessionStorage.getItem("userAvatar")
+                });
+
+                window.location.href = "/gameboard.html";
+            }, 500);
         });
 
         socket.once("error", (error) => {
             console.error(`❌ Erreur : ${error}`);
             loadingOverlay.classList.add("hidden");
-            errorToast.textContent = error;
-            errorToast.classList.add("show");
-            setTimeout(() => errorToast.classList.remove("show"), 3000);
+            showError(error);
         });
     });
 
