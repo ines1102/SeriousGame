@@ -163,12 +163,33 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(CONFIG.STATIC_PATHS.PUBLIC));
 
+// 📌 Définition des routes dynamiques
+const routes = [
+    { path: '/', file: 'index.html' },
+    { path: '/choose-mode', file: 'choose-mode.html' },
+    { path: '/room-choice', file: 'room-choice.html' },
+    { path: '/gameboard', file: 'gameboard.html' }
+];
+
+routes.forEach(route => {
+    app.get(route.path, (req, res) => {
+        res.sendFile(path.join(CONFIG.STATIC_PATHS.PUBLIC, route.file));
+    });
+});
+
+// 🔍 Route de monitoring (statut serveur)
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+// 📌 Création du serveur HTTP et WebSocket
 const server = createServer(app);
 const io = new Server(server, {
     cors: CONFIG.CORS_OPTIONS,
     transports: ['websocket']
 });
 
+// 📌 Gestion des Rooms
 const roomManager = new RoomManager();
 const gameManager = new GameManager(io, roomManager);
 
@@ -191,20 +212,21 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinRoom', (data) => {
-        if (!validateUserData(userData)) {
-            socket.emit('roomError', 'Données utilisateur invalides');
+        if (!validateUserData(data)) {
+            socket.emit('roomError', 'Données invalides');
             return;
         }
+
         const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
         if (!room) {
             socket.emit('roomError', 'Room invalide ou pleine');
             return;
         }
+
         socket.join(data.roomCode);
         if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
-            gameManager.initializeGame(room);
+            io.to(room.code).emit('gameStart', { roomCode });
         }
-    });
 
     socket.on('disconnect', () => {
         roomManager.leaveRoom(socket.id);
