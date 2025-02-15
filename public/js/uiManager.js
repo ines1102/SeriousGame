@@ -12,6 +12,7 @@ const AVATAR_CONFIG = {
     },
     default: '/Avatars/default.jpeg'
 };
+
 // ✅ Attente de l'affichage d'un élément avant exécution d'une fonction
 export function waitForElement(selector, callback) {
     const element = document.querySelector(selector);
@@ -29,16 +30,6 @@ function getAvatarPath(sex, avatarId) {
         return AVATAR_CONFIG.default;
     }
     return AVATAR_CONFIG[sex]?.[avatarId] || AVATAR_CONFIG.default;
-}
-
-// ✅ Attente de l'affichage des éléments HTML avant mise à jour des profils
-function waitForElement(selector, callback) {
-    const element = document.querySelector(selector);
-    if (element) {
-        callback(element);
-    } else {
-        setTimeout(() => waitForElement(selector, callback), 100);
-    }
 }
 
 // ✅ Mise à jour du profil joueur ou adversaire
@@ -82,5 +73,11 @@ export function updatePlayerProfile(player, isOpponent = false) {
 // ✅ Correction du problème de chargement des profils
 document.addEventListener('DOMContentLoaded', () => {
     console.log("📌 Initialisation de l'interface utilisateur...");
-    waitForElement('.player-profile', () => updatePlayerProfile(JSON.parse(localStorage.getItem('userData')), false));
+    
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (userData) {
+        updatePlayerProfile(userData, false);
+    } else {
+        console.warn("⚠️ Aucun utilisateur trouvé dans localStorage.");
+    }
 });
