@@ -10,16 +10,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const socket = io(); // Connexion au serveur Socket.io
 
-    // Récupération du nom et de l’avatar stockés après `index.html`
+    // ✅ Vérification des données utilisateur stockées après `index.html`
     const userName = sessionStorage.getItem("userName");
     const userAvatar = sessionStorage.getItem("userAvatar");
-    sessionStorage.setItem("roomId", roomId);
 
-    if (userName) userNameElement.textContent = userName;
-    if (userAvatar) userAvatarElement.src = userAvatar;
-    else userAvatarElement.src = "/Avatars/default.jpeg"; // Avatar par défaut
+    if (!userName || !userAvatar) {
+        console.error("⚠️ Données utilisateur incomplètes !");
+        alert("Erreur : Données utilisateur manquantes. Retour à l'accueil.");
+        window.location.href = "/";
+        return;
+    }
 
-    /** Afficher un message d'erreur */
+    // ✅ Mise à jour de l'interface utilisateur
+    userNameElement.textContent = userName;
+    userAvatarElement.src = userAvatar || "/Avatars/default.jpeg";
+
+    /** ✅ Fonction pour afficher un message d'erreur */
     function showError(message) {
         errorMessageElement.textContent = message;
         errorToast.classList.add("show");
@@ -28,30 +34,37 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 3000);
     }
 
-    /** Mode Joueur Aléatoire */
+    /** ✅ Mode Joueur Aléatoire */
     randomModeButton.addEventListener("click", () => {
+        console.log("🔄 Recherche d'une room aléatoire...");
         loadingOverlay.classList.remove("hidden"); // Afficher l'overlay
 
         socket.emit("find_random_room", { name: userName, avatar: userAvatar });
 
-        socket.on("room_found", (roomId) => {
+        // ✅ Attente unique de la réponse pour éviter les écoutes multiples
+        socket.once("room_found", (roomId) => {
+            console.log(`✅ Room trouvée : ${roomId}`);
             sessionStorage.setItem("roomId", roomId);
-            window.location.href = "/gameboard.html"; // Redirige vers le plateau de jeu
+            window.location.href = "/gameboard.html"; // Redirection vers le plateau de jeu
         });
 
-        socket.on("error", (error) => {
+        // ✅ Gestion des erreurs reçues du serveur
+        socket.once("error", (error) => {
+            console.error(`❌ Erreur : ${error}`);
             loadingOverlay.classList.add("hidden");
             showError(error);
         });
     });
 
-    /** Mode Jouer entre amis */
+    /** ✅ Mode Jouer entre amis */
     friendModeButton.addEventListener("click", () => {
+        console.log("👥 Choix de jouer entre amis.");
         window.location.href = "/room-choice.html"; // Redirection vers le choix de room
     });
 
-    /** Annuler la recherche d'un adversaire */
+    /** ✅ Annuler la recherche d'un adversaire */
     cancelSearchButton.addEventListener("click", () => {
+        console.log("❌ Annulation de la recherche d'un adversaire.");
         socket.emit("cancel_search");
         loadingOverlay.classList.add("hidden");
     });

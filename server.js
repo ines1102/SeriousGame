@@ -30,12 +30,13 @@ app.get("/choose-mode", (req, res) => res.sendFile(path.join(path.resolve(), "pu
 app.get("/room-choice", (req, res) => res.sendFile(path.join(path.resolve(), "public", "room-choice.html")));
 app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "public", "gameboard.html")));
 
-// Gestion des rooms et des joueurs
-const rooms = {}; // Stocke les rooms et les joueurs connectés
+// Stockage des rooms et joueurs
+const rooms = {}; // Stocke les rooms avec les joueurs
 
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
+    /** Mode Joueur Aléatoire */
     socket.on("find_random_room", (playerData) => {
         let roomId = Object.keys(rooms).find((id) => rooms[id].players.length === 1);
 
@@ -47,15 +48,16 @@ io.on("connection", (socket) => {
         socket.join(roomId);
         rooms[roomId].players.push({ id: socket.id, ...playerData });
 
-        console.log(`👥 Joueur ajouté : ${playerData.name} (Room ${roomId})`);
+        console.log(`👥 Joueur ajouté : ${playerData.name} dans Room ${roomId}`);
 
         if (rooms[roomId].players.length === 2) {
-            console.log(`✅ 2 joueurs trouvés, démarrage de la partie dans Room ${roomId}`);
+            console.log(`✅ 2 joueurs trouvés dans Room ${roomId}, démarrage du jeu.`);
             io.to(roomId).emit("room_found", roomId);
             startGame(roomId);
         }
     });
 
+    /** Mode Jouer entre amis (Création de Room) */
     socket.on("create_room", ({ roomId, name, avatar }) => {
         if (!rooms[roomId]) {
             rooms[roomId] = { players: [] };
@@ -68,13 +70,10 @@ io.on("connection", (socket) => {
         io.to(socket.id).emit("room_created", roomId);
     });
 
+    /** Rejoindre une Room existante */
     socket.on("join_room", ({ roomId, name, avatar }) => {
-        if (!rooms[roomId]) {
-            rooms[roomId] = { players: [] };
-        }
-
-        if (rooms[roomId].players.length >= 2) {
-            console.log(`❌ Room ${roomId} est déjà pleine.`);
+        if (!rooms[roomId] || rooms[roomId].players.length >= 2) {
+            console.log(`❌ Room ${roomId} introuvable ou pleine.`);
             io.to(socket.id).emit("room_not_found");
             return;
         }
@@ -82,50 +81,58 @@ io.on("connection", (socket) => {
         socket.join(roomId);
         rooms[roomId].players.push({ id: socket.id, name, avatar });
 
-        console.log(`👥 ${name} a rejoint Room ${roomId}, joueurs actuellement dans la room: ${rooms[roomId].players.length}`);
+        console.log(`👥 ${name} a rejoint Room ${roomId}, joueurs actuellement : ${rooms[roomId].players.length}`);
 
         if (rooms[roomId].players.length === 2) {
-            console.log(`✅ 2 joueurs dans Room ${roomId}, démarrage de la partie.`);
+            console.log(`✅ 2 joueurs connectés à Room ${roomId}, lancement du jeu.`);
             io.to(roomId).emit("room_joined", roomId);
             startGame(roomId);
         }
     });
 
+    /** Gestion des déconnexions */
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion : ${socket.id}`);
         removePlayerFromRoom(socket.id);
     });
+
+    /** Quitter une Room */
+    socket.on("leave_room", () => {
+        removePlayerFromRoom(socket.id);
+    });
 });
 
-// Fonction pour démarrer le jeu quand 2 joueurs sont présents
+/** Fonction pour démarrer la partie */
 function startGame(roomId) {
     if (!rooms[roomId] || rooms[roomId].players.length !== 2) return;
 
     const [player1, player2] = rooms[roomId].players;
+    
     import("./public/js/deck.js").then(({ default: Deck }) => {
         const deck = new Deck();
         const decks = deck.creerDecksJoueurs();
 
+        console.log(`🎮 Début de la partie pour Room ${roomId}`);
+        
         io.to(roomId).emit("game_start", {
             decks,
             turn: player1.name,
             opponent: { name: player2.name, avatar: player2.avatar }
         });
-
-        io.to(roomId).emit("game_start", {
-            decks,
-            turn: player1.name,
-            opponent: { name: player1.name, avatar: player1.avatar }
-        });
     });
 }
 
-// Fonction pour retirer un joueur d'une room
+/** Fonction pour gérer la suppression d'un joueur de la room */
 function removePlayerFromRoom(socketId) {
     for (const roomId in rooms) {
-        rooms[roomId].players = rooms[roomId].players.filter((player) => player.id !== socketId);
+        const playerIndex = rooms[roomId].players.findIndex((player) => player.id === socketId);
+        if (playerIndex !== -1) {
+            console.log(`❌ Joueur ${rooms[roomId].players[playerIndex].name} supprimé de Room ${roomId}`);
+            rooms[roomId].players.splice(playerIndex, 1);
+        }
 
         if (rooms[roomId].players.length === 0) {
+            console.log(`🗑️ Suppression de Room ${roomId} car elle est vide.`);
             delete rooms[roomId];
         } else {
             io.to(roomId).emit("player_disconnected");
@@ -133,10 +140,5 @@ function removePlayerFromRoom(socketId) {
     }
 }
 
-// Redirection après index vers choose-mode
-app.post("/start-game", (req, res) => {
-    res.redirect("/choose-mode");
-});
-
-// Lancer le serveur
+// Démarrer le serveur
 server.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
