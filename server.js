@@ -21,6 +21,7 @@ const io = new Server(server, {
 
 // Middleware
 app.use(cors({ origin: CLIENT_URL }));
+app.use(express.json());
 app.use(express.static(path.join(path.resolve(), "public"))); // Servir les fichiers statiques
 
 // Routes pour servir les pages HTML
@@ -29,7 +30,7 @@ app.get("/choose-mode", (req, res) => res.sendFile(path.join(path.resolve(), "pu
 app.get("/room-choice", (req, res) => res.sendFile(path.join(path.resolve(), "public", "room-choice.html")));
 app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "public", "gameboard.html")));
 
-// Gestion des rooms
+// Gestion des rooms et des joueurs
 const rooms = {}; // Stocke les rooms et les joueurs connectés
 
 io.on("connection", (socket) => {
@@ -104,6 +105,12 @@ function startGame(roomId) {
             turn: player1.name,
             opponent: { name: player2.name, avatar: player2.avatar }
         });
+
+        io.to(roomId).emit("game_start", {
+            decks,
+            turn: player1.name,
+            opponent: { name: player1.name, avatar: player1.avatar }
+        });
     });
 }
 
@@ -120,5 +127,10 @@ function removePlayerFromRoom(socketId) {
     }
 }
 
+// Redirection après index vers choose-mode
+app.post("/start-game", (req, res) => {
+    res.redirect("/choose-mode");
+});
+
 // Lancer le serveur
-server.listen(PORT, () => console.log(`Serveur lancé sur le port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));

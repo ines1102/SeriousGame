@@ -1,56 +1,41 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const userForm = document.getElementById("user-form");
+    const nameInput = document.getElementById("name");
     const sexSelect = document.getElementById("sex");
     const avatarContainer = document.getElementById("avatar-selection");
-
-    const avatarConfig = {
-        baseUrl: "/Avatars/",
-        types: {
-            male: ["male1.jpeg", "male2.jpeg", "male3.jpeg"],
-            female: ["female1.jpeg", "female2.jpeg", "female3.jpeg"]
-        },
-        defaultAvatar: "default.jpeg"
-    };
-
+    
     let selectedAvatar = null;
 
-    // Cache les avatars au chargement
-    avatarContainer.style.display = "none";
-
-    // Gère le changement du sexe
+    // Gestion de l'affichage des avatars
     sexSelect.addEventListener("change", () => {
-        const selectedSex = sexSelect.value;
-        
-        if (selectedSex && avatarConfig.types[selectedSex]) {
-            displayAvatars(selectedSex);
-        } else {
-            avatarContainer.style.display = "none";
+        avatarContainer.style.display = "grid"; // Affiche les avatars une fois le sexe choisi
+    });
+
+    avatarContainer.addEventListener("click", (event) => {
+        if (event.target.tagName === "IMG") {
+            document.querySelectorAll(".avatar-option img").forEach(img => img.classList.remove("selected"));
+            event.target.classList.add("selected");
+            selectedAvatar = event.target.src;
         }
     });
 
-    function displayAvatars(sex) {
-        avatarContainer.innerHTML = ""; // Efface les anciens avatars
-        avatarContainer.style.display = "grid"; // Affiche la grille des avatars
+    // Validation et redirection vers `choose-mode.html`
+    userForm.addEventListener("submit", (event) => {
+        event.preventDefault();
 
-        avatarConfig.types[sex].forEach((avatarFile, index) => {
-            const avatarDiv = document.createElement("div");
-            avatarDiv.classList.add("avatar-option");
+        const userName = nameInput.value.trim();
+        const userSex = sexSelect.value;
 
-            const avatarImg = document.createElement("img");
-            avatarImg.src = avatarConfig.baseUrl + avatarFile;
-            avatarImg.alt = `Avatar ${index + 1}`;
+        if (!userName || !userSex || !selectedAvatar) {
+            alert("Veuillez remplir tous les champs et sélectionner un avatar.");
+            return;
+        }
 
-            avatarDiv.appendChild(avatarImg);
-            avatarContainer.appendChild(avatarDiv);
+        // Stocker les infos du joueur dans sessionStorage
+        sessionStorage.setItem("userName", userName);
+        sessionStorage.setItem("userAvatar", selectedAvatar);
 
-            // Gestion de la sélection d'avatar
-            avatarDiv.addEventListener("click", () => {
-                document.querySelectorAll(".avatar-option").forEach(option => {
-                    option.classList.remove("selected");
-                });
-
-                avatarDiv.classList.add("selected");
-                selectedAvatar = avatarImg.src;
-            });
-        });
-    }
+        // Redirection vers Choose Mode
+        window.location.href = "/choose-mode";
+    });
 });
