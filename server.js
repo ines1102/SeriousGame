@@ -232,6 +232,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         roomManager.leaveRoom(socket.id);
     });
+});
 
     // Nettoyage périodique des rooms inactives
     setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
@@ -240,4 +241,3 @@ io.on('connection', (socket) => {
     server.listen(CONFIG.PORT, '0.0.0.0', () => {
         console.log(`🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
     });
-});
