@@ -229,10 +229,42 @@ io.on('connection', (socket) => {
         }
     });
 
+    let waitingPlayers = []; // ✅ Liste des joueurs en attente
+
+    socket.on('findRandomGame', (userData) => {
+        if (!validateUserData(userData)) {
+            socket.emit('roomError', 'Données utilisateur invalides');
+            return;
+        }
+
+        console.log(`🎲 ${userData.name} cherche une partie aléatoire...`);
+
+        if (waitingPlayers.length > 0) {
+            // ✅ Prendre le premier joueur en attente et l'associer avec le nouveau
+            const opponent = waitingPlayers.shift(); // Retirer le premier joueur en attente
+            let roomCode = randomInt(1000, 9999).toString();
+
+            // ✅ Créer une nouvelle room et ajouter les deux joueurs
+            const room = roomManager.createRoom(roomCode, opponent);
+            roomManager.joinRoom(roomCode, { id: socket.id, ...userData });
+
+            // ✅ Ajouter les deux joueurs dans la room
+            socket.join(roomCode);
+            io.to(opponent.id).emit('gameStart', { roomCode });
+            io.to(socket.id).emit('gameStart', { roomCode });
+
+            console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans la room ${roomCode}`);
+        } else {
+            // ✅ Aucun joueur en attente, ajouter le joueur à la liste d'attente
+            waitingPlayers.push({ id: socket.id, ...userData });
+            socket.emit('waitingForOpponent');
+            console.log(`⌛ ${userData.name} est en attente d'un adversaire...`);
+        }
+    });
+
     socket.on('disconnect', () => {
         roomManager.leaveRoom(socket.id);
     });
-});
 
     // Nettoyage périodique des rooms inactives
     setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
@@ -241,3 +273,4 @@ io.on('connection', (socket) => {
     server.listen(CONFIG.PORT, '0.0.0.0', () => {
         console.log(`🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
     });
+});
