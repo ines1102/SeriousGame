@@ -1,4 +1,4 @@
-import { updatePlayerProfile } from './uiManager.js';
+import { updatePlayerProfile, waitForElement } from './uiManager.js';
 import { enableDragAndDrop } from './dragAndDrop.js';
 import socket from './websocket.js';
 
@@ -9,44 +9,36 @@ let opponentData = null;
 let isPlayerTurn = false;
 
 // 📌 Initialisation du jeu
+import { updatePlayerProfile, waitForElement } from './uiManager.js';
+
+// 📌 Initialisation du jeu
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔄 Initialisation du jeu...');
 
     try {
-        // ✅ Récupération des données utilisateur
-        const storedData = localStorage.getItem('userData');
-        if (!storedData) {
-            throw new Error('Session expirée');
-        }
-        userData = JSON.parse(storedData);
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (!userData) throw new Error("Session expirée");
+
         console.log("📌 Données utilisateur récupérées:", userData);
+        console.log("📌 Avatar attendu:", userData.avatarSrc);
 
-        // ✅ Vérification de l'ID de la room
-        currentRoomId = new URLSearchParams(window.location.search).get('roomId');
-        if (!currentRoomId) {
-            throw new Error('ID de room manquant');
-        }
-        console.log(`📌 Room ID: ${currentRoomId}`);
-
-        // ✅ Attente de la connexion socket
         await socket.waitForConnection();
         console.log('✅ Connecté au serveur');
 
-        // ✅ Mise à jour de l'interface joueur
+        // Mise à jour du profil joueur
         updatePlayerProfile(userData, false);
 
-        // ✅ Envoi de la demande pour rejoindre la partie
-        socket.emit('joinRoom', { ...userData, roomCode: currentRoomId });
-
-        // ✅ Initialisation du Drag & Drop
-        enableDragAndDrop();
+        // Attente et mise à jour du profil adversaire
+        socket.on('updatePlayers', (players) => {
+            const opponent = players.find(p => p.clientId !== userData.clientId);
+            if (opponent) {
+                console.log(`📌 Mise à jour du profil adversaire: ${opponent.name}`);
+                updatePlayerProfile(opponent, true);
+            }
+        });
 
     } catch (error) {
         console.error("❌ Erreur lors de l'initialisation:", error);
-        showDisconnectOverlay(error.message);
-        setTimeout(() => {
-            window.location.href = '/choose-mode';
-        }, 2000);
     }
 });
 
