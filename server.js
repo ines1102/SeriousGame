@@ -267,6 +267,7 @@ io.on('connection', (socket) => {
         waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);
     });
 });
+
     // Nettoyage périodique des rooms inactives
     setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
 
