@@ -24,6 +24,12 @@ app.use(cors({ origin: CLIENT_URL }));
 app.use(express.json());
 app.use(express.static(path.join(path.resolve(), "public"))); 
 
+// 📌 **Routes pour servir les pages HTML**
+app.get("/", (req, res) => res.sendFile(path.join(path.resolve(), "public", "index.html")));
+app.get("/choose-mode", (req, res) => res.sendFile(path.join(path.resolve(), "public", "choose-mode.html")));
+app.get("/room-choice", (req, res) => res.sendFile(path.join(path.resolve(), "public", "room-choice.html")));
+app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "public", "gameboard.html")));
+
 // Stockage des rooms et joueurs
 const rooms = {}; 
 const reconnectingPlayers = new Map(); 
@@ -48,6 +54,39 @@ io.on("connection", (socket) => {
         if (rooms[roomId].players.length === 2) {
             console.log(`✅ 2 joueurs trouvés dans Room ${roomId}, démarrage du jeu.`);
             io.to(roomId).emit("room_found", roomId);
+            startGame(roomId);
+        }
+    });
+
+    /** ✅ Création et connexion à une Room */
+    socket.on("create_room", ({ roomId, name, avatar }) => {
+        if (!rooms[roomId]) {
+            rooms[roomId] = { players: [] };
+        }
+
+        socket.join(roomId);
+        rooms[roomId].players.push({ id: socket.id, name, avatar });
+
+        console.log(`🎲 Room ${roomId} créée par ${name}`);
+        io.to(socket.id).emit("room_created", roomId);
+    });
+
+    /** ✅ Rejoindre une Room existante */
+    socket.on("join_room", ({ roomId, name, avatar }) => {
+        if (!rooms[roomId] || rooms[roomId].players.length >= 2) {
+            console.log(`❌ Room ${roomId} introuvable ou pleine.`);
+            io.to(socket.id).emit("room_not_found");
+            return;
+        }
+
+        socket.join(roomId);
+        rooms[roomId].players.push({ id: socket.id, name, avatar });
+
+        console.log(`👥 ${name} a rejoint Room ${roomId}, joueurs actuellement : ${rooms[roomId].players.length}`);
+
+        if (rooms[roomId].players.length === 2) {
+            console.log(`✅ 2 joueurs connectés à Room ${roomId}, lancement du jeu.`);
+            io.to(roomId).emit("room_joined", roomId);
             startGame(roomId);
         }
     });
