@@ -1,69 +1,85 @@
-// 📌 uiManager.js - Gestion de l'affichage des profils et de l'UI
+export function updatePlayerProfile(playerData) {
+    console.log("🔄 Mise à jour du profil player:", playerData);
+    
+    const playerContainer = document.getElementById("player-container");
+    const playerAvatar = document.getElementById("player-avatar");
+    const playerName = document.getElementById("player-name");
 
-export function initializeUI(userData) {
-    try {
-        console.log("📌 Initialisation de l'interface utilisateur...");
-
-        // ✅ Met à jour le profil du joueur
-        updatePlayerProfile(userData, false);
-
-        // ✅ Initialise le conteneur de l’adversaire (vide au départ)
-        initializeOpponentContainer();
-    } catch (error) {
-        console.error("❌ Erreur lors de l'initialisation de l'UI:", error);
-    }
-}
-
-function updatePlayerProfile(player, isOpponent = false) {
-    const prefix = isOpponent ? 'opponent' : 'player';
-
-    console.log(`🔄 Mise à jour du profil ${prefix}:`, player);
-
-    // Sélection des éléments HTML
-    const avatarContainer = document.querySelector(`.${prefix}-avatar img`);
-    if (avatarContainer) {
-        avatarContainer.src = player.avatarSrc || '/Avatars/default.jpeg';
-        console.log(`📸 Avatar mis à jour pour ${player.name}: ${player.avatarSrc}`);
-    }
-
-    // Sélection de l’élément nom
-    const nameElement = document.querySelector(`.${prefix}-name`);
-    if (nameElement) {
-        nameElement.textContent = player.name || "Adversaire inconnu";
-    }
-
-    if (!player || !avatarContainer || !nameElement) {
-        console.warn(`⚠️ Impossible de mettre à jour le profil de ${prefix}`);
+    if (!playerContainer || !playerAvatar || !playerName) {
+        console.warn("⚠️ Impossible de mettre à jour le profil du joueur, éléments manquants.");
         return;
     }
 
-    // Correction : Utiliser l'avatar spécifique au joueur
-    const avatarPath = player.avatarSrc ? player.avatarSrc : `/Avatars/default.jpeg`;
-    console.log(`📸 Avatar choisi pour ${player.name}:`, avatarPath);
+    playerName.textContent = playerData.name || "Joueur inconnu";
+    playerAvatar.src = playerData.avatarSrc || "/Avatars/default.jpeg";
 
-    avatarContainer.src = avatarPath;
-    avatarContainer.alt = `Avatar de ${player.name}`;
-    nameElement.textContent = player.name || 'Joueur inconnu';
-
-    // Gestion des erreurs de chargement d'image
-    avatarContainer.onerror = () => {
-        console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
-        avatarContainer.src = "/Avatars/default.jpeg";
+    playerAvatar.onerror = () => {
+        console.warn(`⚠️ Erreur de chargement de l'avatar pour ${playerData.name}, remplacement par défaut.`);
+        playerAvatar.src = "/Avatars/default.jpeg";
     };
+
+    playerContainer.classList.remove("hidden");
 }
 
-// ✅ Initialisation du conteneur de l'adversaire
-function initializeOpponentContainer() {
-    const opponentContainer = document.querySelector('.opponent-profile');
-    if (opponentContainer) {
-        opponentContainer.innerHTML = `
-            <div class="opponent-avatar">
-                <img src="/Avatars/default.jpeg" alt="En attente d'un adversaire" class="avatar-img">
-            </div>
-            <div class="opponent-name">En attente...</div>
-            <div class="status-indicator"></div>
-        `;
+export function updateOpponentProfile(opponentData) {
+    console.log("🔄 Mise à jour du profil opponent:", opponentData);
+    
+    const opponentContainer = document.getElementById("opponent-container");
+    const opponentAvatar = document.getElementById("opponent-avatar");
+    const opponentName = document.getElementById("opponent-name");
+
+    if (!opponentContainer || !opponentAvatar || !opponentName) {
+        console.warn("⚠️ Impossible de mettre à jour le profil de l'adversaire, éléments manquants.");
+        return;
+    }
+
+    opponentName.textContent = opponentData.name || "Adversaire";
+    opponentAvatar.src = opponentData.avatarSrc || "/Avatars/default.jpeg";
+
+    opponentAvatar.onerror = () => {
+        console.warn(`⚠️ Erreur de chargement de l'avatar pour ${opponentData.name}, remplacement par défaut.`);
+        opponentAvatar.src = "/Avatars/default.jpeg";
+    };
+
+    opponentContainer.classList.remove("hidden");
+}
+
+export function initializeUI() {
+    console.log("📌 Initialisation de l'interface utilisateur...");
+
+    // Afficher les containers des profils (Joueur et Adversaire)
+    const playerContainer = document.getElementById("player-container");
+    const opponentContainer = document.getElementById("opponent-container");
+
+    if (playerContainer) playerContainer.classList.remove("hidden");
+    if (opponentContainer) opponentContainer.classList.remove("hidden");
+}
+
+export function showDisconnectOverlay(message) {
+    console.log("🔌 Déconnexion:", message);
+    
+    const overlay = document.getElementById("disconnect-overlay");
+    const messageElement = overlay.querySelector("p");
+
+    if (overlay && messageElement) {
+        messageElement.textContent = message;
+        overlay.classList.remove("hidden");
+    }
+
+    setTimeout(() => {
+        window.location.href = "/choose-mode";
+    }, 3000);
+}
+
+export function showError(message) {
+    console.error("❌ Erreur:", message);
+
+    const errorToast = document.getElementById("error-message");
+    if (errorToast) {
+        errorToast.textContent = message;
+        errorToast.classList.remove("hidden");
+        setTimeout(() => {
+            errorToast.classList.add("hidden");
+        }, 3000);
     }
 }
-
-export { updatePlayerProfile };
