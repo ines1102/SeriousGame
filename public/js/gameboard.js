@@ -1,161 +1,129 @@
-import { updatePlayerProfile, updateOpponentProfile } from './uiManager.js';
+import { updatePlayerProfile } from './uiManager.js';
 import { enableDragAndDrop } from './dragAndDrop.js';
-import socket from './websocket.js';
 
-// Variables globales
-let userData;
-let currentRoomId;
+// 📌 Connexion au serveur WebSocket
+const socket = io();
+
+// 📌 Variables globales
+let userData = JSON.parse(localStorage.getItem('userData')) || {};
 let opponentData = null;
-let isPlayerTurn = false;
+let currentRoomId = null;
+let playerHand = [];
+let opponentHand = [];
 
 // 📌 Initialisation du jeu
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🔄 Initialisation du jeu...");
 
-    // Récupération des informations de l'utilisateur
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    if (!userData) {
-        console.error("❌ Aucun utilisateur trouvé.");
+    if (!userData || !userData.name) {
+        console.error("❌ Données utilisateur manquantes !");
         return;
     }
-    
+
     console.log("📌 Données utilisateur récupérées:", userData);
 
-    // 📌 Écoute de l'événement "updateOpponent" envoyé par le serveur
-    socket.on('updateOpponent', (opponentData) => {
-        console.log("📌 Mise à jour de l'adversaire:", opponentData);
+    socket.emit('requestOpponent');
 
-        if (!opponentData) {
-            console.warn("⚠️ Aucun adversaire détecté.");
-            return;
-        }
-
-        // 📌 Mise à jour de l'affichage de l'adversaire
-        document.querySelector('.opponent-name').textContent = opponentData.name || "Adversaire";
-        document.querySelector('.opponent-avatar img').src = opponentData.avatarSrc || "/Avatars/default.jpeg";
-        document.querySelector('.opponent-avatar img').alt = `Avatar de ${opponentData.name}`;
-    });
-});
-
-// ✅ Gestion des événements Socket.io
-socket.on('gameStart', (data) => {
-    console.log('🎮 Début de la partie:', data);
-
-    if (!data.players || data.players.length < 2) {
-        console.error("❌ Pas assez de joueurs pour commencer.");
-        return;
-    }
-
-    // ✅ Identification du joueur et de l’adversaire
-    opponentData = data.players.find(p => p.clientId !== userData.clientId);
-    if (!opponentData) {
-        console.error("❌ Aucun adversaire détecté !");
-        return;
-    }
-
-    // ✅ Mise à jour des profils
+    // 📌 Mise à jour du profil joueur
     updatePlayerProfile(userData, false);
-    updatePlayerProfile(opponentData, true);
 
-    // ✅ Affichage des mains
-    displayHand(data.hands[userData.clientId], true);  // Main du joueur
-    displayHand(data.hands[opponentData.clientId], false);  // Main de l’adversaire
-
-    // ✅ Définition du tour initial
-    isPlayerTurn = data.turn === userData.clientId;
-    updateTurnIndicator();
+    // 📌 Écoute des événements WebSocket
+    setupSocketListeners();
 });
 
-// ✅ Gestion d'une carte jouée
-socket.on('cardPlayed', (data) => {
-    console.log('🃏 Carte jouée:', data);
-    handleCardPlayed(data);
-});
+// 📌 Configuration des événements WebSocket
+function setupSocketListeners() {
+    // ✅ Connexion réussie
+    socket.on('connect', () => {
+        console.log("✅ Connecté au serveur");
+    });
 
-// ✅ Gestion du changement de tour
-socket.on('turnUpdate', (playerId) => {
-    console.log('🎲 Changement de tour:', playerId);
-    isPlayerTurn = playerId === userData.clientId;
-    updateTurnIndicator();
-});
+    // ✅ Mise à jour des informations de l'adversaire
+    socket.on('updateOpponent', (opponent) => {
+        opponentData = opponent;
+        console.log("📌 Adversaire détecté:", opponentData);
+        updatePlayerProfile(opponentData, true);
+    });
 
-// ✅ Détection du départ de l'adversaire
-socket.on('opponentLeft', () => {
-    console.log('👋 Adversaire déconnecté');
-    showDisconnectOverlay("Votre adversaire a quitté la partie.");
-});
+    // ✅ Initialisation de la main du joueur et de l'adversaire
+    socket.on('initializeHands', (data) => {
+        if (data.playerId === socket.id) {
+            playerHand = data.cards;
+            renderHand(playerHand, 'player-hand');
+        } else {
+            opponentHand = data.cards;
+            renderOpponentHand(opponentHand);
+        }
+    });
 
-// ✅ Gestion de la déconnexion
-socket.on('disconnect', () => {
-    console.log('🔌 Déconnexion du serveur');
-    showDisconnectOverlay("Déconnecté du serveur...");
-});
+    // ✅ Mise à jour des cartes jouées
+    socket.on('cardPlayed', (data) => {
+        console.log("🃏 Carte jouée:", data);
+        placeCardOnBoard(data);
+    });
 
-// ✅ Fonction d'affichage des mains
-function displayHand(cards, isPlayer) {
-    const handContainer = document.getElementById(isPlayer ? 'player-hand' : 'opponent-hand');
-    if (!handContainer || !Array.isArray(cards)) {
-        console.error("❌ Problème avec la main du joueur ou de l’adversaire");
-        return;
-    }
+    // ✅ Tour de jeu mis à jour
+    socket.on('turnUpdate', (turnPlayerId) => {
+        console.log(`🔄 Tour de jeu : ${turnPlayerId}`);
+        updateTurnIndicator(turnPlayerId);
+    });
 
-    handContainer.innerHTML = '';  // Nettoyage avant affichage
-    console.log(`📌 Affichage de la main de ${isPlayer ? 'joueur' : 'adversaire'}`);
+    // ✅ Déconnexion de l'adversaire
+    socket.on('opponentDisconnected', () => {
+        console.warn("⚠️ Votre adversaire s'est déconnecté.");
+        showDisconnectOverlay();
+    });
+}
+
+// 📌 Affichage des cartes du joueur
+function renderHand(cards, handId) {
+    const handContainer = document.getElementById(handId);
+    handContainer.innerHTML = '';
 
     cards.forEach(card => {
         const cardElement = document.createElement('div');
-        cardElement.className = 'hand-card';
+        cardElement.classList.add('hand-card');
+        cardElement.style.backgroundImage = `url('${card.image}')`;
         cardElement.dataset.cardId = card.id;
-        cardElement.style.backgroundImage = isPlayer ? `url(${card.src})` : 'url(/Cartes/dos.png)';
-
-        if (isPlayer) {
-            cardElement.draggable = true;
-            cardElement.addEventListener('dragstart', (e) => handleDragStart(e));
-        }
-
         handContainer.appendChild(cardElement);
+    });
+
+    enableDragAndDrop();
+}
+
+// 📌 Affichage des cartes adversaires (dos visible)
+function renderOpponentHand(cards) {
+    const opponentHandContainer = document.getElementById('opponent-hand');
+    opponentHandContainer.innerHTML = '';
+
+    cards.forEach(() => {
+        const cardBack = document.createElement('div');
+        cardBack.classList.add('hand-card');
+        cardBack.style.backgroundImage = "url('/Cartes/dos.png')";
+        opponentHandContainer.appendChild(cardBack);
     });
 }
 
-// ✅ Mise à jour de l'indicateur de tour
-function updateTurnIndicator() {
-    const playerTurnIndicator = document.querySelector('.player-profile');
-    const opponentTurnIndicator = document.querySelector('.opponent-profile');
+// 📌 Placement des cartes sur le plateau
+function placeCardOnBoard(cardData) {
+    const slot = document.querySelector(`.drop-area[data-slot="${cardData.slot}"]`);
+    if (!slot) return;
 
-    if (playerTurnIndicator) {
-        playerTurnIndicator.classList.toggle('active-turn', isPlayerTurn);
-    }
-    if (opponentTurnIndicator) {
-        opponentTurnIndicator.classList.toggle('active-turn', !isPlayerTurn);
-    }
+    slot.innerHTML = '';
+    const cardElement = document.createElement('div');
+    cardElement.classList.add('played-card');
+    cardElement.style.backgroundImage = `url('${cardData.image}')`;
+    slot.appendChild(cardElement);
 }
 
-// ✅ Gestion d'une carte jouée
-function handleCardPlayed(data) {
-    if (!data.cardId || !data.slot) {
-        console.error("❌ Données de carte invalides:", data);
-        return;
-    }
-
-    const dropZone = document.querySelector(`[data-slot="${data.slot}"]`);
-    if (dropZone) {
-        const playedCard = document.createElement('img');
-        playedCard.src = data.cardSrc;
-        playedCard.classList.add('played-card');
-
-        dropZone.appendChild(playedCard);
-    }
+// 📌 Indicateur du tour de jeu
+function updateTurnIndicator(turnPlayerId) {
+    const turnIndicator = document.getElementById('turn-indicator');
+    turnIndicator.textContent = turnPlayerId === socket.id ? "🟢 Votre tour" : "🔴 Tour de l'adversaire";
 }
 
-// ✅ Affichage de l'overlay de déconnexion
-function showDisconnectOverlay(message) {
-    const overlay = document.getElementById('disconnect-overlay');
-    if (overlay) {
-        overlay.querySelector('p').textContent = message;
-        overlay.classList.remove('hidden');
-
-        setTimeout(() => {
-            window.location.href = '/choose-mode';
-        }, 3000);
-    }
+// 📌 Affichage de l'overlay de déconnexion
+function showDisconnectOverlay() {
+    const disconnectOverlay = document.getElementById('disconnect-overlay');
+    disconnectOverlay.classList.remove('hidden');
 }

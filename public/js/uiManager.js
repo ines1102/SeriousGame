@@ -13,26 +13,7 @@ const AVATAR_CONFIG = {
     default: '/Avatars/default.jpeg'
 };
 
-// ✅ Attente de l'affichage d'un élément avant exécution
-export function waitForElement(selector, callback, maxRetries = 100) {
-    let attempts = 0;
-
-    function checkElement() {
-        const element = document.querySelector(selector);
-        if (element) {
-            callback(element);
-        } else if (attempts < maxRetries) {
-            attempts++;
-            setTimeout(checkElement, 100);
-        } else {
-            console.warn(`⚠️ L'élément "${selector}" n'a pas été trouvé après ${maxRetries} tentatives.`);
-        }
-    }
-
-    checkElement();
-}
-
-// ✅ Récupération sécurisée de l'avatar
+// 📌 Fonction pour récupérer le bon chemin d'avatar
 function getAvatarPath(sex, avatarId) {
     if (!sex || !avatarId) {
         console.warn("⚠️ Avatar non défini, utilisation de l'avatar par défaut");
@@ -41,7 +22,19 @@ function getAvatarPath(sex, avatarId) {
     return AVATAR_CONFIG[sex]?.[avatarId] || AVATAR_CONFIG.default;
 }
 
-// ✅ Mise à jour des profils (joueur et adversaire)
+// ✅ Attente de l'affichage d'un élément avant exécution d'une fonction
+function waitForElement(selector, callback, attempts = 50) {
+    const element = document.querySelector(selector);
+    if (element) {
+        callback(element);
+    } else if (attempts > 0) {
+        setTimeout(() => waitForElement(selector, callback, attempts - 1), 100);
+    } else {
+        console.warn(`⚠️ L'élément "${selector}" n'a pas été trouvé après 50 tentatives.`);
+    }
+}
+
+// ✅ Mise à jour du profil joueur ou adversaire
 export function updatePlayerProfile(player, isOpponent = false) {
     if (!player || !player.name || !player.avatarId) {
         console.warn(`⚠️ Impossible de mettre à jour le profil de ${isOpponent ? 'l\'adversaire' : 'joueur'}`);
@@ -50,60 +43,43 @@ export function updatePlayerProfile(player, isOpponent = false) {
 
     const prefix = isOpponent ? 'opponent' : 'player';
 
-    waitForElement(`.${prefix}-profile`, () => {
-        const profileContainer = document.querySelector(`.${prefix}-profile`);
-        const avatarContainer = document.querySelector(`.${prefix}-avatar img`);
-        const nameContainer = document.querySelector(`.${prefix}-name`);
-        const healthBar = document.querySelector(`.${prefix}-health-bar-fill`);
+    waitForElement(`.${prefix}-profile`, (profileContainer) => {
+        const avatarContainer = profileContainer.querySelector(`.${prefix}-avatar img`);
+        const nameContainer = profileContainer.querySelector(`.${prefix}-name`);
+        const healthBarFill = profileContainer.querySelector(`.${prefix}-health-bar .${prefix}-health-bar-fill`);
 
-        if (!profileContainer || !avatarContainer || !nameContainer || !healthBar) {
+        if (!avatarContainer || !nameContainer || !healthBarFill) {
             console.warn(`⚠️ Conteneurs introuvables pour ${prefix}`);
             return;
         }
 
-        // 📌 Mise à jour du nom et de l'avatar
+        // Mise à jour des informations
         nameContainer.textContent = player.name || 'Joueur inconnu';
         const avatarPath = getAvatarPath(player.sex, player.avatarId);
         avatarContainer.src = avatarPath;
         avatarContainer.alt = `Avatar de ${player.name}`;
 
-        // 🔄 Gestion des erreurs de chargement des avatars
+        // Gestion d'erreur si l'image ne charge pas
         avatarContainer.onerror = () => {
             console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
             avatarContainer.src = AVATAR_CONFIG.default;
         };
 
-        // ✅ Réinitialisation de la barre de vie
-        healthBar.style.width = '100%';
-        healthBar.dataset.health = 100;
+        // Réinitialisation de la barre de vie
+        healthBarFill.style.width = '100%';
+        healthBarFill.dataset.health = 100;
 
         console.log(`📌 Profil mis à jour pour ${player.name}:`, player);
     });
 }
 
-// ✅ Correction pour s'assurer que l'adversaire est bien affiché
-export function updateOpponentProfile(opponentData) {
-    if (!opponentData) {
-        console.warn("⚠️ Aucun adversaire détecté.");
-        return;
-    }
-    updatePlayerProfile(opponentData, true);
-}
-
-// ✅ Attente du chargement du DOM pour initialiser les profils
+// ✅ Correction du problème de chargement des profils
 document.addEventListener('DOMContentLoaded', () => {
     console.log("📌 Initialisation de l'interface utilisateur...");
 
+    // Attente que le DOM soit prêt et mise à jour du profil du joueur
     waitForElement('.player-profile', () => {
         const userData = JSON.parse(localStorage.getItem('userData'));
-        if (userData) {
-            updatePlayerProfile(userData, false);
-        } else {
-            console.warn("⚠️ Aucun utilisateur trouvé dans localStorage.");
-        }
-    });
-
-    waitForElement('.opponent-profile', () => {
-        console.log("📌 Conteneur adversaire détecté. En attente de mise à jour...");
+        if (userData) updatePlayerProfile(userData, false);
     });
 });

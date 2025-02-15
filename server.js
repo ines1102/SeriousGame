@@ -5,12 +5,13 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomInt } from 'crypto';
+import Deck from './public/js/deck.js';
 
-// Configuration des chemins
+// 📌 Configuration des chemins
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration globale
+// 📌 Configuration globale
 const CONFIG = {
     PORT: process.env.PORT || 10000,
     CLIENT_URL: "https://seriousgame-ds65.onrender.com",
@@ -28,12 +29,13 @@ const CONFIG = {
     },
     GAME: {
         MAX_PLAYERS_PER_ROOM: 2,
+        INITIAL_HAND_SIZE: 5,
         CLEANUP_INTERVAL: 3600000, // 1 heure
         MAX_INACTIVE_TIME: 3600000 // 1 heure
     }
 };
 
-// Serveur Express
+// 📌 Serveur Express
 const app = express();
 app.use(cors(CONFIG.CORS_OPTIONS));
 app.use(express.json());
@@ -41,7 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(CONFIG.STATIC_PATHS.PUBLIC));
 app.use('/Avatars', express.static(CONFIG.STATIC_PATHS.AVATARS));
 
-// Routes HTML
+// 📌 Routes HTML
 const routes = [
     { path: '/', file: 'index.html' },
     { path: '/choose-mode', file: 'choose-mode.html' },
@@ -55,19 +57,19 @@ routes.forEach(route => {
     });
 });
 
-// Route de monitoring
+// 📌 Route de monitoring
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
 });
 
-// Création du serveur HTTP et WebSocket
+// 📌 Création du serveur HTTP et WebSocket
 const server = createServer(app);
 const io = new Server(server, {
     cors: CONFIG.CORS_OPTIONS,
     transports: ['websocket']
 });
 
-// Gestionnaire des rooms
+// 📌 Gestionnaire des rooms
 class RoomManager {
     constructor() {
         this.rooms = new Map();
@@ -83,6 +85,7 @@ class RoomManager {
                 status: 'waiting',
                 turn: creator.id,
                 playedCards: new Map(),
+                decks: new Map(),
                 startTime: Date.now()
             },
             createdAt: Date.now()
@@ -125,28 +128,28 @@ class RoomManager {
 
 const roomManager = new RoomManager();
 
+// 📌 Gestion des connexions WebSocket
 io.on('connection', (socket) => {
+    console.log(`✅ Joueur connecté: ${socket.id}`);
 
-    // Création d'une room privée
+    // 📌 Création d'une room privée
     socket.on('createRoom', (userData) => {
         if (!userData || !userData.name) {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
-    
+
         let roomCode;
         do {
             roomCode = randomInt(1000, 9999).toString();
         } while (roomManager.rooms.has(roomCode));
-    
+
         const room = roomManager.createRoom(roomCode, { id: socket.id, ...userData });
         socket.join(roomCode);
         socket.emit('roomCreated', { roomCode });
-    
-        // 📌 Envoi de la mise à jour des joueurs immédiatement
-        io.to(roomCode).emit('updatePlayers', room.players);
     });
-    
+
+    // 📌 Rejoindre une room avec un code
     socket.on('joinRoom', (data) => {
         if (!data || !data.roomCode) {
             socket.emit('roomError', 'Données invalides');
@@ -158,19 +161,14 @@ io.on('connection', (socket) => {
             socket.emit('roomError', 'Room invalide ou pleine');
             return;
         }
-    
+
         socket.join(data.roomCode);
-    
-        // 📌 Envoi immédiat des données de l’adversaire
-        if (room.players.length === 2) {
-            const [player1, player2] = room.players;
-    
-            io.to(player1.id).emit('updateOpponent', player2);
-            io.to(player2.id).emit('updateOpponent', player1);
+        if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
+            io.to(room.code).emit('gameStart', { roomCode, players: room.players });
         }
     });
 
-    // Matchmaking aléatoire
+    // 📌 Matchmaking aléatoire
     socket.on('findRandomGame', (userData) => {
         if (!userData || !userData.name) {
             socket.emit('roomError', 'Données utilisateur invalides');
@@ -189,22 +187,27 @@ io.on('connection', (socket) => {
             socket.join(roomCode);
             io.to(opponent.id).emit('gameStart', { roomCode, players: room.players });
             io.to(socket.id).emit('gameStart', { roomCode, players: room.players });
-
-            console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans la room ${roomCode}`);
         } else {
             roomManager.waitingPlayers.push({ id: socket.id, ...userData });
             socket.emit('waitingForOpponent');
-            console.log(`⌛ ${userData.name} est en attente d'un adversaire...`);
         }
     });
 
-    // Gestion des joueurs quittant une room
-    socket.on('disconnect', () => {
-        roomManager.waitingPlayers = roomManager.waitingPlayers.filter(player => player.id !== socket.id);
-        roomManager.leaveRoom(socket.id);
+    // 📌 Mise à jour des profils joueurs/adversaire
+    socket.on('requestOpponent', () => {
+        const roomCode = roomManager.playerRooms.get(socket.id);
+        if (!roomCode) return;
+
+        const room = roomManager.rooms.get(roomCode);
+        if (!room) return;
+
+        const opponent = room.players.find(p => p.id !== socket.id);
+        if (opponent) {
+            socket.emit('updateOpponent', opponent);
+        }
     });
 
-    // Gestion des cartes jouées
+    // 📌 Gestion des cartes jouées
     socket.on('cardPlayed', (data) => {
         const roomCode = roomManager.playerRooms.get(socket.id);
         if (!roomCode) return;
@@ -212,24 +215,15 @@ io.on('connection', (socket) => {
         const room = roomManager.rooms.get(roomCode);
         if (!room) return;
 
-        room.gameState.playedCards.set(data.slot, data);
         io.to(roomCode).emit('cardPlayed', data);
     });
 
-    // Gestion des tours
-    socket.on('endTurn', () => {
-        const roomCode = roomManager.playerRooms.get(socket.id);
-        if (!roomCode) return;
-
-        const room = roomManager.rooms.get(roomCode);
-        if (!room) return;
-
-        room.gameState.turn = room.players.find(p => p.id !== socket.id)?.id;
-        io.to(roomCode).emit('turnUpdate', room.gameState.turn);
+    socket.on('disconnect', () => {
+        roomManager.leaveRoom(socket.id);
     });
 });
 
-// Lancement du serveur
+// 📌 Lancement du serveur
 server.listen(CONFIG.PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
 });

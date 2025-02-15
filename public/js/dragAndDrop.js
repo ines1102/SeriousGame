@@ -1,115 +1,80 @@
-import { waitForElement } from './uiManager.js';
-
 export function enableDragAndDrop() {
-    waitForElement('.hand-card', () => {
-        const cards = document.querySelectorAll('.hand-card');
-        if (!cards.length) {
-            console.warn('⚠️ Aucune carte trouvée pour activer le Drag & Drop');
-            return;
-        }
+    console.log("🖱️ Activation du Drag & Drop...");
 
-        cards.forEach(card => {
-            card.setAttribute('draggable', 'true');
+    const playerHand = document.getElementById('player-hand');
+    const opponentHand = document.getElementById('opponent-hand');
+    const playerDropZones = document.querySelectorAll('.player-areas .drop-area');
+    const opponentDropZones = document.querySelectorAll('.opponent-areas .drop-area');
 
-            card.addEventListener('dragstart', (event) => {
-                event.dataTransfer.setData('text/plain', event.target.dataset.cardId);
-            });
-
-            card.addEventListener('dragend', () => {
-                document.querySelectorAll('.drop-hover').forEach(zone => zone.classList.remove('drop-hover'));
-            });
-        });
-
-        console.log('✅ Drag & Drop activé');
-    });
-}
-
-// 📌 Initialisation du Drag & Drop
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.drop-area').forEach(area => {
-        area.addEventListener('dragover', (event) => {
-            event.preventDefault();
-            if (!area.hasChildNodes()) {
-                area.classList.add('drop-hover');
-            }
-        });
-
-        area.addEventListener('dragleave', () => {
-            area.classList.remove('drop-hover');
-        });
-
-        area.addEventListener('drop', (event) => {
-            event.preventDefault();
-            area.classList.remove('drop-hover');
-
-            if (area.hasChildNodes()) return;
-
-            const cardSrc = event.dataTransfer.getData('text/plain');
-            const playedCard = document.createElement('img');
-            playedCard.src = cardSrc;
-            playedCard.classList.add('played-card');
-
-            area.appendChild(playedCard);
-
-            // Envoi de l'action au serveur
-            const socket = io('/');
-            socket.emit('cardPlayed', { cardSrc, slot: area.dataset.slot });
-
-            // Suppression de la carte de la main du joueur
-            document.querySelectorAll('#player-hand img').forEach(card => {
-                if (card.src === cardSrc) {
-                    card.remove();
-                }
-            });
-        });
-    });
-});
-
-class DragAndDropManager {
-    constructor(gameInstance, socket) {
-        this.gameInstance = gameInstance;
-        this.socket = socket;
+    if (!playerHand || !opponentHand || playerDropZones.length === 0 || opponentDropZones.length === 0) {
+        console.warn("⚠️ Zones de Drag & Drop non trouvées !");
+        return;
     }
 
-    initialize() {
-        console.log('🖱️ Drag & Drop initialisé');
-        document.querySelectorAll('.drop-area').forEach(area => {
-            area.addEventListener('dragover', (event) => {
-                event.preventDefault();
-                if (!area.hasChildNodes()) {
-                    area.classList.add('drop-hover');
-                }
-            });
+    // Ajout d'événements pour rendre les cartes déplaçables
+    playerHand.addEventListener('dragstart', (event) => {
+        const card = event.target;
+        if (!card.classList.contains('hand-card')) return;
 
-            area.addEventListener('dragleave', () => {
-                area.classList.remove('drop-hover');
-            });
+        event.dataTransfer.setData('text/plain', card.id);
+        setTimeout(() => card.classList.add('dragging'), 0);
+    });
 
-            area.addEventListener('drop', (event) => {
-                event.preventDefault();
-                area.classList.remove('drop-hover');
+    playerHand.addEventListener('dragend', (event) => {
+        event.target.classList.remove('dragging');
+    });
 
-                if (area.hasChildNodes()) return;
+    // Gestion du survol des zones valides
+    playerDropZones.forEach(zone => {
+        zone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            zone.classList.add('drop-hover');
+        });
 
-                const cardSrc = event.dataTransfer.getData('text/plain');
-                const playedCard = document.createElement('img');
-                playedCard.src = cardSrc;
-                playedCard.classList.add('played-card');
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('drop-hover');
+        });
 
-                area.appendChild(playedCard);
+        zone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            zone.classList.remove('drop-hover');
 
-                // Envoi de l'action au serveur
-                this.socket.emit('cardPlayed', { cardSrc, slot: area.dataset.slot });
+            const cardId = event.dataTransfer.getData('text/plain');
+            const card = document.getElementById(cardId);
 
-                // Suppression de la carte de la main du joueur
-                document.querySelectorAll('#player-hand img').forEach(card => {
-                    if (card.src === cardSrc) {
-                        card.remove();
-                    }
+            if (!card) return;
+
+            // Déplacement de la carte vers la zone choisie
+            zone.appendChild(card);
+            card.classList.add('played-card');
+
+            // Notifier le serveur
+            const roomId = localStorage.getItem('currentRoomId');
+            const socket = window.gameSocket;
+            if (socket) {
+                socket.emit('cardPlayed', {
+                    roomId,
+                    cardId,
+                    slot: zone.dataset.slot
                 });
-            });
+            }
+
+            console.log(`🎴 Carte ${cardId} jouée dans ${zone.dataset.slot}`);
         });
-    }
+    });
+
+    // Interdire le drop dans la zone de l'adversaire
+    opponentDropZones.forEach(zone => {
+        zone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+
+        zone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            console.warn("🚫 Vous ne pouvez pas jouer une carte dans la zone de l'adversaire !");
+        });
+    });
 }
 
-export default DragAndDropManager; // ✅ Ajout de l'export
+// ✅ Activation du Drag & Drop après le chargement de la page
+document.addEventListener('DOMContentLoaded', enableDragAndDrop);
