@@ -193,6 +193,7 @@ const io = new Server(server, {
 const roomManager = new RoomManager();
 const gameManager = new GameManager(io, roomManager);
 
+let waitingPlayers = []; // ✅ Liste des joueurs en attente
 io.on('connection', (socket) => {
     console.log(`✅ Joueur connecté: ${socket.id}`);
 
@@ -228,8 +229,6 @@ io.on('connection', (socket) => {
             io.to(room.code).emit('gameStart', { roomCode });
         }
     });
-
-    let waitingPlayers = []; // ✅ Liste des joueurs en attente
 
     socket.on('findRandomGame', (userData) => {
         if (!validateUserData(userData)) {
