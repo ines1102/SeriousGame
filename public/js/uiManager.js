@@ -14,38 +14,33 @@ export function initializeUI(userData) {
     }
 }
 
-export function updatePlayerProfile(player, isOpponent = false) {
+function updatePlayerProfile(player, isOpponent = false) {
     const prefix = isOpponent ? 'opponent' : 'player';
-    
+
     console.log(`🔄 Mise à jour du profil ${prefix}:`, player);
 
-    // ✅ Mise à jour de l'avatar
-    const avatarContainer = document.querySelector(`.${prefix}-avatar`);
-    if (avatarContainer) {
-        let avatarImg = avatarContainer.querySelector('img');
-        if (!avatarImg) {
-            avatarImg = document.createElement('img');
-            avatarImg.className = 'avatar-img';
-            avatarContainer.appendChild(avatarImg);
-        }
-
-        const avatarPath = player.avatarSrc || `/Avatars/default.jpeg`;
-        console.log(`📸 Avatar choisi pour ${player.name}: ${avatarPath}`);
-
-        avatarImg.src = avatarPath;
-        avatarImg.alt = `Avatar de ${player.name}`;
-
-        avatarImg.onerror = () => {
-            console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
-            avatarImg.src = "/Avatars/default.jpeg";
-        };
-    }
-
-    // ✅ Mise à jour du nom
+    // Sélection des éléments HTML
+    const avatarContainer = document.querySelector(`.${prefix}-avatar img`);
     const nameElement = document.querySelector(`.${prefix}-name`);
-    if (nameElement) {
-        nameElement.textContent = player.name || "Joueur inconnu";
+
+    if (!player || !avatarContainer || !nameElement) {
+        console.warn(`⚠️ Impossible de mettre à jour le profil de ${prefix}`);
+        return;
     }
+
+    // Correction : Utiliser l'avatar spécifique au joueur
+    const avatarPath = player.avatarSrc ? player.avatarSrc : `/Avatars/default.jpeg`;
+    console.log(`📸 Avatar choisi pour ${player.name}:`, avatarPath);
+
+    avatarContainer.src = avatarPath;
+    avatarContainer.alt = `Avatar de ${player.name}`;
+    nameElement.textContent = player.name || 'Joueur inconnu';
+
+    // Gestion des erreurs de chargement d'image
+    avatarContainer.onerror = () => {
+        console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
+        avatarContainer.src = "/Avatars/default.jpeg";
+    };
 }
 
 // ✅ Initialisation du conteneur de l'adversaire
