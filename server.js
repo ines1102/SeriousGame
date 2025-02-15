@@ -6,7 +6,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import { randomInt } from 'crypto';
-import { z } from 'zod';
 import Deck from './public/js/deck.js';
 
 // Configuration des chemins
@@ -38,12 +37,14 @@ const CONFIG = {
     }
 };
 
-// Schéma de validation des utilisateurs
-const userSchema = z.object({
-    name: z.string().min(2).max(20),
-    sex: z.enum(["male", "female"]),
-    avatarId: z.string()
-});
+function validateUserData(userData) {
+    return userData &&
+        typeof userData.name === 'string' &&
+        userData.name.length >= 2 &&
+        userData.name.length <= 20 &&
+        ['male', 'female'].includes(userData.sex) &&
+        typeof userData.avatarId === 'string';
+}
 
 // Gestionnaire de Room
 class RoomManager {
@@ -175,7 +176,7 @@ io.on('connection', (socket) => {
     console.log(`✅ Joueur connecté: ${socket.id}`);
 
     socket.on('createRoom', (userData) => {
-        if (!userSchema.safeParse(userData).success) {
+        if (!validateUserData(userData)) {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
@@ -190,8 +191,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinRoom', (data) => {
-        if (!userSchema.safeParse(data).success) {
-            socket.emit('roomError', 'Données invalides');
+        if (!validateUserData(userData)) {
+            socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
         const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
