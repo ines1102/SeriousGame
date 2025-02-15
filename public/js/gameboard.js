@@ -62,6 +62,10 @@ socket.on('updatePlayers', (players) => {
     const currentPlayer = players.find(p => p.clientId === userData.clientId);
     const opponent = players.find(p => p.clientId !== userData.clientId); // ✅ Correction
 
+    if (opponent) {
+        console.log(`📌 Adversaire trouvé: ${opponent.name}, Avatar: ${opponent.avatarSrc}`);
+        updatePlayerProfile(opponent, true);
+    }
     if (!currentPlayer || !opponent) {
         console.warn("⚠️ Impossible de récupérer les informations des joueurs.");
         return;

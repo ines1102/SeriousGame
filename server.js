@@ -148,14 +148,18 @@ io.on('connection', (socket) => {
             socket.emit('roomError', 'Données invalides');
             return;
         }
-
+    
         const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
         if (!room) {
             socket.emit('roomError', 'Room invalide ou pleine');
             return;
         }
-
+    
         socket.join(data.roomCode);
+    
+        // ✅ Envoyer les infos des joueurs à toute la room
+        io.to(room.code).emit('updatePlayers', room.players);
+    
         if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
             io.to(room.code).emit('gameStart', { roomCode, players: room.players });
         }

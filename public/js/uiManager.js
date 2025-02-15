@@ -21,7 +21,16 @@ function updatePlayerProfile(player, isOpponent = false) {
 
     // Sélection des éléments HTML
     const avatarContainer = document.querySelector(`.${prefix}-avatar img`);
+    if (avatarContainer) {
+        avatarContainer.src = player.avatarSrc || '/Avatars/default.jpeg';
+        console.log(`📸 Avatar mis à jour pour ${player.name}: ${player.avatarSrc}`);
+    }
+
+    // Sélection de l’élément nom
     const nameElement = document.querySelector(`.${prefix}-name`);
+    if (nameElement) {
+        nameElement.textContent = player.name || "Adversaire inconnu";
+    }
 
     if (!player || !avatarContainer || !nameElement) {
         console.warn(`⚠️ Impossible de mettre à jour le profil de ${prefix}`);
