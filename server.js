@@ -14,7 +14,6 @@ const __dirname = path.dirname(__filename);
 
 // Configuration globale
 const CONFIG = {
-    PORT: process.env.PORT || 10000,
     CLIENT_URL: "https://seriousgame-ds65.onrender.com",
     STATIC_PATHS: {
         PUBLIC: path.join(__dirname, 'public'),
