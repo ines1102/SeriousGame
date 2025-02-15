@@ -38,21 +38,17 @@ document.addEventListener("DOMContentLoaded", () => {
     randomModeButton.addEventListener("click", () => {
         console.log("🔄 Recherche d'une room aléatoire...");
         loadingOverlay.classList.remove("hidden"); // Afficher l'overlay
-
+    
         socket.emit("find_random_room", { name: userName, avatar: userAvatar });
-
-        // ✅ Attente unique de la réponse pour éviter les écoutes multiples
+    
         socket.once("room_found", (roomId) => {
             console.log(`✅ Room trouvée : ${roomId}`);
+            
+            // Vérification du stockage de `roomId`
             sessionStorage.setItem("roomId", roomId);
-            window.location.href = "/gameboard.html"; // Redirection vers le plateau de jeu
-        });
-
-        // ✅ Gestion des erreurs reçues du serveur
-        socket.once("error", (error) => {
-            console.error(`❌ Erreur : ${error}`);
-            loadingOverlay.classList.add("hidden");
-            showError(error);
+            console.log("📌 `roomId` enregistré dans sessionStorage :", sessionStorage.getItem("roomId"));
+    
+            window.location.href = "/gameboard.html";
         });
     });
 

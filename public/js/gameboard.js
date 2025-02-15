@@ -30,20 +30,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     socket.on("game_start", (gameData) => {
         console.log("✅ Game start reçu :", gameData);
-
+    
         if (!gameData.opponent) {
             console.warn("⚠️ Aucun adversaire trouvé !");
             return;
         }
-        console.log(`🎮 Début du jeu ! Adversaire : ${gameData.opponent.name}`);
-        
-        opponentNameElement.textContent = gameData.opponent.name;
-        opponentAvatarElement.src = gameData.opponent.avatar || "/Avatars/default.jpeg";
-
-        displayHand(gameData.decks.joueur1.main, playerHand);
-        displayOpponentHand(gameData.decks.joueur2.main, opponentHand);
-
-        turnIndicator.textContent = gameData.turn === userName ? "Votre tour !" : "Tour de l'adversaire";
+    
+        console.log(`🎮 Début du jeu pour ${userName}. Adversaire : ${gameData.opponent.name}`);
     });
 
     function displayHand(deck, handContainer) {

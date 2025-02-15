@@ -104,20 +104,30 @@ io.on("connection", (socket) => {
 
 /** Fonction pour démarrer la partie */
 function startGame(roomId) {
-    if (!rooms[roomId] || rooms[roomId].players.length !== 2) return;
+    if (!rooms[roomId] || rooms[roomId].players.length !== 2) {
+        console.warn(`⚠️ Tentative de démarrage de la room ${roomId} mais pas assez de joueurs.`);
+        return;
+    }
 
     const [player1, player2] = rooms[roomId].players;
-    
+
     import("./public/js/deck.js").then(({ default: Deck }) => {
         const deck = new Deck();
         const decks = deck.creerDecksJoueurs();
 
-        console.log(`🎮 Début de la partie pour Room ${roomId}`);
-        
+        console.log(`🎮 Début de la partie dans Room ${roomId}`);
+        console.log(`👤 Joueur 1 : ${player1.name} - 👤 Joueur 2 : ${player2.name}`);
+
         io.to(roomId).emit("game_start", {
             decks,
             turn: player1.name,
             opponent: { name: player2.name, avatar: player2.avatar }
+        });
+
+        io.to(roomId).emit("game_start", {
+            decks,
+            turn: player1.name,
+            opponent: { name: player1.name, avatar: player1.avatar }
         });
     });
 }
