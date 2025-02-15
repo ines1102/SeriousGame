@@ -236,23 +236,23 @@ io.on('connection', (socket) => {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
-
+    
         console.log(`🎲 ${userData.name} cherche une partie aléatoire...`);
-
+    
         if (waitingPlayers.length > 0) {
             // ✅ Prendre le premier joueur en attente et l'associer avec le nouveau
             const opponent = waitingPlayers.shift(); // Retirer le premier joueur en attente
             let roomCode = randomInt(1000, 9999).toString();
-
+    
             // ✅ Créer une nouvelle room et ajouter les deux joueurs
             const room = roomManager.createRoom(roomCode, opponent);
             roomManager.joinRoom(roomCode, { id: socket.id, ...userData });
-
-            // ✅ Ajouter les deux joueurs dans la room
+    
+            // ✅ Ajouter les deux joueurs dans la même room
             socket.join(roomCode);
             io.to(opponent.id).emit('gameStart', { roomCode });
             io.to(socket.id).emit('gameStart', { roomCode });
-
+    
             console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans la room ${roomCode}`);
         } else {
             // ✅ Aucun joueur en attente, ajouter le joueur à la liste d'attente
@@ -261,9 +261,10 @@ io.on('connection', (socket) => {
             console.log(`⌛ ${userData.name} est en attente d'un adversaire...`);
         }
     });
-
+    
+    // ✅ Gérer la déconnexion d'un joueur en attente
     socket.on('disconnect', () => {
-        roomManager.leaveRoom(socket.id);
+        waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);
     });
 });
     // Nettoyage périodique des rooms inactives
