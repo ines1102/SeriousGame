@@ -1,4 +1,4 @@
-import { updatePlayerProfile, waitForElement } from './uiManager.js';
+import { updatePlayerProfile, updateOpponentProfile } from './uiManager.js';
 import { enableDragAndDrop } from './dragAndDrop.js';
 import socket from './websocket.js';
 
@@ -7,9 +7,6 @@ let userData;
 let currentRoomId;
 let opponentData = null;
 let isPlayerTurn = false;
-
-// 📌 Initialisation du jeu
-import { updatePlayerProfile, waitForElement } from './uiManager.js';
 
 // 📌 Initialisation du jeu
 document.addEventListener('DOMContentLoaded', async () => {
@@ -28,12 +25,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Mise à jour du profil joueur
         updatePlayerProfile(userData, false);
 
-        // Attente et mise à jour du profil adversaire
+        // 📌 Attente de l'adversaire et mise à jour du profil
         socket.on('updatePlayers', (players) => {
             const opponent = players.find(p => p.clientId !== userData.clientId);
             if (opponent) {
                 console.log(`📌 Mise à jour du profil adversaire: ${opponent.name}`);
-                updatePlayerProfile(opponent, true);
+                updateOpponentProfile(opponent);
             }
         });
 

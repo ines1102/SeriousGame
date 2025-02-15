@@ -13,7 +13,7 @@ const AVATAR_CONFIG = {
     default: '/Avatars/default.jpeg'
 };
 
-// ✅ Attente d'un élément HTML avant exécution
+// ✅ Fonction pour attendre un élément HTML avant exécution
 export function waitForElement(selector, callback, maxRetries = 100) {
     let attempts = 0;
 
@@ -54,7 +54,7 @@ export function updatePlayerProfile(player, isOpponent = false) {
         const profileContainer = document.querySelector(`.${prefix}-profile`);
         const avatarContainer = document.querySelector(`.${prefix}-avatar img`);
         const nameContainer = document.querySelector(`.${prefix}-name`);
-        const healthBar = document.querySelector(`.${prefix}-health .health-bar-fill`);
+        const healthBar = document.querySelector(`.${prefix}-health-bar-fill`);
 
         if (!profileContainer || !avatarContainer || !nameContainer || !healthBar) {
             console.warn(`⚠️ Conteneurs introuvables pour ${prefix}`);
@@ -74,13 +74,20 @@ export function updatePlayerProfile(player, isOpponent = false) {
         };
 
         // ✅ Réinitialisation de la barre de vie
-        if (healthBar) {
-            healthBar.style.width = '100%';
-            healthBar.dataset.health = 100;
-        }
+        healthBar.style.width = '100%';
+        healthBar.dataset.health = 100;
 
         console.log(`📌 Profil mis à jour pour ${player.name}:`, player);
     });
+}
+
+// ✅ Correction pour s'assurer que l'adversaire est bien affiché
+export function updateOpponentProfile(opponentData) {
+    if (!opponentData) {
+        console.warn("⚠️ Aucun adversaire détecté.");
+        return;
+    }
+    updatePlayerProfile(opponentData, true);
 }
 
 // ✅ Attente du chargement du DOM pour initialiser les profils
