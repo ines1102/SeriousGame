@@ -86,7 +86,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(CONFIG.STATIC_PATHS.PUBLIC));
 
 // Servir correctement les fichiers statiques
-app.use('/Avatars', express.static(CONFIG.STATIC_PATHS.AVATARS));
+app.use('/Avatars', express.static(path.join(__dirname, 'public', 'Avatars')));
 app.use('/Cartes', express.static(CONFIG.STATIC_PATHS.CARTES));
 
 // 📌 Définition des routes dynamiques
