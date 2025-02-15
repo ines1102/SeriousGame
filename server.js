@@ -237,7 +237,8 @@ io.on('connection', (socket) => {
     setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
 
     // Démarrage du serveur
-    server.listen(CONFIG.PORT, '0.0.0.0', () => {
-        console.log(`\n🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
+    const PORT = process.env.PORT || 10000; // Render fournit un port
+    server.listen(PORT, () => {
+        console.log(`🚀 Serveur lancé sur le port ${PORT}`);
     });
 });
