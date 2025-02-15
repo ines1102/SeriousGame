@@ -243,4 +243,20 @@ function handleCardPlayed(data) {
     }
 }
 
+// Affichage des erreurs sous forme de notification/toast
+function showError(message) {
+    const errorToast = document.getElementById('error-toast');
+    if (errorToast) {
+        errorToast.textContent = message;
+        errorToast.classList.add('show');
+        
+        // Masquer l'erreur après quelques secondes
+        setTimeout(() => {
+            errorToast.classList.remove('show');
+        }, 3000);
+    } else {
+        console.error("❌ Impossible d'afficher le message d'erreur:", message);
+    }
+}
+
 export { updatePlayerProfile, showError, handleCardPlayed, handleTurnUpdate };
