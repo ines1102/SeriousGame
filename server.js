@@ -126,7 +126,6 @@ class RoomManager {
 const roomManager = new RoomManager();
 
 io.on('connection', (socket) => {
-    console.log(`✅ Joueur connecté: ${socket.id}`);
 
     // Création d'une room privée
     socket.on('createRoom', (userData) => {

@@ -22,15 +22,26 @@ function getAvatarPath(sex, avatarId) {
     return AVATAR_CONFIG[sex]?.[avatarId] || AVATAR_CONFIG.default;
 }
 
-// ✅ Mise à jour du profil d'un joueur (Joueur ou Adversaire)
-export function updatePlayerProfile(player, isOpponent = false) {
-    try {
-        if (!player || !player.name || !player.avatarId) {
-            console.warn(`⚠️ Impossible de mettre à jour le profil de ${isOpponent ? 'l\'adversaire' : 'joueur'}`);
-            return;
-        }
+// ✅ Attente de l'affichage des éléments HTML avant mise à jour des profils
+function waitForElement(selector, callback) {
+    const element = document.querySelector(selector);
+    if (element) {
+        callback(element);
+    } else {
+        setTimeout(() => waitForElement(selector, callback), 100);
+    }
+}
 
-        const prefix = isOpponent ? 'opponent' : 'player';
+// ✅ Mise à jour du profil joueur ou adversaire
+export function updatePlayerProfile(player, isOpponent = false) {
+    if (!player || !player.name || !player.avatarId) {
+        console.warn(`⚠️ Impossible de mettre à jour le profil de ${isOpponent ? 'l\'adversaire' : 'joueur'}`);
+        return;
+    }
+
+    const prefix = isOpponent ? 'opponent' : 'player';
+
+    waitForElement(`.${prefix}-profile`, () => {
         const profileContainer = document.querySelector(`.${prefix}-profile`);
         const avatarContainer = document.querySelector(`.${prefix}-avatar img`);
         const nameContainer = document.querySelector(`.${prefix}-name`);
@@ -60,62 +71,11 @@ export function updatePlayerProfile(player, isOpponent = false) {
         healthBar.dataset.health = 100;
 
         console.log(`📌 Profil mis à jour pour ${player.name}:`, player);
-
-    } catch (error) {
-        console.error(`❌ Erreur lors de la mise à jour du profil ${isOpponent ? 'adversaire' : 'joueur'}:`, error);
-    }
+    });
 }
 
-// ✅ Mise à jour des barres de vie (après un tour)
-export function updateHealthBar(playerId, newHealth) {
-    try {
-        const isOpponent = playerId !== localStorage.getItem('userData').clientId;
-        const prefix = isOpponent ? 'opponent' : 'player';
-        const healthBarFill = document.querySelector(`.${prefix}-health .health-bar-fill`);
-
-        if (!healthBarFill) {
-            console.warn(`⚠️ Barre de vie introuvable pour ${prefix}`);
-            return;
-        }
-
-        // ✅ Mise à jour visuelle de la barre de vie
-        healthBarFill.style.width = `${newHealth}%`;
-        healthBarFill.dataset.health = newHealth;
-
-        console.log(`💖 Mise à jour de la vie de ${prefix}: ${newHealth}%`);
-
-    } catch (error) {
-        console.error(`❌ Erreur lors de la mise à jour de la barre de vie:`, error);
-    }
-}
-
-// ✅ Ajout des profils aux coins de l'écran
-function initializeProfiles() {
-    try {
-        const playerContainer = document.querySelector('.player-profile');
-        const opponentContainer = document.querySelector('.opponent-profile');
-
-        if (playerContainer) {
-            playerContainer.style.position = 'fixed';
-            playerContainer.style.bottom = '20px';
-            playerContainer.style.right = '20px';
-        }
-
-        if (opponentContainer) {
-            opponentContainer.style.position = 'fixed';
-            opponentContainer.style.top = '20px';
-            opponentContainer.style.left = '20px';
-        }
-        
-        console.log('📌 Initialisation des profils aux coins de l’écran');
-
-    } catch (error) {
-        console.error('❌ Erreur lors de l\'initialisation des profils:', error);
-    }
-}
-
-// ✅ Exécution automatique après chargement de la page
+// ✅ Correction du problème de chargement des profils
 document.addEventListener('DOMContentLoaded', () => {
     console.log("📌 Initialisation de l'interface utilisateur...");
-    initializeProfiles();
+    waitForElement('.player-profile', () => updatePlayerProfile(JSON.parse(localStorage.getItem('userData')), false));
 });

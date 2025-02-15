@@ -1,14 +1,24 @@
-export function enableDragAndDrop(cardElement) {
-    cardElement.setAttribute('draggable', 'true');
+export function enableDragAndDrop() {
+    waitForElement('.hand-card', () => {
+        const cards = document.querySelectorAll('.hand-card');
+        if (!cards.length) {
+            console.warn('⚠️ Aucune carte trouvée pour activer le Drag & Drop');
+            return;
+        }
 
-    cardElement.addEventListener('dragstart', (event) => {
-        event.dataTransfer.setData('text/plain', event.target.src);
-    });
+        cards.forEach(card => {
+            card.setAttribute('draggable', 'true');
 
-    cardElement.addEventListener('dragend', () => {
-        document.querySelectorAll('.drop-hover').forEach(zone => 
-            zone.classList.remove('drop-hover')
-        );
+            card.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData('text/plain', event.target.dataset.cardId);
+            });
+
+            card.addEventListener('dragend', () => {
+                document.querySelectorAll('.drop-hover').forEach(zone => zone.classList.remove('drop-hover'));
+            });
+        });
+
+        console.log('✅ Drag & Drop activé');
     });
 }
 
