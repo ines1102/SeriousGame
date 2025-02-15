@@ -22,17 +22,17 @@ const io = new Server(server, {
 // Middleware
 app.use(cors({ origin: CLIENT_URL }));
 app.use(express.json());
-app.use(express.static(path.join(path.resolve(), "public"))); 
+app.use(express.static(path.join(path.resolve(), "public")));
 
-// 📌 **Routes pour servir les pages HTML**
+// Routes pour servir les fichiers HTML
 app.get("/", (req, res) => res.sendFile(path.join(path.resolve(), "public", "index.html")));
 app.get("/choose-mode", (req, res) => res.sendFile(path.join(path.resolve(), "public", "choose-mode.html")));
 app.get("/room-choice", (req, res) => res.sendFile(path.join(path.resolve(), "public", "room-choice.html")));
 app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "public", "gameboard.html")));
 
 // Stockage des rooms et joueurs
-const rooms = {}; 
-const reconnectingPlayers = new Map(); 
+const rooms = {};
+const pendingDisconnects = new Map(); // Stocker les joueurs en attente de suppression
 
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
@@ -91,36 +91,24 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** ✅ Gestion des déconnexions avec **vérification avant suppression** */
+    /** ✅ Gestion des déconnexions avec **attente avant suppression** */
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion détectée : ${socket.id}`);
 
         let roomId = null;
+        let disconnectedPlayer = null;
+
         for (const id in rooms) {
             const playerIndex = rooms[id].players.findIndex((player) => player.id === socket.id);
-
             if (playerIndex !== -1) {
                 roomId = id;
-                const disconnectedPlayer = rooms[id].players[playerIndex];
+                disconnectedPlayer = rooms[id].players[playerIndex];
 
                 console.log(`❌ Joueur ${disconnectedPlayer.name} marqué comme déconnecté dans Room ${roomId}`);
 
-                // **Attendre 10 secondes et vérifier avec un ping**
-                reconnectingPlayers.set(socket.id, { roomId, player: disconnectedPlayer });
-
-                let stillConnected = false;
-
-                const checkConnection = setInterval(() => {
-                    if (io.sockets.sockets.get(socket.id)) {
-                        stillConnected = true;
-                        clearInterval(checkConnection);
-                        console.log(`✅ ${disconnectedPlayer.name} est revenu, annulation de la suppression.`);
-                        reconnectingPlayers.delete(socket.id);
-                    }
-                }, 2000);
-
-                setTimeout(() => {
-                    if (!stillConnected) {
+                // **Mettre en attente pendant 10 secondes avant suppression**
+                pendingDisconnects.set(socket.id, setTimeout(() => {
+                    if (pendingDisconnects.has(socket.id)) {
                         console.log(`🛑 Suppression confirmée de ${disconnectedPlayer.name} (déconnexion réelle)`);
                         rooms[roomId].players.splice(playerIndex, 1);
 
@@ -133,7 +121,7 @@ io.on("connection", (socket) => {
                             delete rooms[roomId];
                         }
                     }
-                }, 10000);
+                }, 10000)); // Attente de 10 secondes avant suppression
             }
         }
     });
@@ -142,6 +130,14 @@ io.on("connection", (socket) => {
     socket.on("rejoin_game", ({ roomId, name, avatar }) => {
         if (rooms[roomId]) {
             console.log(`🔄 ${name} tente de rejoindre Room ${roomId} après reconnexion.`);
+
+            // **Annuler la suppression si elle était en attente**
+            if (pendingDisconnects.has(socket.id)) {
+                clearTimeout(pendingDisconnects.get(socket.id));
+                pendingDisconnects.delete(socket.id);
+                console.log(`✅ Annulation de la suppression de ${name}`);
+            }
+
             rooms[roomId].players.push({ id: socket.id, name, avatar });
 
             io.to(roomId).emit("opponent_reconnected", { name, avatar });
