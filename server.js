@@ -153,6 +153,27 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('joinRoom', (data) => {
+        if (!validateUserData(data)) {
+            socket.emit('roomError', 'Données invalides');
+            return;
+        }
+    
+        const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
+    
+        console.log(`📌 Joueurs dans la room ${data.roomCode}:`, room ? room.players : '❌ Room introuvable'); // ✅ Debug
+    
+        if (!room) {
+            socket.emit('roomError', 'Room invalide ou pleine');
+            return;
+        }
+    
+        socket.join(data.roomCode);
+    
+        // 🔄 Mise à jour des joueurs
+        io.to(data.roomCode).emit('updatePlayers', room.players);
+    });
+    
     // Gérer la déconnexion d'un joueur en attente
     socket.on('disconnect', () => {
         waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);

@@ -79,14 +79,24 @@ function initializeUI() {
 function updatePlayerProfile(player, isOpponent = false) {
     const prefix = isOpponent ? 'opponent' : 'player';
     
+    console.log(`🔄 Mise à jour du profil ${prefix}:`, player); // ✅ Debug
+
     // Mise à jour de l'avatar
     const avatarContainer = document.querySelector(`.${prefix}-avatar`);
     if (avatarContainer) {
         const avatarImg = avatarContainer.querySelector('img') || document.createElement('img');
         avatarImg.className = 'avatar-img';
-        avatarImg.src = getAvatarPath(player.sex, player.avatarId);
+
+        const avatarPath = getAvatarPath(player.sex, player.avatarId);
+        console.log(`📸 Avatar choisi pour ${player.name}: ${avatarPath}`); // ✅ Debug
+
+        avatarImg.src = avatarPath;
         avatarImg.alt = `Avatar de ${player.name}`;
-        avatarImg.onerror = () => avatarImg.src = AVATAR_CONFIG.default;
+        
+        avatarImg.onerror = () => {
+            console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
+            avatarImg.src = AVATAR_CONFIG.default;
+        };
 
         if (!avatarContainer.contains(avatarImg)) {
             avatarContainer.appendChild(avatarImg);
@@ -98,9 +108,6 @@ function updatePlayerProfile(player, isOpponent = false) {
     if (nameElement) {
         nameElement.textContent = player.name || 'Joueur inconnu';
     }
-
-    // Indication du tour
-    updateTurnIndicator(prefix, player.id === gameInstance?.currentTurn);
 }
 
 // 📌 Mise à jour de l'indicateur de tour
@@ -171,6 +178,17 @@ function setupSocketListeners() {
 
     socket.on('error', (error) => {
         showError(`Erreur: ${error.message}`);
+    });
+
+    socket.on('updatePlayers', (players) => {
+        console.log('🔄 Mise à jour des joueurs:', players); // ✅ Debug
+    
+        const opponent = players.find(player => player.clientId !== userData.clientId);
+        console.log('👀 Adversaire détecté:', opponent); // ✅ Vérifie si l’adversaire est bien trouvé
+    
+        if (opponent) {
+            updatePlayerProfile(opponent, true);
+        }
     });
 }
 
