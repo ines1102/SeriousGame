@@ -216,20 +216,32 @@ io.on('connection', (socket) => {
 
     // 📌 Mise à jour des profils joueurs/adversaire
     socket.on('requestOpponent', () => {
+        console.log(`🔍 Demande d'informations adversaire de ${socket.id}`);
+        
         const roomCode = roomManager.playerRooms.get(socket.id);
-        if (!roomCode) return;
-
+        if (!roomCode) {
+            console.log(`⚠️ Pas de room trouvée pour ${socket.id}`);
+            return;
+        }
+    
         const room = roomManager.rooms.get(roomCode);
-        if (!room) return;
-
+        if (!room) {
+            console.log(`⚠️ Room ${roomCode} non trouvée`);
+            return;
+        }
+    
         const opponent = room.players.find(p => p.id !== socket.id);
         if (opponent) {
+            console.log(`✅ Envoi des infos de l'adversaire à ${socket.id}:`, opponent);
             socket.emit('updateOpponent', {
                 id: opponent.id,
                 name: opponent.name,
                 sex: opponent.sex,
-                avatarId: opponent.avatarId
+                avatarId: opponent.avatarId,
+                avatarSrc: opponent.avatarSrc
             });
+        } else {
+            console.log(`⚠️ Pas d'adversaire trouvé dans la room ${roomCode}`);
         }
     });
 

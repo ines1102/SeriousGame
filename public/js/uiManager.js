@@ -41,37 +41,48 @@ export function updatePlayerProfile(player, isOpponent = false) {
         return;
     }
 
+    const prefix = isOpponent ? 'opponent' : 'player';
+    console.log(`🔄 Mise à jour du profil ${prefix}:`, player);
+
     try {
-        const prefix = isOpponent ? 'opponent' : 'player';
-        const profileElement = document.querySelector(`.${prefix}-profile`);
-        
-        if (!profileElement) {
-            throw new Error(`Élément ${prefix}-profile non trouvé`);
+        // Sélectionner les éléments avec une meilleure gestion d'erreur
+        const profileContainer = document.querySelector(`.${prefix}-profile`);
+        if (!profileContainer) {
+            throw new Error(`Container ${prefix}-profile non trouvé`);
         }
 
-        // Mise à jour avec gestion d'erreur
-        const avatarPath = getAvatarPath(player.sex, player.avatarId);
-        const avatarImg = profileElement.querySelector(`.${prefix}-avatar img`);
-        const nameElement = profileElement.querySelector(`.${prefix}-name`);
-
+        // Mettre à jour l'avatar
+        const avatarImg = profileContainer.querySelector(`.${prefix}-avatar img`);
         if (avatarImg) {
+            const avatarPath = getAvatarPath(player.sex, player.avatarId);
+            avatarImg.src = avatarPath;
+            avatarImg.alt = `Avatar de ${player.name}`;
+            
+            // Gérer les erreurs de chargement d'image
             avatarImg.onerror = () => {
                 console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
                 avatarImg.src = AVATAR_CONFIG.default;
             };
-            avatarImg.src = avatarPath;
         }
 
+        // Mettre à jour le nom
+        const nameElement = profileContainer.querySelector(`.${prefix}-name`);
         if (nameElement) {
             nameElement.textContent = player.name;
         }
 
+        // Mettre à jour la barre de vie si nécessaire
+        const healthBar = profileContainer.querySelector(`.${prefix}-health-bar-fill`);
+        if (healthBar) {
+            healthBar.style.width = '100%';
+        }
+
         console.log(`✅ Profil ${prefix} mis à jour:`, {
             name: player.name,
-            avatar: avatarPath
+            avatar: getAvatarPath(player.sex, player.avatarId)
         });
     } catch (error) {
-        console.error(`❌ Erreur lors de la mise à jour du profil:`, error);
+        console.error(`❌ Erreur lors de la mise à jour du profil ${prefix}:`, error);
     }
 }
 

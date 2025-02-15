@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 📌 Configuration des événements WebSocket
 function setupSocketListeners() {
+    // Gestion des erreurs et de la connexion
     socket.on('connect_error', (error) => {
         console.error("❌ Erreur de connexion socket:", error);
         showErrorMessage("Problème de connexion au serveur. Tentative de reconnexion...");
@@ -48,29 +49,15 @@ function setupSocketListeners() {
     socket.on('connect', () => {
         console.log("✅ Connecté au serveur");
         hideErrorMessage();
+        // Demander les informations de l'adversaire après la connexion
+        socket.emit('requestOpponent');
     });
-    
-    // Fonction d'affichage des erreurs
-    function showErrorMessage(message) {
-        const errorElement = document.getElementById('error-message');
-        if (errorElement) {
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-        }
-    }
-    
-    function hideErrorMessage() {
-        const errorElement = document.getElementById('error-message');
-        if (errorElement) {
-            errorElement.classList.add('hidden');
-        }
-    }
 
+    // Gestion de la partie et de l'adversaire
     socket.on('gameStart', (data) => {
         console.log("🎮 Partie démarrée:", data);
         currentRoomId = data.roomCode;
         
-        // Trouver l'adversaire
         const opponent = data.players.find(p => p.id !== socket.id);
         if (opponent) {
             opponentData = opponent;
@@ -78,16 +65,18 @@ function setupSocketListeners() {
         }
     });
     
-    // ✅ Mise à jour des informations de l'adversaire
     socket.on('updateOpponent', (opponent) => {
-        if (!opponent) return;
+        if (!opponent) {
+            console.warn("⚠️ Données de l'adversaire manquantes");
+            return;
+        }
         
         opponentData = opponent;
         console.log("📌 Adversaire mis à jour:", opponentData);
         updatePlayerProfile(opponentData, true);
     });
 
-    // ✅ Initialisation de la main du joueur et de l'adversaire
+    // Gestion des cartes et du jeu
     socket.on('initializeHands', (data) => {
         if (data.playerId === socket.id) {
             playerHand = data.cards;
@@ -98,23 +87,36 @@ function setupSocketListeners() {
         }
     });
 
-    // ✅ Mise à jour des cartes jouées
     socket.on('cardPlayed', (data) => {
         console.log("🃏 Carte jouée:", data);
         placeCardOnBoard(data);
     });
 
-    // ✅ Tour de jeu mis à jour
     socket.on('turnUpdate', (turnPlayerId) => {
         console.log(`🔄 Tour de jeu : ${turnPlayerId}`);
         updateTurnIndicator(turnPlayerId);
     });
 
-    // ✅ Déconnexion de l'adversaire
     socket.on('opponentDisconnected', () => {
         console.warn("⚠️ Votre adversaire s'est déconnecté.");
         showDisconnectOverlay();
     });
+}
+
+// Fonctions utilitaires pour la gestion des messages d'erreur
+function showErrorMessage(message) {
+    const errorElement = document.getElementById('error-message');
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.classList.remove('hidden');
+    }
+}
+
+function hideErrorMessage() {
+    const errorElement = document.getElementById('error-message');
+    if (errorElement) {
+        errorElement.classList.add('hidden');
+    }
 }
 
 // 📌 Affichage des cartes du joueur

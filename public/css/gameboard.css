@@ -43,16 +43,26 @@ body {
 }
 
 /* 📌 Profils des joueurs */
-.player-profile,
+.opponent-profile, .player-profile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--card-background);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: var(--box-shadow);
+    margin: 10px;
+    z-index: 1;
+}
+
 .opponent-profile {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  background: var(--card-background);
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: var(--box-shadow);
-  transition: var(--transition);
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .player-avatar,
