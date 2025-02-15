@@ -34,9 +34,8 @@ app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "publ
 const rooms = {}; // Stocke les rooms et les joueurs connectés
 
 io.on("connection", (socket) => {
-    console.log(`Nouvelle connexion : ${socket.id}`);
+    console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
-    // Recherche d'un adversaire en mode aléatoire
     socket.on("find_random_room", (playerData) => {
         let roomId = Object.keys(rooms).find((id) => rooms[id].players.length === 1);
 
@@ -48,13 +47,15 @@ io.on("connection", (socket) => {
         socket.join(roomId);
         rooms[roomId].players.push({ id: socket.id, ...playerData });
 
+        console.log(`👥 Joueur ajouté : ${playerData.name} (Room ${roomId})`);
+
         if (rooms[roomId].players.length === 2) {
+            console.log(`✅ 2 joueurs trouvés, démarrage de la partie dans Room ${roomId}`);
             io.to(roomId).emit("room_found", roomId);
             startGame(roomId);
         }
     });
 
-    // Création d'une room privée
     socket.on("create_room", ({ roomId, name, avatar }) => {
         if (!rooms[roomId]) {
             rooms[roomId] = { players: [] };
@@ -63,30 +64,27 @@ io.on("connection", (socket) => {
         socket.join(roomId);
         rooms[roomId].players.push({ id: socket.id, name, avatar });
 
+        console.log(`🎲 Room ${roomId} créée par ${name}`);
         io.to(socket.id).emit("room_created", roomId);
     });
 
-    // Rejoindre une room existante
     socket.on("join_room", ({ roomId, name, avatar }) => {
         if (!rooms[roomId] || rooms[roomId].players.length >= 2) {
             io.to(socket.id).emit("room_not_found");
+            console.log(`❌ Room ${roomId} introuvable ou pleine`);
             return;
         }
 
         socket.join(roomId);
         rooms[roomId].players.push({ id: socket.id, name, avatar });
 
+        console.log(`👥 ${name} a rejoint Room ${roomId}`);
         io.to(roomId).emit("room_joined", roomId);
         startGame(roomId);
     });
 
-    // Quitter une room
-    socket.on("leave_room", () => {
-        removePlayerFromRoom(socket.id);
-    });
-
-    // Déconnexion du joueur
     socket.on("disconnect", () => {
+        console.log(`🔌 Déconnexion : ${socket.id}`);
         removePlayerFromRoom(socket.id);
     });
 });

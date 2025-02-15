@@ -18,23 +18,26 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "/"; // Rediriger si pas d'infos valides
     }
 
+    console.log(`📌 Connexion en cours pour ${userName} avec avatar ${userAvatar} dans la room ${roomId}`);
+
     playerNameElement.textContent = userName;
     playerAvatarElement.src = userAvatar;
-
-    const deck = new Deck();
-    let playerDeck, opponentDeck;
 
     socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
     socket.on("game_start", (gameData) => {
+        console.log("✅ Game start reçu :", gameData);
+
+        if (!gameData.opponent) {
+            console.warn("⚠️ Aucun adversaire trouvé !");
+            return;
+        }
+
         opponentNameElement.textContent = gameData.opponent.name;
         opponentAvatarElement.src = gameData.opponent.avatar || "/Avatars/default.jpeg";
 
-        playerDeck = gameData.decks.joueur1.main;
-        opponentDeck = gameData.decks.joueur2.main;
-
-        displayHand(playerDeck, playerHand);
-        displayOpponentHand(opponentDeck, opponentHand);
+        displayHand(gameData.decks.joueur1.main, playerHand);
+        displayOpponentHand(gameData.decks.joueur2.main, opponentHand);
 
         turnIndicator.textContent = gameData.turn === userName ? "Votre tour !" : "Tour de l'adversaire";
     });
