@@ -11,6 +11,8 @@
     --health-color: #4CAF50;
     --online-color: #2ecc71;
     --offline-color: #e74c3c;
+    --drop-area-border: #a0aec0;
+    --drop-area-bg: #f7fafc;
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
@@ -30,23 +32,16 @@ body {
     min-height: 100vh;
 }
 
-/* Structure principale */
-#game-container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-}
-
 /* Profils des joueurs */
 .player-profile,
 .opponent-profile {
     position: fixed;
-    width: 180px;
+    width: 200px;
+    height: 60px;
     background: linear-gradient(135deg, var(--primary-color) 0%, #2c5282 100%);
-    border-radius: 10px;
+    border-radius: 8px;
     color: white;
-    padding: 8px;
+    padding: 5px;
     box-shadow: var(--shadow-md);
     display: flex;
     flex-direction: column;
@@ -64,18 +59,18 @@ body {
     top: 10px;
 }
 
-/* En-tête du profil */
-.profile-header {
+/* Layout du profil */
+.profile-content {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-start;
+    height: 35px;
 }
 
 .avatar-container {
-    position: relative;
     width: 35px;
     height: 35px;
     flex-shrink: 0;
+    margin-right: 8px;
 }
 
 .avatar-img {
@@ -90,18 +85,25 @@ body {
 .opponent-name {
     font-weight: bold;
     font-size: 0.9rem;
-    flex-grow: 1;
+    line-height: 35px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Barre de vie */
+.player-status,
+.opponent-status {
+    width: 100%;
+    margin-top: auto;
+}
+
 .health-bar {
     width: 100%;
     height: 8px;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 4px;
     overflow: hidden;
-    margin-top: 2px;
-    position: relative;
 }
 
 .health-bar-fill {
@@ -127,33 +129,32 @@ body {
     animation: healthShine 2s linear infinite;
 }
 
-/* Zone de jeu principale */
+/* Structure du jeu */
 .game-board {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    padding: 20px;
+    padding: 80px 20px;
 }
 
 .play-area {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
     width: 100%;
     max-width: 800px;
-    padding: 0 10px;
 }
 
 /* Zones de jeu */
 .game-areas {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 12px;
+    gap: 10px;
     padding: 15px;
-    background: rgba(240, 240, 240, 0.5);
-    border-radius: 15px;
+    background: var(--background-color);
+    border-radius: 12px;
     box-shadow: var(--shadow-sm);
 }
 
@@ -161,13 +162,13 @@ body {
 .drop-area {
     aspect-ratio: 2/3;
     width: 100%;
-    border: 2px dashed #a0aec0;
+    border: 2px solid var(--drop-area-border);
     border-radius: 8px;
-    transition: all 0.3s ease;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: var(--drop-area-bg);
     position: relative;
-    min-height: 120px;
     box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .drop-area::before {
@@ -177,24 +178,29 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 24px;
-    color: #a0aec0;
-    opacity: 0.5;
+    color: var(--drop-area-border);
+    opacity: 0.8;
+}
+
+.drop-area:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(75, 121, 161, 0.1);
 }
 
 .drop-area.droppable {
+    border-style: dashed;
     border-color: var(--secondary-color);
     background-color: rgba(80, 176, 79, 0.1);
-    box-shadow: inset 0 0 8px rgba(80, 176, 79, 0.2);
 }
 
 .drop-area.drop-hover {
     transform: scale(1.05);
-    border-color: var(--secondary-color);
     border-width: 3px;
-    box-shadow: 0 0 10px rgba(80, 176, 79, 0.3);
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 15px rgba(80, 176, 79, 0.3);
 }
 
-/* Mains des joueurs */
+/* Main des joueurs */
 .hand {
     position: fixed;
     left: 50%;
@@ -227,11 +233,11 @@ body {
     box-shadow: var(--shadow-md);
     transition: all 0.3s ease;
     pointer-events: auto;
-    cursor: pointer;
+    cursor: grab;
 }
 
 .card:hover {
-    transform: translateY(-10px) scale(1.05);
+    transform: translateY(-10px);
     box-shadow: var(--shadow-lg);
     z-index: 10;
 }
@@ -240,6 +246,7 @@ body {
     transform: scale(1.1);
     opacity: 0.8;
     z-index: 100;
+    cursor: grabbing;
 }
 
 /* Carte jouée */
@@ -349,8 +356,8 @@ body {
 @media (max-width: 768px) {
     .player-profile,
     .opponent-profile {
-        width: 150px;
-        padding: 6px;
+        width: 180px;
+        height: 55px;
     }
 
     .avatar-container {
@@ -360,16 +367,13 @@ body {
 
     .player-name,
     .opponent-name {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+        line-height: 30px;
     }
 
     .game-areas {
         gap: 8px;
         padding: 10px;
-    }
-
-    .drop-area {
-        min-height: 90px;
     }
 
     .drop-area::before {
@@ -385,27 +389,25 @@ body {
 @media (max-width: 480px) {
     .player-profile,
     .opponent-profile {
-        width: 130px;
-        padding: 5px;
+        width: 160px;
+        height: 50px;
     }
 
     .avatar-container {
         width: 25px;
         height: 25px;
+        margin-right: 6px;
     }
 
     .player-name,
     .opponent-name {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
+        line-height: 25px;
     }
 
     .game-areas {
         gap: 5px;
         padding: 8px;
-    }
-
-    .drop-area {
-        min-height: 70px;
     }
 
     .drop-area::before {
@@ -422,13 +424,231 @@ body {
     }
 }
 
+/* État actif du tour */
+.active-turn {
+    border-left: 3px solid var(--secondary-color);
+    box-shadow: 0 0 15px rgba(80, 176, 79, 0.2);
+}
+
 /* Utilitaires */
 .hidden {
     display: none !important;
 }
 
-/* État actif du tour */
-.active-turn {
-    border-left: 3px solid var(--secondary-color);
-    box-shadow: 0 0 15px rgba(80, 176, 79, 0.2);
+/* Status du tour */
+.turn-indicator {
+    position: fixed;
+    left: 50%;
+    top: 20px;
+    transform: translateX(-50%);
+    background: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    box-shadow: var(--shadow-md);
+    z-index: 90;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.turn-indicator.visible {
+    opacity: 1;
+}
+
+/* Messages de statut */
+.status-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 25px;
+    z-index: 95;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.status-message.visible {
+    opacity: 1;
+}
+
+/* Loading et Error */
+.loading,
+.error {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    border-radius: 20px;
+    color: white;
+    z-index: 100;
+    animation: fadeIn 0.3s ease;
+}
+
+.loading {
+    background: var(--primary-color);
+}
+
+.error {
+    background: var(--error-color);
+}
+
+/* Zone du deck */
+.deck-area {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 80;
+}
+
+.deck {
+    width: 90px;
+    height: 130px;
+    perspective: 1000px;
+}
+
+.card-back {
+    width: 100%;
+    height: 100%;
+    background-image: url('/Cartes/dos.png');
+    background-size: cover;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    transform: rotateY(-10deg);
+    transition: transform 0.3s ease;
+}
+
+.card-back:hover {
+    transform: rotateY(-20deg) translateX(-10px);
+}
+
+/* Cursor styles */
+.card.draggable {
+    cursor: grab;
+}
+
+.card.dragging {
+    cursor: grabbing;
+    opacity: 0.8;
+}
+
+/* Animation pour le hover des cartes */
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Feedback visuel pour les zones de drop */
+.drop-area.valid-target {
+    background-color: rgba(80, 176, 79, 0.1);
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 10px rgba(80, 176, 79, 0.3);
+}
+
+.drop-area.invalid-target {
+    background-color: rgba(231, 76, 60, 0.1);
+    border-color: var(--error-color);
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Effets de survol améliorés */
+.player-profile:hover,
+.opponent-profile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Support écran tactile */
+@media (hover: none) {
+    .card:hover {
+        transform: none;
+    }
+    
+    .card:active {
+        transform: scale(1.05);
+    }
+}
+
+/* Support mode sombre */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --drop-area-bg: rgba(255, 255, 255, 0.05);
+        --drop-area-border: rgba(255, 255, 255, 0.2);
+    }
+}
+
+/* Accessibilité */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Animation supplémentaire */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) translateX(-50%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) translateX(-50%);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Support grands écrans */
+@media (min-width: 1600px) {
+    .play-area {
+        max-width: 1000px;
+    }
+
+    .card {
+        width: 100px;
+        height: 145px;
+    }
+
+    .deck {
+        width: 100px;
+        height: 145px;
+    }
+}
+
+/* Support orientation paysage sur mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+    .game-board {
+        padding: 60px 10px;
+    }
+
+    .player-profile,
+    .opponent-profile {
+        transform: scale(0.8);
+        transform-origin: center;
+    }
+
+    .deck-area {
+        display: none;
+    }
 }
