@@ -28,6 +28,19 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log(`📌 Connexion en cours pour ${userName} avec avatar ${userAvatar} dans la room ${roomId}`);
 
         const socket = io();
+
+        socket.on("connect", () => {
+            console.log(`✅ Reconnexion détectée, réenvoi des informations...`);
+        
+            const userName = sessionStorage.getItem("userName");
+            const userAvatar = sessionStorage.getItem("userAvatar");
+            const roomId = sessionStorage.getItem("roomId");
+        
+            if (userName && userAvatar && roomId) {
+                console.log(`📌 Renvoyant les infos : Room ${roomId}, ${userName}`);
+                socket.emit("rejoin_game", { roomId, name: userName, avatar: userAvatar });
+            }
+        });
         socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
         socket.on("game_start", (gameData) => {
@@ -70,6 +83,17 @@ document.addEventListener("DOMContentLoaded", () => {
             window.location.href = "/";
         });
 
+        socket.on("opponent_reconnected", (data) => {
+            console.log(`✅ ${data.name} est revenu !`);
+        
+            // 🔄 Mise à jour du profil de l'adversaire
+            document.querySelector(".opponent-name").textContent = data.name;
+            document.querySelector(".opponent-avatar img").src = data.avatar;
+        
+            // 🔴 Supprimer le message de déconnexion
+            document.getElementById("disconnect-overlay").classList.add("hidden");
+        });
+        
         socket.on("disconnect", () => {
             console.warn("❌ Vous avez été déconnecté du serveur. Vérification...");
             

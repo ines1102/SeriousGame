@@ -102,35 +102,48 @@ io.on("connection", (socket) => {
     
             if (playerIndex !== -1) {
                 roomId = id;
-                console.log(`❌ Joueur ${rooms[id].players[playerIndex].name} déconnecté de la room ${roomId}`);
+                const disconnectedPlayer = rooms[id].players[playerIndex];
     
-                // 🔴 Vérifier si l'autre joueur est toujours là avant de le marquer comme seul joueur restant
-                if (rooms[roomId].players.length === 2) {
-                    const remainingPlayer = rooms[roomId].players.find((p) => p.id !== socket.id);
-                    if (io.sockets.sockets.get(remainingPlayer.id)) {
-                        console.log(`⚠️ L'autre joueur ${remainingPlayer.name} est toujours connecté.`);
-                        io.to(remainingPlayer.id).emit("opponent_disconnected");
+                console.log(`❌ Joueur ${disconnectedPlayer.name} déconnecté de la room ${roomId}`);
+    
+                // ⏳ Attendre quelques secondes avant de supprimer le joueur
+                setTimeout(() => {
+                    if (!io.sockets.sockets.get(socket.id)) {
+                        console.log(`🛑 Suppression confirmée de ${disconnectedPlayer.name} (déconnexion réelle)`);
+                        rooms[id].players.splice(playerIndex, 1);
+    
+                        if (rooms[roomId].players.length === 1) {
+                            const remainingPlayer = rooms[roomId].players[0];
+                            console.log(`⚠️ L'autre joueur ${remainingPlayer.name} est toujours connecté.`);
+                            io.to(remainingPlayer.id).emit("opponent_disconnected");
+                        } else if (rooms[roomId].players.length === 0) {
+                            console.log(`🗑️ Suppression de Room ${roomId} car elle est vide.`);
+                            delete rooms[roomId];
+                        }
                     } else {
-                        console.log(`❌ L'autre joueur aussi semble déconnecté.`);
+                        console.log(`✅ ${disconnectedPlayer.name} est revenu, annulation de la suppression.`);
                     }
-                }
-    
-                rooms[id].players.splice(playerIndex, 1);
-                break;
+                }, 5000); // ⏳ Attente de 5s avant de confirmer la suppression
             }
-        }
-    
-        if (roomId && rooms[roomId].players.length === 1) {
-            console.log(`⚠️ Un seul joueur reste dans la room ${roomId}, mais le jeu continue.`);
-        } else if (roomId && rooms[roomId].players.length === 0) {
-            console.log(`🗑️ Suppression de Room ${roomId} car elle est vide.`);
-            delete rooms[roomId];
         }
     });
 
     /** 🔴 Quitter une Room manuellement */
     socket.on("leave_room", () => {
         removePlayerFromRoom(socket.id);
+    });
+
+    socket.on("rejoin_game", ({ roomId, name, avatar }) => {
+        if (rooms[roomId]) {
+            console.log(`🔄 ${name} tente de rejoindre Room ${roomId} après reconnexion.`);
+            rooms[roomId].players.push({ id: socket.id, name, avatar });
+    
+            // Informer l'adversaire que le joueur est revenu
+            socket.to(roomId).emit("opponent_reconnected", { name, avatar });
+        } else {
+            console.log(`❌ Room ${roomId} n'existe plus, redirection vers l'accueil.`);
+            socket.emit("force_leave_game");
+        }
     });
 
     /** Déconnexion forcée (test) */
