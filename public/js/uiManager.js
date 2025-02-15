@@ -13,7 +13,7 @@ const AVATAR_CONFIG = {
     default: '/Avatars/default.jpeg'
 };
 
-// ✅ Fonction pour attendre un élément HTML avant exécution
+// ✅ Attente de l'affichage d'un élément avant exécution
 export function waitForElement(selector, callback, maxRetries = 100) {
     let attempts = 0;
 

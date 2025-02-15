@@ -132,31 +132,38 @@ io.on('connection', (socket) => {
         if (!userData || !userData.name) {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
-        }a
+        }
+    
         let roomCode;
         do {
             roomCode = randomInt(1000, 9999).toString();
         } while (roomManager.rooms.has(roomCode));
-
+    
         const room = roomManager.createRoom(roomCode, { id: socket.id, ...userData });
         socket.join(roomCode);
         socket.emit('roomCreated', { roomCode });
+    
+        // 📌 Mise à jour immédiate des joueurs présents
+        io.to(roomCode).emit('updatePlayers', room.players);
     });
-
-    // Rejoindre une room avec un code
+    
     socket.on('joinRoom', (data) => {
         if (!data || !data.roomCode) {
             socket.emit('roomError', 'Données invalides');
             return;
         }
-
+    
         const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
         if (!room) {
             socket.emit('roomError', 'Room invalide ou pleine');
             return;
         }
-
+    
         socket.join(data.roomCode);
+    
+        // 📌 Mise à jour immédiate des joueurs présents
+        io.to(room.code).emit('updatePlayers', room.players);
+    
         if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
             io.to(room.code).emit('gameStart', { roomCode, players: room.players });
         }
