@@ -23,6 +23,11 @@ let currentRoomId;
 let userData;
 let dragAndDrop;
 
+// 📌 Fonction pour obtenir le chemin de l'avatar
+function getAvatarPath(sex, avatarId) {
+    return AVATAR_CONFIG[sex]?.[avatarId] || AVATAR_CONFIG.default;
+}
+
 // 📌 Initialisation du jeu
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔄 Initialisation du jeu...');
@@ -53,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // ✅ Initialisation du drag & drop
         dragAndDrop = new DragAndDropManager(gameInstance, socket);
-        dragAndDrop.initialize(); // Supprime `await` car non asynchrone
+        dragAndDrop.initialize();
 
         // ✅ Configuration des écouteurs WebSocket
         setupSocketListeners();
@@ -195,14 +200,6 @@ function handleGameStart(data) {
 
     updatePlayerProfile(currentPlayer, false);
     updatePlayerProfile(opponent, true);
-
-    if (data.hands?.playerHand) {
-        displayHand(data.hands.playerHand, true);
-    }
-
-    if (dragAndDrop) {
-        dragAndDrop.enableDragDrop();
-    }
 }
 
 // 📌 Gestion d'une carte jouée
@@ -225,49 +222,29 @@ function handleTurnUpdate(playerId) {
     dragAndDrop.setDraggable(playerId === userData.clientId);
 }
 
-// 📌 Affichage de la main
-function displayHand(cards, isPlayer) {
-    const handContainer = document.getElementById(isPlayer ? 'player-hand' : 'opponent-hand');
-    if (!handContainer || !Array.isArray(cards)) return;
-
-    handContainer.innerHTML = '';
-    cards.forEach(card => {
-        const cardElement = document.createElement('div');
-        cardElement.className = 'card';
-        cardElement.dataset.cardId = card.id;
-        cardElement.style.backgroundImage = isPlayer ? `url(${card.name})` : 'url(/Cartes/dos.png)';
-        if (isPlayer) {
-            cardElement.draggable = true;
-            cardElement.addEventListener('dragstart', dragAndDrop.handleDragStart);
-        }
-        handContainer.appendChild(cardElement);
-    });
-}
-
-// Affichage de l'overlay de déconnexion
+// 📌 Affichage de l'overlay de déconnexion
 function showDisconnectOverlay(message) {
     const overlay = document.getElementById('disconnect-overlay');
     if (overlay) {
-        const messageElement = overlay.querySelector('p');
-        if (messageElement) messageElement.textContent = message;
+        overlay.querySelector('p').textContent = message;
         overlay.classList.remove('hidden');
-
         setTimeout(() => {
             window.location.href = '/choose-mode';
         }, 3000);
     }
 }
 
-// Affichage des erreurs
+// 📌 Affichage des erreurs
 function showError(message) {
-    const errorToast = document.getElementById('error-toast');
+    const errorToast = document.getElementById('error-message');
     if (errorToast) {
         errorToast.textContent = message;
-        errorToast.classList.add('show');
+        errorToast.classList.remove('hidden');
         setTimeout(() => {
-            errorToast.classList.remove('show');
+            errorToast.classList.add('hidden');
         }, 3000);
     }
 }
 
+// 📌 Export des fonctions
 export { updatePlayerProfile, showDisconnectOverlay, showError, handleCardPlayed, handleTurnUpdate };
