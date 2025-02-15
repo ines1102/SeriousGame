@@ -28,7 +28,7 @@ const CONFIG = {
     },
     GAME: {
         MAX_PLAYERS_PER_ROOM: 2,
-        CLEANUP_INTERVAL: 600000, // 10 minutes
+        CLEANUP_INTERVAL: 3600000, // 1 heure
         MAX_INACTIVE_TIME: 3600000 // 1 heure
     }
 };
@@ -72,6 +72,7 @@ class RoomManager {
     constructor() {
         this.rooms = new Map();
         this.playerRooms = new Map();
+        this.waitingPlayers = [];
     }
 
     createRoom(roomCode, creator) {
@@ -81,6 +82,7 @@ class RoomManager {
             gameState: {
                 status: 'waiting',
                 turn: creator.id,
+                playedCards: new Map(),
                 startTime: Date.now()
             },
             createdAt: Date.now()
@@ -122,17 +124,16 @@ class RoomManager {
 }
 
 const roomManager = new RoomManager();
-let waitingPlayers = []; // Liste des joueurs en attente
 
 io.on('connection', (socket) => {
     console.log(`✅ Joueur connecté: ${socket.id}`);
 
+    // Création d'une room privée
     socket.on('createRoom', (userData) => {
         if (!userData || !userData.name) {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
-
         let roomCode;
         do {
             roomCode = randomInt(1000, 9999).toString();
@@ -143,28 +144,26 @@ io.on('connection', (socket) => {
         socket.emit('roomCreated', { roomCode });
     });
 
+    // Rejoindre une room avec un code
     socket.on('joinRoom', (data) => {
         if (!data || !data.roomCode) {
             socket.emit('roomError', 'Données invalides');
             return;
         }
-    
+
         const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
         if (!room) {
             socket.emit('roomError', 'Room invalide ou pleine');
             return;
         }
-    
+
         socket.join(data.roomCode);
-    
-        // ✅ Envoyer les infos des joueurs à toute la room
-        io.to(room.code).emit('updatePlayers', room.players);
-    
         if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
             io.to(room.code).emit('gameStart', { roomCode, players: room.players });
         }
     });
 
+    // Matchmaking aléatoire
     socket.on('findRandomGame', (userData) => {
         if (!userData || !userData.name) {
             socket.emit('roomError', 'Données utilisateur invalides');
@@ -173,8 +172,8 @@ io.on('connection', (socket) => {
 
         console.log(`🎲 ${userData.name} cherche une partie aléatoire...`);
 
-        if (waitingPlayers.length > 0) {
-            const opponent = waitingPlayers.shift();
+        if (roomManager.waitingPlayers.length > 0) {
+            const opponent = roomManager.waitingPlayers.shift();
             let roomCode = randomInt(1000, 9999).toString();
 
             const room = roomManager.createRoom(roomCode, opponent);
@@ -186,33 +185,42 @@ io.on('connection', (socket) => {
 
             console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans la room ${roomCode}`);
         } else {
-            waitingPlayers.push({ id: socket.id, ...userData });
+            roomManager.waitingPlayers.push({ id: socket.id, ...userData });
             socket.emit('waitingForOpponent');
             console.log(`⌛ ${userData.name} est en attente d'un adversaire...`);
         }
     });
 
+    // Gestion des joueurs quittant une room
     socket.on('disconnect', () => {
-        // ✅ Supprime le joueur de la liste d'attente
-        waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);
+        roomManager.waitingPlayers = roomManager.waitingPlayers.filter(player => player.id !== socket.id);
         roomManager.leaveRoom(socket.id);
     });
-});
 
-// Nettoyage périodique des rooms inactives
-setInterval(() => {
-    const now = Date.now();
-    let cleanedRooms = 0;
-    for (const [roomCode, room] of roomManager.rooms) {
-        if (now - room.createdAt > CONFIG.GAME.MAX_INACTIVE_TIME) {
-            roomManager.rooms.delete(roomCode);
-            cleanedRooms++;
-        }
-    }
-    if (cleanedRooms > 0) {
-        console.log(`🧹 ${cleanedRooms} rooms inactives supprimées`);
-    }
-}, CONFIG.GAME.CLEANUP_INTERVAL);
+    // Gestion des cartes jouées
+    socket.on('cardPlayed', (data) => {
+        const roomCode = roomManager.playerRooms.get(socket.id);
+        if (!roomCode) return;
+
+        const room = roomManager.rooms.get(roomCode);
+        if (!room) return;
+
+        room.gameState.playedCards.set(data.slot, data);
+        io.to(roomCode).emit('cardPlayed', data);
+    });
+
+    // Gestion des tours
+    socket.on('endTurn', () => {
+        const roomCode = roomManager.playerRooms.get(socket.id);
+        if (!roomCode) return;
+
+        const room = roomManager.rooms.get(roomCode);
+        if (!room) return;
+
+        room.gameState.turn = room.players.find(p => p.id !== socket.id)?.id;
+        io.to(roomCode).emit('turnUpdate', room.gameState.turn);
+    });
+});
 
 // Lancement du serveur
 server.listen(CONFIG.PORT, '0.0.0.0', () => {
