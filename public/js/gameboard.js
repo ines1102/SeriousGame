@@ -38,10 +38,24 @@ function setupSocketListeners() {
         console.log("✅ Connecté au serveur");
     });
 
+    socket.on('gameStart', (data) => {
+        console.log("🎮 Partie démarrée:", data);
+        currentRoomId = data.roomCode;
+        
+        // Trouver l'adversaire
+        const opponent = data.players.find(p => p.id !== socket.id);
+        if (opponent) {
+            opponentData = opponent;
+            updatePlayerProfile(opponent, true);
+        }
+    });
+    
     // ✅ Mise à jour des informations de l'adversaire
     socket.on('updateOpponent', (opponent) => {
+        if (!opponent) return;
+        
         opponentData = opponent;
-        console.log("📌 Adversaire détecté:", opponentData);
+        console.log("📌 Adversaire mis à jour:", opponentData);
         updatePlayerProfile(opponentData, true);
     });
 

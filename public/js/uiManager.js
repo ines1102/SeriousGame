@@ -73,6 +73,42 @@ export function updatePlayerProfile(player, isOpponent = false) {
     });
 }
 
+export function updatePlayerProfile(player, isOpponent = false) {
+    if (!player) {
+        console.warn("❌ Données du joueur manquantes");
+        return;
+    }
+
+    const prefix = isOpponent ? 'opponent' : 'player';
+    
+    waitForElement(`.${prefix}-profile`, (profileContainer) => {
+        try {
+            const avatarContainer = profileContainer.querySelector(`.${prefix}-avatar img`);
+            const nameContainer = profileContainer.querySelector(`.${prefix}-name`);
+            
+            if (!avatarContainer || !nameContainer) {
+                throw new Error(`Éléments manquants pour ${prefix}`);
+            }
+
+            // Mise à jour sécurisée des informations
+            nameContainer.textContent = player.name || 'Joueur inconnu';
+            
+            const avatarPath = getAvatarPath(player.sex, player.avatarId);
+            if (avatarPath) {
+                avatarContainer.src = avatarPath;
+                avatarContainer.alt = `Avatar de ${player.name}`;
+            }
+
+            console.log(`✅ Profil ${prefix} mis à jour:`, {
+                name: player.name,
+                avatar: avatarPath
+            });
+        } catch (error) {
+            console.error(`❌ Erreur lors de la mise à jour du profil ${prefix}:`, error);
+        }
+    }, 100); // Augmenter le nombre de tentatives si nécessaire
+}
+
 // ✅ Correction du problème de chargement des profils
 document.addEventListener('DOMContentLoaded', () => {
     console.log("📌 Initialisation de l'interface utilisateur...");

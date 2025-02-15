@@ -155,16 +155,33 @@ io.on('connection', (socket) => {
             socket.emit('roomError', 'Données invalides');
             return;
         }
-
-        const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
+    
+        const room = roomManager.joinRoom(data.roomCode, { 
+            id: socket.id, 
+            name: data.name,
+            sex: data.sex,
+            avatarId: data.avatarId,
+            ...data 
+        });
+        
         if (!room) {
             socket.emit('roomError', 'Room invalide ou pleine');
             return;
         }
-
+    
         socket.join(data.roomCode);
+        
+        // Émettre les informations des joueurs à tous les joueurs de la room
         if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
-            io.to(room.code).emit('gameStart', { roomCode, players: room.players });
+            io.to(room.code).emit('gameStart', { 
+                roomCode: room.code, 
+                players: room.players.map(player => ({
+                    id: player.id,
+                    name: player.name,
+                    sex: player.sex,
+                    avatarId: player.avatarId
+                }))
+            });
         }
     });
 
@@ -203,7 +220,12 @@ io.on('connection', (socket) => {
 
         const opponent = room.players.find(p => p.id !== socket.id);
         if (opponent) {
-            socket.emit('updateOpponent', opponent);
+            socket.emit('updateOpponent', {
+                id: opponent.id,
+                name: opponent.name,
+                sex: opponent.sex,
+                avatarId: opponent.avatarId
+            });
         }
     });
 
