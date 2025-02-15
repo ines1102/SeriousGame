@@ -69,4 +69,16 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.on("disconnect", () => {
         document.getElementById("disconnect-overlay").classList.remove("hidden");
     });
+
+    socket.on("player_disconnected", () => {
+        console.warn("❌ L'adversaire s'est déconnecté. Retour à l'accueil.");
+        alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
+        window.location.href = "/";
+    });
+    
+    socket.on("disconnect", () => {
+        console.warn("❌ Vous avez été déconnecté du serveur. Retour à l'accueil.");
+        alert("Vous avez été déconnecté du serveur. Retour à l'accueil.");
+        window.location.href = "/";
+    });
 });

@@ -46,9 +46,14 @@ document.addEventListener("DOMContentLoaded", () => {
         socket.once("room_found", (roomId) => {
             console.log(`✅ Room trouvée : ${roomId}`);
 
-            // Stocker `roomId` et `userAvatar` avant la redirection
+            // **Forcer l'enregistrement des données avant de rediriger**
             sessionStorage.setItem("roomId", roomId);
+            sessionStorage.setItem("userName", userName);
+            sessionStorage.setItem("userAvatar", userAvatar);
+
             console.log("📌 `roomId` enregistré :", sessionStorage.getItem("roomId"));
+            console.log("📌 `userName` enregistré :", sessionStorage.getItem("userName"));
+            console.log("📌 `userAvatar` enregistré :", sessionStorage.getItem("userAvatar"));
 
             window.location.href = "/gameboard.html";
         });
@@ -56,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
         socket.once("error", (error) => {
             console.error(`❌ Erreur : ${error}`);
             loadingOverlay.classList.add("hidden");
-            errorMessageElement.textContent = error;
+            errorToast.textContent = error;
             errorToast.classList.add("show");
             setTimeout(() => errorToast.classList.remove("show"), 3000);
         });
