@@ -14,8 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const userAvatar = sessionStorage.getItem("userAvatar") || "/Avatars/default.jpeg";
     const roomId = sessionStorage.getItem("roomId");
 
-    if (!userName || !roomId) {
-        window.location.href = "/"; // Rediriger si pas d'infos valides
+    if (!userName || !userAvatar || !roomId) {
+        console.error("⚠️ Données de session incomplètes !", { userName, userAvatar, roomId });
+        window.location.href = "/"; // Redirection vers l'accueil si données manquantes
+        return;
     }
 
     console.log(`📌 Connexion en cours pour ${userName} avec avatar ${userAvatar} dans la room ${roomId}`);

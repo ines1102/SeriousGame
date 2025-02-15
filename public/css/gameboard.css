@@ -44,6 +44,14 @@ body {
     border: 2px solid var(--primary-color);
 }
 
+.opponent-avatar img {
+    width: 60px;  /* Ajuste la taille de l'avatar */
+    height: 60px;
+    border-radius: 50%;  /* Rend l'avatar circulaire */
+    border: 3px solid #4a90e2;  /* Ajoute une bordure */
+    object-fit: cover;  /* Assure que l'image est bien cadrée */
+}
+
 .player-name, .opponent-name {
     font-size: 1.2rem;
     font-weight: bold;
