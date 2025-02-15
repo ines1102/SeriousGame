@@ -2,7 +2,7 @@ import Game from './game.js';
 import DragAndDropManager from './dragAndDrop.js';
 import socket from './websocket.js';
 
-// 📌 Configuration des avatars
+// 📌 Configuration des avatars et chemins
 const AVATAR_CONFIG = {
     male: {
         '1': '/Avatars/male1.jpeg',
@@ -17,43 +17,63 @@ const AVATAR_CONFIG = {
     default: '/Avatars/default.jpeg'
 };
 
-// Variables globales
+// 🔹 Variables globales
 let gameInstance;
 let currentRoomId;
 let userData;
 let dragAndDrop;
 
-// 📌 Fonction pour obtenir le chemin de l'avatar
+// 📌 Fonction pour récupérer le bon avatar
 function getAvatarPath(sex, avatarId) {
-    return AVATAR_CONFIG[sex]?.[avatarId] || AVATAR_CONFIG.default;
+    try {
+        const avatarKey = String(avatarId); // 🔄 Convertir en chaîne pour éviter les erreurs
+        if (!sex || !avatarKey) {
+            console.warn('⚠️ Données d\'avatar incomplètes, utilisation de l\'avatar par défaut');
+            return AVATAR_CONFIG.default;
+        }
+        return AVATAR_CONFIG[sex]?.[avatarKey] || AVATAR_CONFIG.default;
+    } catch (error) {
+        console.error('❌ Erreur lors de la récupération de l\'avatar:', error);
+        return AVATAR_CONFIG.default;
+    }
 }
 
-// 📌 Initialisation du jeu
+// 🎮 Initialisation du jeu
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔄 Initialisation du jeu...');
     
     try {
+        // 🔹 Récupération des données utilisateur
         userData = JSON.parse(localStorage.getItem('userData'));
         if (!userData) {
             throw new Error('Session expirée');
         }
 
+        // 🔹 Récupération et validation de l'ID de room
         currentRoomId = new URLSearchParams(window.location.search).get('roomId');
         if (!currentRoomId) {
             throw new Error('Room ID manquant');
         }
 
+        // 🔄 Attente de la connexion WebSocket
         await socket.waitForConnection();
         console.log('✅ Connecté au serveur');
 
+        // 🔄 Initialisation de l'interface
         initializeUI();
 
+        // 🎮 Initialisation du jeu
         gameInstance = new Game(socket);
-        dragAndDrop = new DragAndDropManager(gameInstance, socket);
-        dragAndDrop.initialize(); 
+        window.gameInstance = gameInstance; // Pour debugging
 
+        // 🎯 Initialisation du Drag & Drop
+        dragAndDrop = new DragAndDropManager(gameInstance, socket);
+        dragAndDrop.initialize();
+
+        // 🔄 Configuration des écouteurs Socket.io
         setupSocketListeners();
 
+        // 🎲 Rejoindre la room
         socket.emit('joinRoom', { 
             ...userData, 
             roomCode: currentRoomId 
@@ -61,10 +81,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error("❌ Erreur lors de l'initialisation:", error);
+        showDisconnectOverlay(error.message);
+        setTimeout(() => {
+            window.location.href = '/choose-mode';
+        }, 2000);
     }
 });
 
-// 📌 Mise à jour de l'UI
+// 📌 Initialisation de l'interface utilisateur
 function initializeUI() {
     try {
         updatePlayerProfile(userData, false);
@@ -75,24 +99,24 @@ function initializeUI() {
     }
 }
 
-// 📌 Mise à jour du profil du joueur/adversaire
+// 🎭 Mise à jour du profil d'un joueur
 function updatePlayerProfile(player, isOpponent = false) {
     const prefix = isOpponent ? 'opponent' : 'player';
-    
-    console.log(`🔄 Mise à jour du profil ${prefix}:`, player); // ✅ Debug
 
-    // Mise à jour de l'avatar
+    // 📌 Mise à jour de l'avatar
     const avatarContainer = document.querySelector(`.${prefix}-avatar`);
     if (avatarContainer) {
         const avatarImg = avatarContainer.querySelector('img') || document.createElement('img');
         avatarImg.className = 'avatar-img';
 
+        // 🎯 Attribution de l'avatar correct
         const avatarPath = getAvatarPath(player.sex, player.avatarId);
-        console.log(`📸 Avatar choisi pour ${player.name}: ${avatarPath}`); // ✅ Debug
+        console.log(`📸 Avatar choisi pour ${player.name}: ${avatarPath}`);
 
         avatarImg.src = avatarPath;
         avatarImg.alt = `Avatar de ${player.name}`;
-        
+
+        // 🔄 Gestion des erreurs de chargement d'image
         avatarImg.onerror = () => {
             console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
             avatarImg.src = AVATAR_CONFIG.default;
@@ -103,56 +127,22 @@ function updatePlayerProfile(player, isOpponent = false) {
         }
     }
 
-    // Mise à jour du nom
+    // 📌 Mise à jour du nom
     const nameElement = document.querySelector(`.${prefix}-name`);
     if (nameElement) {
         nameElement.textContent = player.name || 'Joueur inconnu';
     }
 }
 
-// 📌 Mise à jour de l'indicateur de tour
-function updateTurnIndicator(prefix, isCurrentTurn) {
-    const profile = document.querySelector(`.${prefix}-profile`);
-    if (profile) {
-        profile.classList.toggle('active-turn', isCurrentTurn);
-    }
-}
-
-// 📌 Initialisation des zones de jeu
-function initializeGameAreas() {
-    const gameBoard = document.querySelector('.game-board');
-    if (gameBoard) {
-        gameBoard.innerHTML = ''; // Nettoyage
-
-        const zones = ['player-hand', 'game-zones', 'opponent-hand'];
-        zones.forEach(zone => {
-            const div = document.createElement('div');
-            div.id = zone;
-            div.className = zone;
-            gameBoard.appendChild(div);
-        });
-    }
-}
-
-// 📌 Initialisation du conteneur adversaire
-function initializeOpponentContainer() {
-    const opponentContainer = document.querySelector('.opponent-profile');
-    if (opponentContainer) {
-        opponentContainer.innerHTML = `
-            <div class="opponent-avatar">
-                <img src="${AVATAR_CONFIG.default}" alt="En attente d'un adversaire" class="avatar-img placeholder">
-            </div>
-            <div class="opponent-name">En attente...</div>
-            <div class="status-indicator"></div>
-        `;
-    }
-}
-
-// 📌 Écouteurs Socket.io
+// 📌 Configuration des écouteurs WebSocket
 function setupSocketListeners() {
     socket.on('updatePlayers', (players) => {
+        console.log('🔄 Mise à jour des joueurs:', players);
+
         const opponent = players.find(player => player.clientId !== userData.clientId);
-        if (opponent) updatePlayerProfile(opponent, true);
+        if (opponent) {
+            updatePlayerProfile(opponent, true);
+        }
     });
 
     socket.on('gameStart', (data) => {
@@ -160,39 +150,23 @@ function setupSocketListeners() {
         handleGameStart(data);
     });
 
-    socket.on('cardPlayed', (data) => {
-        handleCardPlayed(data);
-    });
-
-    socket.on('turnUpdate', (playerId) => {
-        handleTurnUpdate(playerId);
-    });
-
     socket.on('opponentLeft', () => {
+        console.log('👋 Adversaire déconnecté');
         showDisconnectOverlay("Votre adversaire a quitté la partie.");
     });
 
     socket.on('disconnect', () => {
+        console.log('🔌 Déconnexion du serveur');
         showDisconnectOverlay("Déconnecté du serveur...");
     });
 
     socket.on('error', (error) => {
+        console.error('❌ Erreur socket:', error);
         showError(`Erreur: ${error.message}`);
-    });
-
-    socket.on('updatePlayers', (players) => {
-        console.log('🔄 Mise à jour des joueurs:', players); // ✅ Debug
-    
-        const opponent = players.find(player => player.clientId !== userData.clientId);
-        console.log('👀 Adversaire détecté:', opponent); // ✅ Vérifie si l’adversaire est bien trouvé
-    
-        if (opponent) {
-            updatePlayerProfile(opponent, true);
-        }
     });
 }
 
-// 📌 Gestion du début de partie
+// 🎮 Gestion du début de partie
 function handleGameStart(data) {
     if (!data.players || data.players.length < 2) {
         console.error("❌ Pas assez de joueurs pour démarrer");
@@ -209,69 +183,36 @@ function handleGameStart(data) {
 
     updatePlayerProfile(currentPlayer, false);
     updatePlayerProfile(opponent, true);
-
-    if (data.hands?.playerHand) {
-        displayHand(data.hands.playerHand, true);
-    }
-
-    dragAndDrop.enableDragDrop();
 }
 
-// 📌 Gestion d'une carte jouée
-function handleCardPlayed(data) {
-    if (!data.cardId || !data.slot) {
-        console.error("❌ Données de carte invalides:", data);
-        return;
+// 🎯 Affichage de l'overlay de déconnexion
+function showDisconnectOverlay(message) {
+    const overlay = document.getElementById('disconnect-overlay');
+    if (overlay) {
+        const messageElement = overlay.querySelector('p');
+        if (messageElement) messageElement.textContent = message;
+        overlay.classList.remove('hidden');
+
+        setTimeout(() => {
+            window.location.href = '/choose-mode';
+        }, 3000);
     }
-
-    const dropZone = document.querySelector(`[data-slot="${data.slot}"]`);
-    if (dropZone && dragAndDrop) {
-        dragAndDrop.processDrop({
-            cardId: data.cardId,
-            cardSrc: data.cardSrc || `url(${data.name})`,
-            name: data.cardName || data.name
-        }, dropZone);
-    }
-}
-
-// 📌 Gestion du changement de tour
-function handleTurnUpdate(playerId) {
-    if (!gameInstance) return;
-
-    gameInstance.currentTurn = playerId;
-    const isPlayerTurn = playerId === userData.clientId;
-
-    updateTurnIndicator('player', isPlayerTurn);
-    updateTurnIndicator('opponent', !isPlayerTurn);
-
-    dragAndDrop.setDraggable(isPlayerTurn);
-}
-
-// 📌 Affichage de la main
-function displayHand(cards, isPlayer) {
-    const handContainer = document.getElementById(isPlayer ? 'player-hand' : 'opponent-hand');
-    if (!handContainer || !Array.isArray(cards)) return;
-
-    handContainer.innerHTML = '';
-    cards.forEach(card => {
-        const cardElement = document.createElement('div');
-        cardElement.className = 'card';
-        cardElement.dataset.cardId = card.id;
-        cardElement.dataset.cardName = card.name;
-        cardElement.style.backgroundImage = isPlayer ? `url(${card.name})` : 'url(/Cartes/dos.png)';
-        
-        if (isPlayer) {
-            cardElement.draggable = true;
-            cardElement.addEventListener('dragstart', (e) => dragAndDrop.handleDragStart(e));
-        }
-
-        handContainer.appendChild(cardElement);
-    });
 }
 
 // 📌 Affichage des erreurs
 function showError(message) {
-    console.error(message);
+    const errorToast = document.getElementById('error-toast');
+    if (errorToast) {
+        errorToast.textContent = message;
+        errorToast.classList.add('show');
+        setTimeout(() => {
+            errorToast.classList.remove('show');
+        }, 3000);
+    }
 }
 
-export { updatePlayerProfile, showError, handleCardPlayed, handleTurnUpdate };
+export { 
+    updatePlayerProfile, 
+    showDisconnectOverlay, 
+    showError
+};
