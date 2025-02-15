@@ -9,8 +9,6 @@ let opponentData = null;
 let isPlayerTurn = false;
 
 // 📌 Initialisation du jeu
-import socket from './websocket.js'; // Assure-toi que le fichier websocket.js gère la connexion
-
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🔄 Initialisation du jeu...");
 
