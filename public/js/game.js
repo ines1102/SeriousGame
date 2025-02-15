@@ -29,20 +29,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const socket = io();
 
+        /** ✅ Gérer la reconnexion proprement */
         socket.on("connect", () => {
             console.log(`✅ Reconnexion détectée, réenvoi des informations...`);
-        
-            const userName = sessionStorage.getItem("userName");
-            const userAvatar = sessionStorage.getItem("userAvatar");
-            const roomId = sessionStorage.getItem("roomId");
-        
-            if (userName && userAvatar && roomId) {
-                console.log(`📌 Renvoyant les infos : Room ${roomId}, ${userName}`);
-                socket.emit("rejoin_game", { roomId, name: userName, avatar: userAvatar });
+            const storedUserName = sessionStorage.getItem("userName");
+            const storedUserAvatar = sessionStorage.getItem("userAvatar");
+            const storedRoomId = sessionStorage.getItem("roomId");
+
+            if (storedUserName && storedUserAvatar && storedRoomId) {
+                console.log(`📌 Renvoyant les infos : Room ${storedRoomId}, ${storedUserName}`);
+                socket.emit("rejoin_game", { roomId: storedRoomId, name: storedUserName, avatar: storedUserAvatar });
             }
         });
+
+        /** ✅ Émission de l'événement pour rejoindre la partie */
         socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
+        /** ✅ Réception de l'événement `game_start` */
         socket.on("game_start", (gameData) => {
             console.log("✅ Game start reçu :", gameData);
         
@@ -54,12 +57,19 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log(`🎮 Début du jeu pour ${userName}. Adversaire : ${gameData.opponent.name}`);
         
             // 🔴 Mise à jour du profil de l'adversaire
-            document.querySelector(".opponent-name").textContent = gameData.opponent.name;
-            document.querySelector(".opponent-avatar img").src = gameData.opponent.avatar;
-            console.log("🎭 Avatar de l'adversaire mis à jour :", gameData.opponent.avatar);
+            const opponentNameElement = document.querySelector(".opponent-name");
+            const opponentAvatarElement = document.querySelector(".opponent-avatar img");
+
+            if (opponentNameElement && opponentAvatarElement) {
+                opponentNameElement.textContent = gameData.opponent.name;
+                opponentAvatarElement.src = gameData.opponent.avatar;
+                console.log("🎭 Avatar de l'adversaire mis à jour :", gameData.opponent.avatar);
+            } else {
+                console.error("❌ Impossible de mettre à jour l'adversaire, éléments introuvables !");
+            }
         });
 
-        // ✅ Ajout d'un nouvel événement pour s'assurer que les profils sont bien mis à jour
+        /** ✅ Confirmation que les joueurs sont prêts */
         socket.on("players_ready", (data) => {
             console.log("✅ Confirmation : Les deux joueurs sont bien connectés.", data);
 
@@ -70,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelector(".player-avatar img").src = data.player1.avatar;
         });
 
-        /** ✅ Ajout de la gestion d'une déconnexion d'un joueur */
+        /** ✅ Gestion d'une déconnexion d'un joueur */
         socket.on("opponent_disconnected", () => {
             console.warn("❌ L'adversaire s'est déconnecté !");
             alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
@@ -83,6 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
             window.location.href = "/";
         });
 
+        /** ✅ Si l'adversaire revient, mise à jour de son profil */
         socket.on("opponent_reconnected", (data) => {
             console.log(`✅ ${data.name} est revenu !`);
         
@@ -93,7 +104,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // 🔴 Supprimer le message de déconnexion
             document.getElementById("disconnect-overlay").classList.add("hidden");
         });
-        
+
+        /** ✅ Gérer la déconnexion du joueur lui-même */
         socket.on("disconnect", () => {
             console.warn("❌ Vous avez été déconnecté du serveur. Vérification...");
             
@@ -115,6 +127,15 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 2000);
         });
 
+        /** ✅ Forcer une reconnexion automatique si la connexion est perdue */
+        setTimeout(() => {
+            if (!socket.connected) {
+                console.warn("❌ Connexion interrompue, tentative de reconnexion...");
+                socket.connect();
+            }
+        }, 5000);
+
+        /** ✅ Gérer l'événement `reconnect` pour enlever le message de déconnexion */
         socket.on("reconnect", () => {
             console.log("🔄 Reconnexion détectée, suppression du message de déconnexion.");
             document.getElementById("disconnect-overlay").classList.add("hidden");
