@@ -1,6 +1,3 @@
-Je vais vous fournir le CSS correspondant pour `choose-mode.css` :
-
-```css
 :root {
     --primary-color: #4a90e2;
     --secondary-color: #50b04f;
@@ -257,25 +254,3 @@ h2 {
 .btn-mode:active {
     transform: scale(0.98);
 }
-```
-
-Ce CSS fournit :
-1. Un design moderne et responsive
-2. Des animations fluides
-3. Des états de hover et focus
-4. Un overlay de chargement élégant
-5. Un système de toast pour les erreurs
-6. Une gestion des différents états des boutons
-7. Des transitions douces
-8. Une adaptation mobile
-
-Les principales caractéristiques incluent :
-- Utilisation de variables CSS pour la cohérence
-- Animations fluides pour une meilleure UX
-- Design responsive
-- États interactifs pour les boutons
-- Gestion de l'accessibilité
-- Support des icônes Font Awesome
-- Système de notification d'erreur
-
-N'oubliez pas que ce CSS suppose que vous utilisez Font Awesome pour les icônes et qu'il est optimisé pour fonctionner avec le HTML que vous avez fourni.​​​​​​​​​​​​​​​​
