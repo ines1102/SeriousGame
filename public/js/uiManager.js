@@ -1,16 +1,14 @@
-// uiManager.js - Gère l'affichage et l'interface utilisateur
+// 📌 uiManager.js - Gestion de l'affichage des profils et de l'UI
+
 export function initializeUI(userData) {
     try {
         console.log("📌 Initialisation de l'interface utilisateur...");
 
         // ✅ Met à jour le profil du joueur
         updatePlayerProfile(userData, false);
-        
-        // ✅ Initialise le conteneur de l’adversaire
-        initializeOpponentContainer();
 
-        // ✅ Initialise les zones de jeu
-        initializeGameAreas();
+        // ✅ Initialise le conteneur de l’adversaire (vide au départ)
+        initializeOpponentContainer();
     } catch (error) {
         console.error("❌ Erreur lors de l'initialisation de l'UI:", error);
     }
@@ -24,25 +22,23 @@ export function updatePlayerProfile(player, isOpponent = false) {
     // ✅ Mise à jour de l'avatar
     const avatarContainer = document.querySelector(`.${prefix}-avatar`);
     if (avatarContainer) {
-        const avatarImg = avatarContainer.querySelector('img') || document.createElement('img');
-        avatarImg.className = 'avatar-img';
+        let avatarImg = avatarContainer.querySelector('img');
+        if (!avatarImg) {
+            avatarImg = document.createElement('img');
+            avatarImg.className = 'avatar-img';
+            avatarContainer.appendChild(avatarImg);
+        }
 
-        // 📌 Vérification du bon avatar
-        const avatarPath = player.avatarSrc || "/Avatars/default.jpeg";
+        const avatarPath = player.avatarSrc || `/Avatars/default.jpeg`;
         console.log(`📸 Avatar choisi pour ${player.name}: ${avatarPath}`);
 
         avatarImg.src = avatarPath;
         avatarImg.alt = `Avatar de ${player.name}`;
 
-        // ✅ Gestion des erreurs de chargement d’image
         avatarImg.onerror = () => {
             console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
             avatarImg.src = "/Avatars/default.jpeg";
         };
-
-        if (!avatarContainer.contains(avatarImg)) {
-            avatarContainer.appendChild(avatarImg);
-        }
     }
 
     // ✅ Mise à jour du nom
@@ -52,45 +48,16 @@ export function updatePlayerProfile(player, isOpponent = false) {
     }
 }
 
-// ✅ Initialisation du conteneur adversaire
+// ✅ Initialisation du conteneur de l'adversaire
 function initializeOpponentContainer() {
     const opponentContainer = document.querySelector('.opponent-profile');
     if (opponentContainer) {
         opponentContainer.innerHTML = `
             <div class="opponent-avatar">
-                <img src="/Avatars/default.jpeg" alt="En attente d'un adversaire" class="avatar-img placeholder">
+                <img src="/Avatars/default.jpeg" alt="En attente d'un adversaire" class="avatar-img">
             </div>
             <div class="opponent-name">En attente...</div>
             <div class="status-indicator"></div>
         `;
-    }
-}
-
-// ✅ Initialisation des zones de jeu
-function initializeGameAreas() {
-    const gameBoard = document.querySelector('.game-board');
-    if (gameBoard) {
-        gameBoard.innerHTML = '';
-
-        // 📌 Création des zones de jeu
-        ['player-hand', 'game-zones', 'opponent-hand'].forEach(zone => {
-            const div = document.createElement('div');
-            div.id = zone;
-            div.className = zone;
-            gameBoard.appendChild(div);
-        });
-    }
-}
-
-export function showDisconnectOverlay(message) {
-    const overlay = document.getElementById('disconnect-overlay');
-    if (overlay) {
-        const messageElement = overlay.querySelector('p');
-        if (messageElement) messageElement.textContent = message;
-        overlay.classList.remove('hidden');
-
-        setTimeout(() => {
-            window.location.href = '/choose-mode';
-        }, 3000);
     }
 }

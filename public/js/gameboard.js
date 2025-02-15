@@ -1,4 +1,4 @@
-import { initializeUI, showDisconnectOverlay, updatePlayerProfile } from './uiManager.js';
+import { initializeUI, updatePlayerProfile } from './uiManager.js';
 import socket from './websocket.js';
 import DragAndDropManager from './dragAndDrop.js';
 
@@ -46,6 +46,77 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error("❌ Erreur lors de l'initialisation:", error);
-        showDisconnectOverlay(error.message);
     }
 });
+
+// 📌 Écoute des mises à jour des joueurs et de l'état du jeu
+socket.on('updatePlayers', (players) => {
+    console.log('🔄 Mise à jour des joueurs:', players);
+
+    // ✅ Trouver l’adversaire
+    const opponent = players.find(player => player.clientId !== userData.clientId);
+    if (opponent) {
+        updatePlayerProfile(opponent, true);
+    }
+});
+
+socket.on('gameStart', (data) => {
+    console.log('🎮 Début de la partie:', data);
+    handleGameStart(data);
+});
+
+// ✅ Gestion de l'affichage des mains
+function handleGameStart(data) {
+    if (!data.players || data.players.length < 2) {
+        console.error("❌ Pas assez de joueurs pour démarrer");
+        return;
+    }
+
+    const currentPlayer = data.players.find(player => player.clientId === userData.clientId);
+    const opponent = data.players.find(player => player.clientId !== userData.clientId);
+
+    if (!currentPlayer || !opponent) {
+        console.error("❌ Erreur d'attribution des joueurs");
+        return;
+    }
+
+    // ✅ Mise à jour des profils
+    updatePlayerProfile(currentPlayer, false);
+    updatePlayerProfile(opponent, true);
+
+    // ✅ Affichage des mains initiales
+    if (data.hands?.playerHand) {
+        displayHand(data.hands.playerHand, true);
+    }
+
+    if (data.hands?.opponentHand) {
+        displayHand(data.hands.opponentHand, false);
+    }
+}
+
+// ✅ Fonction d'affichage des mains des joueurs
+function displayHand(cards, isPlayer) {
+    const handContainer = document.getElementById(isPlayer ? 'player-hand' : 'opponent-hand');
+    if (!handContainer || !Array.isArray(cards)) {
+        console.error("❌ Problème avec le conteneur de la main ou les cartes");
+        return;
+    }
+
+    handContainer.innerHTML = '';
+    console.log(`📌 Affichage de la main ${isPlayer ? 'du joueur' : 'de l\'adversaire'}:`, cards);
+
+    cards.forEach(card => {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
+        cardElement.dataset.cardId = card.id;
+        cardElement.dataset.cardName = card.name;
+        cardElement.style.backgroundImage = isPlayer ? `url(${card.name})` : 'url(/Cartes/dos.png)';
+        
+        if (isPlayer && dragAndDrop) {
+            cardElement.draggable = true;
+            cardElement.addEventListener('dragstart', (e) => dragAndDrop.handleDragStart(e));
+        }
+
+        handContainer.appendChild(cardElement);
+    });
+}
