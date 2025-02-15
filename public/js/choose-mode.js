@@ -1,200 +1,57 @@
-import socketManager from './websocket.js';
+document.addEventListener("DOMContentLoaded", () => {
+    const userNameElement = document.getElementById("user-name");
+    const userAvatarElement = document.getElementById("user-avatar");
+    const randomModeButton = document.getElementById("random-mode");
+    const friendModeButton = document.getElementById("friend-mode");
+    const loadingOverlay = document.getElementById("loading-overlay");
+    const cancelSearchButton = document.getElementById("cancel-search");
+    const errorToast = document.getElementById("error-toast");
+    const errorMessageElement = document.getElementById("error-message");
 
-class GameModeSelector {
-    constructor() {
-        this.init();
-        this.socket = socketManager;
-        this.isSearching = false;
-    }
+    const socket = io(); // Connexion au serveur Socket.io
 
-    async init() {
-        try {
-            this.loadUserData();
-            this.initializeElements();
-            this.setupEventListeners();
-            this.setupSocketListeners();
-            this.displayUserInfo();
-            console.log('✅ Mode selector initialisé');
-        } catch (error) {
-            console.error('❌ Erreur d\'initialisation:', error);
-            this.showError('Erreur lors de l\'initialisation');
-        }
-    }
+    // Récupération du nom et de l’avatar stockés après `index.html`
+    const userName = sessionStorage.getItem("userName");
+    const userAvatar = sessionStorage.getItem("userAvatar");
 
-    loadUserData() {
-        this.userData = JSON.parse(localStorage.getItem('userData'));
-        if (!this.userData) {
-            console.error('❌ Données utilisateur manquantes');
-            window.location.href = '/';
-            return;
-        }
-        console.log('👤 Données utilisateur chargées:', this.userData.name);
-    }
+    if (userName) userNameElement.textContent = userName;
+    if (userAvatar) userAvatarElement.src = userAvatar;
+    else userAvatarElement.src = "/Avatars/default.jpeg"; // Avatar par défaut
 
-    initializeElements() {
-        this.elements = {
-            userAvatar: document.getElementById('user-avatar'),
-            userName: document.getElementById('user-name'),
-            randomModeBtn: document.getElementById('random-mode'),
-            friendModeBtn: document.getElementById('friend-mode'),
-            loadingOverlay: document.getElementById('loading-overlay'),
-            cancelSearchBtn: document.getElementById('cancel-search'),
-            errorToast: document.getElementById('error-toast'),
-            errorMessage: document.getElementById('error-message')
-        };
-
-        // Vérification des éléments
-        for (const [key, element] of Object.entries(this.elements)) {
-            if (!element) {
-                throw new Error(`Élément ${key} non trouvé`);
-            }
-        }
-    }
-
-    setupEventListeners() {
-        // Mode aléatoire
-        this.elements.randomModeBtn.addEventListener('click', () => {
-            if (!this.isSearching) {
-                this.startRandomSearch();
-            }
-        });
-
-        // Mode entre amis
-        this.elements.friendModeBtn.addEventListener('click', () => {
-            window.location.href = '/room-choice';
-        });
-
-        // Annulation de la recherche
-        this.elements.cancelSearchBtn.addEventListener('click', () => {
-            this.cancelSearch();
-        });
-
-        // Gestion des touches clavier
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isSearching) {
-                this.cancelSearch();
-            }
-        });
-    }
-
-    setupSocketListeners() {
-        // Connexion établie
-        this.socket.on('connect', () => {
-            console.log('✅ Connecté au serveur');
-            this.enableButtons();
-        });
-
-        // Déconnexion
-        this.socket.on('disconnect', () => {
-            console.log('❌ Déconnecté du serveur');
-            this.disableButtons();
-            this.showError('Connexion perdue');
-        });
-
-        // Partie trouvée
-        this.socket.on('gameStart', (data) => {
-            console.log('🎮 Partie trouvée:', data);
-            window.location.href = `/gameboard?room=${data.roomCode}`;
-        });
-
-        // En attente d'adversaire
-        this.socket.on('waitingForOpponent', () => {
-            console.log('⏳ En attente d\'un adversaire...');
-        });
-
-        // Erreur de room
-        this.socket.on('roomError', (error) => {
-            console.error('❌ Erreur:', error);
-            this.hideLoadingOverlay();
-            this.showError(error);
-        });
-    }
-
-    displayUserInfo() {
-        this.elements.userAvatar.src = this.userData.avatarSrc || '/Avatars/default.jpeg';
-        this.elements.userAvatar.alt = `Avatar de ${this.userData.name}`;
-        this.elements.userName.textContent = this.userData.name;
-    }
-
-    startRandomSearch() {
-        this.isSearching = true;
-        this.showLoadingOverlay();
-        this.elements.randomModeBtn.disabled = true;
-        this.elements.friendModeBtn.disabled = true;
-
-        console.log('🎲 Recherche d\'une partie aléatoire...');
-        this.socket.emit('findRandomGame', this.userData);
-    }
-
-    cancelSearch() {
-        if (!this.isSearching) return;
-
-        this.socket.emit('cancelSearch');
-        this.hideLoadingOverlay();
-        this.isSearching = false;
-        this.elements.randomModeBtn.disabled = false;
-        this.elements.friendModeBtn.disabled = false;
-        
-        console.log('🚫 Recherche annulée');
-    }
-
-    showLoadingOverlay() {
-        this.elements.loadingOverlay.classList.remove('hidden');
-    }
-
-    hideLoadingOverlay() {
-        this.elements.loadingOverlay.classList.add('hidden');
-    }
-
-    showError(message) {
-        this.elements.errorMessage.textContent = message;
-        this.elements.errorToast.classList.add('show');
-        
+    /** Afficher un message d'erreur */
+    function showError(message) {
+        errorMessageElement.textContent = message;
+        errorToast.classList.add("show");
         setTimeout(() => {
-            this.elements.errorToast.classList.remove('show');
+            errorToast.classList.remove("show");
         }, 3000);
     }
 
-    enableButtons() {
-        this.elements.randomModeBtn.disabled = false;
-        this.elements.friendModeBtn.disabled = false;
-    }
+    /** Mode Joueur Aléatoire */
+    randomModeButton.addEventListener("click", () => {
+        loadingOverlay.classList.remove("hidden"); // Afficher l'overlay
 
-    disableButtons() {
-        this.elements.randomModeBtn.disabled = true;
-        this.elements.friendModeBtn.disabled = true;
-    }
+        socket.emit("find_random_room", { name: userName, avatar: userAvatar });
 
-    handleConnectionError() {
-        this.hideLoadingOverlay();
-        this.isSearching = false;
-        this.enableButtons();
-        this.showError('Erreur de connexion au serveur');
-    }
-}
+        socket.on("room_found", (roomId) => {
+            sessionStorage.setItem("roomId", roomId);
+            window.location.href = "/gameboard.html"; // Redirige vers le plateau de jeu
+        });
 
-// Initialisation une fois le DOM chargé
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        const gameModeSelector = new GameModeSelector();
-    } catch (error) {
-        console.error('❌ Erreur fatale:', error);
-        // Afficher une erreur générique à l'utilisateur
-        const errorToast = document.getElementById('error-toast');
-        if (errorToast) {
-            const errorMessage = document.getElementById('error-message');
-            errorMessage.textContent = 'Une erreur inattendue est survenue';
-            errorToast.classList.add('show');
-        }
-    }
+        socket.on("error", (error) => {
+            loadingOverlay.classList.add("hidden");
+            showError(error);
+        });
+    });
+
+    /** Mode Jouer entre amis */
+    friendModeButton.addEventListener("click", () => {
+        window.location.href = "/room-choice.html"; // Redirection vers le choix de room
+    });
+
+    /** Annuler la recherche d'un adversaire */
+    cancelSearchButton.addEventListener("click", () => {
+        socket.emit("cancel_search");
+        loadingOverlay.classList.add("hidden");
+    });
 });
-
-// Gestion des erreurs globales
-window.addEventListener('error', (event) => {
-    console.error('❌ Erreur globale:', event.error);
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-    console.error('❌ Promesse rejetée non gérée:', event.reason);
-});
-​​​​​​​​​​​​​​​​
