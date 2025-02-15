@@ -8,11 +8,11 @@ import fs from 'fs/promises';
 import { randomInt } from 'crypto';
 import Deck from './public/js/deck.js';
 
-// Configuration des chemins
+// 📌 Configuration des chemins
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration globale
+// 📌 Configuration globale
 const CONFIG = {
     PORT: process.env.PORT || 10000,
     CLIENT_URL: "https://seriousgame-ds65.onrender.com",
@@ -37,6 +37,7 @@ const CONFIG = {
     }
 };
 
+// 📌 Vérification des données utilisateur
 function validateUserData(userData) {
     return userData &&
         typeof userData.name === 'string' &&
@@ -46,7 +47,41 @@ function validateUserData(userData) {
         typeof userData.avatarId === 'string';
 }
 
-// Gestionnaire de Room
+// 📌 Initialisation du serveur
+const app = express();
+app.use(cors(CONFIG.CORS_OPTIONS));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(CONFIG.STATIC_PATHS.PUBLIC));
+app.use('/Avatars', express.static(CONFIG.STATIC_PATHS.AVATARS)); // ✅ Correction pour servir les avatars
+
+// 📌 Routes statiques
+const routes = [
+    { path: '/', file: 'index.html' },
+    { path: '/choose-mode', file: 'choose-mode.html' },
+    { path: '/room-choice', file: 'room-choice.html' },
+    { path: '/gameboard', file: 'gameboard.html' }
+];
+
+routes.forEach(route => {
+    app.get(route.path, (req, res) => {
+        res.sendFile(path.join(CONFIG.STATIC_PATHS.PUBLIC, route.file));
+    });
+});
+
+// 📌 Route de monitoring
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+// 📌 Création du serveur WebSocket
+const server = createServer(app);
+const io = new Server(server, {
+    cors: CONFIG.CORS_OPTIONS,
+    transports: ['websocket']
+});
+
+// 📌 Gestion des rooms et matchmaking
 class RoomManager {
     constructor() {
         this.rooms = new Map();
@@ -104,97 +139,20 @@ class RoomManager {
 
     cleanInactiveRooms() {
         const now = Date.now();
-        let cleanedCount = 0;
         for (const [roomCode, room] of this.rooms) {
             if (now - room.createdAt > CONFIG.GAME.MAX_INACTIVE_TIME) {
                 this.rooms.delete(roomCode);
                 room.players.forEach(player => this.playerRooms.delete(player.id));
-                cleanedCount++;
+                console.log(`🧹 Room ${roomCode} supprimée (inactivité)`);
             }
         }
-        if (cleanedCount > 0) {
-            console.log(`🧹 ${cleanedCount} rooms inactives nettoyées`);
-        }
     }
 }
 
-// Gestionnaire de Jeu
-class GameManager {
-    constructor(io, roomManager) {
-        this.io = io;
-        this.roomManager = roomManager;
-        this.deck = new Deck();
-    }
-
-    initializeGame(room) {
-        console.log(`🎮 Initialisation du jeu pour la room ${room.code}`);
-        const decks = this.deck.creerDecksJoueurs();
-
-        room.gameState = {
-            ...room.gameState,
-            status: 'playing',
-            playerDecks: new Map([
-                [room.players[0].id, decks.joueur1],
-                [room.players[1].id, decks.joueur2]
-            ]),
-            turn: room.players[0].id
-        };
-
-        room.players.forEach((player, index) => {
-            const playerDeck = index === 0 ? decks.joueur1 : decks.joueur2;
-            this.io.to(player.id).emit('gameStart', {
-                players: room.players,
-                hands: {
-                    playerHand: playerDeck.main,
-                    deckSize: playerDeck.deck.length
-                },
-                turn: room.gameState.turn
-            });
-        });
-
-        console.log(`✅ Jeu initialisé pour la room ${room.code}`);
-    }
-}
-
-// Configuration du serveur
-const app = express();
-app.use(cors(CONFIG.CORS_OPTIONS));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(CONFIG.STATIC_PATHS.PUBLIC));
-app.use('/Avatars', express.static(CONFIG.STATIC_PATHS.AVATARS));
-
-// 📌 Définition des routes dynamiques
-const routes = [
-    { path: '/', file: 'index.html' },
-    { path: '/choose-mode', file: 'choose-mode.html' },
-    { path: '/room-choice', file: 'room-choice.html' },
-    { path: '/gameboard', file: 'gameboard.html' }
-];
-
-routes.forEach(route => {
-    app.get(route.path, (req, res) => {
-        res.sendFile(path.join(CONFIG.STATIC_PATHS.PUBLIC, route.file));
-    });
-});
-
-// 🔍 Route de monitoring (statut serveur)
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', uptime: process.uptime() });
-});
-
-// 📌 Création du serveur HTTP et WebSocket
-const server = createServer(app);
-const io = new Server(server, {
-    cors: CONFIG.CORS_OPTIONS,
-    transports: ['websocket']
-});
-
-// 📌 Gestion des Rooms
+// 📌 Instanciation des gestionnaires
 const roomManager = new RoomManager();
-const gameManager = new GameManager(io, roomManager);
 
-let waitingPlayers = []; // ✅ Liste des joueurs en attente
+// 📌 Gestion des connexions WebSocket
 io.on('connection', (socket) => {
     console.log(`✅ Joueur connecté: ${socket.id}`);
 
@@ -206,7 +164,7 @@ io.on('connection', (socket) => {
         let roomCode;
         do {
             roomCode = randomInt(1000, 9999).toString();
-        } while (roomManager.getRoomByCode(roomCode));
+        } while (roomManager.rooms.has(roomCode));
 
         const room = roomManager.createRoom(roomCode, { id: socket.id, ...userData });
         socket.join(roomCode);
@@ -237,41 +195,37 @@ io.on('connection', (socket) => {
             return;
         }
     
-        console.log(`🎲 ${userData.name} cherche une partie aléatoire...`);
+        console.log(`🎲 ${userData.name} cherche une partie...`);
     
-        if (waitingPlayers.length > 0) {
-            // ✅ Prendre le premier joueur en attente et l'associer avec le nouveau
-            const opponent = waitingPlayers.shift(); // Retirer le premier joueur en attente
+        if (roomManager.waitingPlayers.length > 0) {
+            const opponent = roomManager.waitingPlayers.shift();
             let roomCode = randomInt(1000, 9999).toString();
     
-            // ✅ Créer une nouvelle room et ajouter les deux joueurs
             const room = roomManager.createRoom(roomCode, opponent);
             roomManager.joinRoom(roomCode, { id: socket.id, ...userData });
-    
-            // ✅ Ajouter les deux joueurs dans la même room
+
             socket.join(roomCode);
             io.to(opponent.id).emit('gameStart', { roomCode });
             io.to(socket.id).emit('gameStart', { roomCode });
-    
-            console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans la room ${roomCode}`);
+
+            console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans ${roomCode}`);
         } else {
-            // ✅ Aucun joueur en attente, ajouter le joueur à la liste d'attente
-            waitingPlayers.push({ id: socket.id, ...userData });
+            roomManager.waitingPlayers.push({ id: socket.id, ...userData });
             socket.emit('waitingForOpponent');
-            console.log(`⌛ ${userData.name} est en attente d'un adversaire...`);
+            console.log(`⌛ ${userData.name} en attente d'un adversaire...`);
         }
     });
-    
-    // ✅ Gérer la déconnexion d'un joueur en attente
+
     socket.on('disconnect', () => {
-        waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);
+        roomManager.leaveRoom(socket.id);
+        roomManager.waitingPlayers = roomManager.waitingPlayers.filter(p => p.id !== socket.id);
     });
 });
 
-    // Nettoyage périodique des rooms inactives
-    setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
+// 📌 Nettoyage périodique des rooms inactives
+setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
 
-    //Forcer Render à écouter sur `0.0.0.0`
-    server.listen(CONFIG.PORT, '0.0.0.0', () => {
-        console.log(`🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
-    });
+// 📌 Démarrage du serveur
+server.listen(CONFIG.PORT, '0.0.0.0', () => {
+    console.log(`🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
+});

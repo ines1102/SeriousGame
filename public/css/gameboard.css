@@ -1,18 +1,4 @@
-/* Variables CSS */
-:root {
-    --primary-color: #4b79a1;
-    --success-color: #4CAF50;
-    --warning-color: #f1c40f;
-    --error-color: #e74c3c;
-    --background-color: #f0f4f8;
-    --shadow-color: rgba(0, 0, 0, 0.2);
-    --card-width: 90px;
-    --card-height: 130px;
-    --border-radius: 8px;
-    --transition-speed: 0.2s;
-}
-
-/* Base */
+/* Réinitialisation et styles de base */
 * {
     margin: 0;
     padding: 0;
@@ -22,12 +8,10 @@
 body {
     overflow: hidden;
     font-family: Arial, sans-serif;
-    background-color: var(--background-color);
-    min-height: 100vh;
-    position: relative;
+    background-color: #f0f4f8;
 }
 
-/* Structure du jeu */
+/* Structure principale */
 .game-board {
     display: flex;
     flex-direction: column;
@@ -38,6 +22,7 @@ body {
     position: relative;
 }
 
+/* Zones de jeu */
 .play-area {
     display: flex;
     flex-direction: column;
@@ -52,135 +37,110 @@ body {
     display: flex;
     justify-content: center;
     gap: 15px;
-    margin: 20px 0;
 }
 
 /* Zones de drop */
 .drop-area {
-    width: var(--card-width);
-    height: var(--card-height);
-    border: 2px dashed rgba(204, 204, 204, 0.5);
-    border-radius: var(--border-radius);
-    transition: all var(--transition-speed) ease;
-    background-color: rgba(255, 255, 255, 0.1);
+    width: 90px;
+    height: 130px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background-color: rgba(255, 255, 255, 0.5);
     position: relative;
-}
-
-.drop-area.droppable {
-    border-color: var(--success-color);
-    background-color: rgba(76, 175, 80, 0.05);
+    z-index: 90;
 }
 
 .drop-area.drop-hover {
-    border-color: var(--success-color);
-    background-color: rgba(76, 175, 80, 0.1);
-    transform: scale(1.02);
-}
-
-/* Mains des joueurs */
-.hand {
-    position: fixed;
-    left: 50%;
-    width: 70%;
-    height: var(--card-height);
-    transform: translateX(-50%);
-    display: flex;
-    justify-content: center;
-    z-index: 50;
-}
-
-.player-hand {
-    bottom: 20px;
-    align-items: flex-end;
-}
-
-.opponent-hand {
-    top: 20px;
-    align-items: flex-start;
-}
-
-/* Cartes */
-.hand-card, .opponent-card {
-    position: absolute;
-    width: var(--card-width);
-    height: var(--card-height);
-    border-radius: var(--border-radius);
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
-    box-shadow: 0 2px 4px var(--shadow-color);
-    transition: transform var(--transition-speed) ease;
-    will-change: transform;
-}
-
-.hand-card {
-    cursor: grab;
-    transform-origin: bottom center;
-}
-
-.hand-card:hover {
-    transform: scale(1.05) translateY(-10px);
-    z-index: 99;
-}
-
-.hand-card.dragging {
-    opacity: 0.8;
-    cursor: grabbing;
+    border-color: #4b79a1;
+    background-color: rgba(75, 121, 161, 0.2);
     transform: scale(1.05);
+    z-index: 95;
 }
 
-.opponent-card {
-    transform-origin: top center;
-    pointer-events: none;
-    transform: rotate(180deg);
-    opacity: 0;
+.drop-area.droppable {
+    border-color: #4b79a1;
+    background-color: rgba(75, 121, 161, 0.05);
 }
 
-.opponent-card.dealt {
-    opacity: 1;
+/* ✅ Correction pour que les cartes forment un arc vers le haut */
+.hand {
+  position: fixed;
+  left: 50%;
+  width: 600px;
+  height: 160px;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  pointer-events: none;
 }
 
-/* Deck */
-.deck-area {
-    position: fixed;
-    right: 20px;
-    bottom: 140px;
-    z-index: 40;
+/* ✅ Ajustement de la position du joueur */
+.player-hand {
+  bottom: 50px; /* 🔼 Remonté pour être bien visible */
 }
 
-.deck {
-    width: var(--card-width);
-    height: var(--card-height);
-    perspective: 1000px;
+/* ✅ Ajustement de la position de l'adversaire */
+.opponent-hand {
+  top: 50px; /* 🔽 Ajusté pour ne pas descendre trop bas */
 }
 
-.card-back {
-    width: 100%;
-    height: 100%;
-    background-image: url('/Cartes/dos.png');
-    background-size: cover;
-    border-radius: var(--border-radius);
-    box-shadow: 0 2px 8px var(--shadow-color);
+/* ✅ Cartes légèrement surélevées et bien positionnées */
+.hand-card {
+  position: absolute;
+  width: 90px;
+  height: 130px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  cursor: pointer;
+  transition: transform 0.15s ease-in-out;
+  transform-origin: bottom center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  pointer-events: auto;
 }
 
-/* Cartes jouées */
+/* Effet au survol des cartes dans la main du joueur */
+.player-hand .hand-card:hover {
+  transform: translateY(-20px) scale(1.1);
+  transition: transform 0.2s ease-in-out;
+  z-index: 1000;
+}
+
+/* ✅ Empêche un déplacement exagéré */
+.hand-card:hover {
+  transform-origin: center bottom;
+}
+
+/* Carte draggable */
+.hand-card.dragging {
+  opacity: 0.6;
+  transform: scale(1.1);
+  z-index: 1000;
+  cursor: grabbing;
+}
+
+
+/* Carte jouée */
 .played-card {
     width: 100%;
     height: 100%;
-    border-radius: var(--border-radius);
+    border-radius: 8px;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    box-shadow: 0 2px 4px var(--shadow-color);
-    animation: cardPlace 0.3s ease forwards;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease;
+    z-index: 91;
 }
 
-/* Zones profils */
-.player-zone {
+/* Zones des profils */
+#player-zone, #opponent-zone {
     position: fixed;
     width: 250px;
     height: 100px;
-    background-color: var(--primary-color);
+    background-color: #4b79a1;
     color: white;
     border-radius: 12px;
     padding: 10px 20px;
@@ -188,7 +148,7 @@ body {
     align-items: center;
     gap: 10px;
     z-index: 200;
-    box-shadow: 0 4px 6px var(--shadow-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 #player-zone {
@@ -201,6 +161,7 @@ body {
     top: 20px;
 }
 
+/* Avatars */
 .avatar {
     width: 50px;
     height: 50px;
@@ -223,8 +184,8 @@ body {
 .health-bar-fill {
     width: 100%;
     height: 100%;
-    background-color: var(--success-color);
-    transition: width 0.3s ease, background-color 0.3s ease;
+    background-color: #4CAF50;
+    transition: width 0.3s ease;
 }
 
 .health-bar .health-text {
@@ -238,22 +199,7 @@ body {
     font-weight: bold;
 }
 
-/* Tour de jeu */
-.turn-indicator {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 16px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    border-radius: 20px;
-    font-weight: bold;
-    z-index: 100;
-    transition: opacity 0.3s ease;
-}
-
-/* Prévisualisation de carte */
+/* Prévisualisation */
 .fullscreen {
     position: fixed;
     top: 0;
@@ -274,12 +220,23 @@ body {
     animation: zoomIn 0.3s ease;
 }
 
+@keyframes zoomIn {
+    from {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 #preview-image {
     max-width: 100%;
     max-height: 90vh;
     object-fit: contain;
     border-radius: 15px;
-    box-shadow: 0 0 20px var(--shadow-color);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .close-preview {
@@ -296,48 +253,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 4px var(--shadow-color);
-    transition: transform var(--transition-speed) ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
 }
 
 .close-preview:hover {
     transform: scale(1.1);
-}
-
-/* Messages et états */
-.status-message {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-100%);
-    padding: 12px 24px;
-    border-radius: var(--border-radius);
-    z-index: 1000;
-    transition: all 0.3s ease;
-    opacity: 0;
-    pointer-events: none;
-    font-weight: bold;
-    text-align: center;
-}
-
-.status-message.show {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-}
-
-.status-message.warning {
-    background-color: var(--warning-color);
-    color: #000;
-}
-
-.status-message.success {
-    background-color: var(--success-color);
-    color: white;
-}
-
-.status-message.error {
-    background-color: var(--error-color);
-    color: white;
 }
 
 /* Overlay de déconnexion */
@@ -359,31 +280,28 @@ body {
     padding: 30px;
     border-radius: 15px;
     text-align: center;
-    box-shadow: 0 0 20px var(--shadow-color);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
-/* États spéciaux */
-.opponent-disconnected .opponent-zone {
-    opacity: 0.5;
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #4b79a1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
 }
 
-.opponent-disconnected .opponent-zone::after {
-    content: '⚠️ Déconnecté';
-    position: absolute;
-    top: -25px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(241, 196, 15, 0.9);
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
+
+.hidden {
+    display: none !important;
 }
 
-/* Animations */
+/* Animation pour les cartes jouées */
 @keyframes cardPlace {
     from {
-        transform: scale(0.8) translateY(-10px);
+        transform: scale(0.8) translateY(-20px);
         opacity: 0;
     }
     to {
@@ -392,45 +310,23 @@ body {
     }
 }
 
-@keyframes zoomIn {
-    from {
-        transform: scale(0.5);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
-}
-
-/* Utilitaires */
-.hidden {
-    display: none !important;
+.played-card {
+    animation: cardPlace 0.3s ease forwards;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    :root {
-        --card-width: 70px;
-        --card-height: 100px;
+    .drop-area {
+        width: 70px;
+        height: 100px;
     }
 
-    .player-zone {
+    .hand-card {
+        width: 70px;
+        height: 100px;
+    }
+
+    #player-zone, #opponent-zone {
         width: 200px;
         height: 80px;
         padding: 8px 15px;
@@ -447,20 +343,21 @@ body {
     .game-areas {
         gap: 10px;
     }
-
-    .deck-area {
-        right: 10px;
-        bottom: 120px;
-    }
 }
 
+/* Support pour les écrans plus petits */
 @media (max-width: 480px) {
-    :root {
-        --card-width: 60px;
-        --card-height: 85px;
+    .drop-area {
+        width: 60px;
+        height: 85px;
     }
 
-    .player-zone {
+    .hand-card {
+        width: 60px;
+        height: 85px;
+    }
+
+    #player-zone, #opponent-zone {
         width: 180px;
         height: 70px;
         padding: 5px 10px;
@@ -479,203 +376,5 @@ body {
     .health-bar .health-text {
         font-size: 10px;
         line-height: 15px;
-    }
-}
-
-/* Focus et accessibilité */
-.close-preview:focus,
-.hand-card:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
-
-[role="button"]:focus-visible,
-button:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
-
-/* Support du mode sombre */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background-color: #1a1a1a;
-        --shadow-color: rgba(0, 0, 0, 0.4);
-    }
-
-    .preview-content,
-    .disconnect-content {
-        background-color: #2a2a2a;
-        color: white;
-    }
-
-    .close-preview {
-        background-color: #3a3a3a;
-        color: white;
-    }
-}
-
-/* Styles des profils joueurs */
-.player-profile,
-.opponent-profile {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    background: var(--card-background);
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1rem;
-    transition: all 0.3s ease;
-}
-
-.player-avatar,
-.opponent-avatar {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    margin-right: 1rem;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 3px solid var(--primary-color);
-}
-
-.avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.avatar-img.placeholder {
-    opacity: 0.5;
-    filter: grayscale(1);
-}
-
-.player-name,
-.opponent-name {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--text-color);
-}
-
-/* Animations */
-@keyframes profileEntrance {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes avatarPulse {
-    0% {
-        transform: scale(1);
-        border-color: var(--primary-color);
-    }
-    50% {
-        transform: scale(1.05);
-        border-color: var(--secondary-color);
-    }
-    100% {
-        transform: scale(1);
-        border-color: var(--primary-color);
-    }
-}
-
-.profile-loaded {
-    animation: profileEntrance 0.5s ease forwards;
-}
-
-.profile-loaded .avatar-img:not(.placeholder) {
-    animation: avatarPulse 2s infinite;
-}
-
-/* État actif pour le tour du joueur */
-.profile-active {
-    border: 2px solid var(--secondary-color);
-    box-shadow: 0 0 15px rgba(80, 176, 79, 0.3);
-}
-
-/* Statut en ligne */
-.online-status {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 12px;
-    height: 12px;
-    background-color: var(--secondary-color);
-    border-radius: 50%;
-    border: 2px solid var(--card-background);
-}
-
-/* Overlay de déconnexion */
-.disconnect-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.disconnect-overlay.hidden {
-    display: none;
-}
-
-.disconnect-message {
-    background: var(--card-background);
-    padding: 2rem;
-    border-radius: 10px;
-    text-align: center;
-    max-width: 400px;
-}
-
-/* Points de vie et statut du joueur */
-.player-status {
-    display: flex;
-    flex-direction: column;
-    margin-left: auto;
-}
-
-.health-bar {
-    width: 100px;
-    height: 10px;
-    background: #e74c3c;
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-.health-bar-fill {
-    height: 100%;
-    background: var(--secondary-color);
-    transition: width 0.3s ease;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .player-profile,
-    .opponent-profile {
-        padding: 0.8rem;
-    }
-
-    .player-avatar,
-    .opponent-avatar {
-        width: 45px;
-        height: 45px;
-    }
-
-    .player-name,
-    .opponent-name {
-        font-size: 1rem;
-    }
-
-    .health-bar {
-        width: 80px;
     }
 }
