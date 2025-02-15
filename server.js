@@ -227,10 +227,10 @@ io.on('connection', (socket) => {
         if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
             io.to(room.code).emit('gameStart', { roomCode });
         }
+    });
 
     socket.on('disconnect', () => {
         roomManager.leaveRoom(socket.id);
-    });
     });
 
     // Nettoyage périodique des rooms inactives
