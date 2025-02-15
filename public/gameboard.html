@@ -30,12 +30,13 @@
 <body>
     <main id="game-container" aria-live="polite">
         <!-- Profil de l'adversaire -->
-        <div id="opponent-container" class="profile-container opponent">
-            <div class="profile-avatar">
-                <img id="opponent-avatar" src="/Avatars/default.jpeg" alt="Avatar de l'adversaire">
+        <div class="opponent-profile">
+            <div class="opponent-avatar">
+                <img src="/Avatars/default.jpeg" alt="Avatar de l'adversaire" class="avatar-img">
             </div>
-            <div class="profile-info">
-                <div id="opponent-name" class="profile-name">Adversaire</div>
+            <div class="opponent-name">En attente...</div>
+            <div class="opponent-health-bar">
+                <div class="opponent-health-bar-fill" style="width: 100%;"></div>
             </div>
         </div>
 
@@ -66,12 +67,13 @@
         </section>
 
         <!-- Profil du joueur -->
-        <div id="player-container" class="profile-container player">
-            <div class="profile-avatar">
-                <img id="player-avatar" src="/Avatars/default.jpeg" alt="Votre avatar">
+        <div class="player-profile">
+            <div class="player-avatar">
+                <img src="/Avatars/default.jpeg" alt="Votre avatar" class="avatar-img">
             </div>
-            <div class="profile-info">
-                <div id="player-name" class="profile-name">Votre Nom</div>
+            <div class="player-name">Votre nom</div>
+            <div class="player-health-bar">
+                <div class="player-health-bar-fill" style="width: 100%;"></div>
             </div>
         </div>
 

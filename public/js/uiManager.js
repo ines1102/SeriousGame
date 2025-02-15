@@ -1,85 +1,121 @@
-export function updatePlayerProfile(playerData) {
-    console.log("🔄 Mise à jour du profil player:", playerData);
-    
-    const playerContainer = document.getElementById("player-container");
-    const playerAvatar = document.getElementById("player-avatar");
-    const playerName = document.getElementById("player-name");
+// 📌 Configuration des avatars et chemins
+const AVATAR_CONFIG = {
+    male: {
+        '1': '/Avatars/male1.jpeg',
+        '2': '/Avatars/male2.jpeg',
+        '3': '/Avatars/male3.jpeg'
+    },
+    female: {
+        '1': '/Avatars/female1.jpeg',
+        '2': '/Avatars/female2.jpeg',
+        '3': '/Avatars/female3.jpeg'
+    },
+    default: '/Avatars/default.jpeg'
+};
 
-    if (!playerContainer || !playerAvatar || !playerName) {
-        console.warn("⚠️ Impossible de mettre à jour le profil du joueur, éléments manquants.");
-        return;
+// ✅ Fonction pour récupérer le bon chemin d'avatar
+function getAvatarPath(sex, avatarId) {
+    if (!sex || !avatarId) {
+        console.warn("⚠️ Avatar non défini, utilisation de l'avatar par défaut");
+        return AVATAR_CONFIG.default;
     }
-
-    playerName.textContent = playerData.name || "Joueur inconnu";
-    playerAvatar.src = playerData.avatarSrc || "/Avatars/default.jpeg";
-
-    playerAvatar.onerror = () => {
-        console.warn(`⚠️ Erreur de chargement de l'avatar pour ${playerData.name}, remplacement par défaut.`);
-        playerAvatar.src = "/Avatars/default.jpeg";
-    };
-
-    playerContainer.classList.remove("hidden");
+    return AVATAR_CONFIG[sex]?.[avatarId] || AVATAR_CONFIG.default;
 }
 
-export function updateOpponentProfile(opponentData) {
-    console.log("🔄 Mise à jour du profil opponent:", opponentData);
-    
-    const opponentContainer = document.getElementById("opponent-container");
-    const opponentAvatar = document.getElementById("opponent-avatar");
-    const opponentName = document.getElementById("opponent-name");
+// ✅ Mise à jour du profil d'un joueur (Joueur ou Adversaire)
+export function updatePlayerProfile(player, isOpponent = false) {
+    try {
+        if (!player || !player.name || !player.avatarId) {
+            console.warn(`⚠️ Impossible de mettre à jour le profil de ${isOpponent ? 'l\'adversaire' : 'joueur'}`);
+            return;
+        }
 
-    if (!opponentContainer || !opponentAvatar || !opponentName) {
-        console.warn("⚠️ Impossible de mettre à jour le profil de l'adversaire, éléments manquants.");
-        return;
+        const prefix = isOpponent ? 'opponent' : 'player';
+        const profileContainer = document.querySelector(`.${prefix}-profile`);
+        const avatarContainer = document.querySelector(`.${prefix}-avatar img`);
+        const nameContainer = document.querySelector(`.${prefix}-name`);
+        const healthBar = document.querySelector(`.${prefix}-health .health-bar-fill`);
+
+        if (!profileContainer || !avatarContainer || !nameContainer || !healthBar) {
+            console.warn(`⚠️ Conteneurs introuvables pour ${prefix}`);
+            return;
+        }
+
+        // ✅ Mise à jour du nom
+        nameContainer.textContent = player.name || 'Joueur inconnu';
+
+        // ✅ Mise à jour de l'avatar
+        const avatarPath = getAvatarPath(player.sex, player.avatarId);
+        avatarContainer.src = avatarPath;
+        avatarContainer.alt = `Avatar de ${player.name}`;
+
+        // ✅ Gestion des erreurs de chargement d'avatar
+        avatarContainer.onerror = () => {
+            console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
+            avatarContainer.src = AVATAR_CONFIG.default;
+        };
+
+        // ✅ Réinitialisation de la barre de vie
+        healthBar.style.width = '100%';
+        healthBar.dataset.health = 100;
+
+        console.log(`📌 Profil mis à jour pour ${player.name}:`, player);
+
+    } catch (error) {
+        console.error(`❌ Erreur lors de la mise à jour du profil ${isOpponent ? 'adversaire' : 'joueur'}:`, error);
     }
-
-    opponentName.textContent = opponentData.name || "Adversaire";
-    opponentAvatar.src = opponentData.avatarSrc || "/Avatars/default.jpeg";
-
-    opponentAvatar.onerror = () => {
-        console.warn(`⚠️ Erreur de chargement de l'avatar pour ${opponentData.name}, remplacement par défaut.`);
-        opponentAvatar.src = "/Avatars/default.jpeg";
-    };
-
-    opponentContainer.classList.remove("hidden");
 }
 
-export function initializeUI() {
+// ✅ Mise à jour des barres de vie (après un tour)
+export function updateHealthBar(playerId, newHealth) {
+    try {
+        const isOpponent = playerId !== localStorage.getItem('userData').clientId;
+        const prefix = isOpponent ? 'opponent' : 'player';
+        const healthBarFill = document.querySelector(`.${prefix}-health .health-bar-fill`);
+
+        if (!healthBarFill) {
+            console.warn(`⚠️ Barre de vie introuvable pour ${prefix}`);
+            return;
+        }
+
+        // ✅ Mise à jour visuelle de la barre de vie
+        healthBarFill.style.width = `${newHealth}%`;
+        healthBarFill.dataset.health = newHealth;
+
+        console.log(`💖 Mise à jour de la vie de ${prefix}: ${newHealth}%`);
+
+    } catch (error) {
+        console.error(`❌ Erreur lors de la mise à jour de la barre de vie:`, error);
+    }
+}
+
+// ✅ Ajout des profils aux coins de l'écran
+function initializeProfiles() {
+    try {
+        const playerContainer = document.querySelector('.player-profile');
+        const opponentContainer = document.querySelector('.opponent-profile');
+
+        if (playerContainer) {
+            playerContainer.style.position = 'fixed';
+            playerContainer.style.bottom = '20px';
+            playerContainer.style.right = '20px';
+        }
+
+        if (opponentContainer) {
+            opponentContainer.style.position = 'fixed';
+            opponentContainer.style.top = '20px';
+            opponentContainer.style.left = '20px';
+        }
+        
+        console.log('📌 Initialisation des profils aux coins de l’écran');
+
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'initialisation des profils:', error);
+    }
+}
+
+// ✅ Exécution automatique après chargement de la page
+document.addEventListener('DOMContentLoaded', () => {
     console.log("📌 Initialisation de l'interface utilisateur...");
-
-    // Afficher les containers des profils (Joueur et Adversaire)
-    const playerContainer = document.getElementById("player-container");
-    const opponentContainer = document.getElementById("opponent-container");
-
-    if (playerContainer) playerContainer.classList.remove("hidden");
-    if (opponentContainer) opponentContainer.classList.remove("hidden");
-}
-
-export function showDisconnectOverlay(message) {
-    console.log("🔌 Déconnexion:", message);
-    
-    const overlay = document.getElementById("disconnect-overlay");
-    const messageElement = overlay.querySelector("p");
-
-    if (overlay && messageElement) {
-        messageElement.textContent = message;
-        overlay.classList.remove("hidden");
-    }
-
-    setTimeout(() => {
-        window.location.href = "/choose-mode";
-    }, 3000);
-}
-
-export function showError(message) {
-    console.error("❌ Erreur:", message);
-
-    const errorToast = document.getElementById("error-message");
-    if (errorToast) {
-        errorToast.textContent = message;
-        errorToast.classList.remove("hidden");
-        setTimeout(() => {
-            errorToast.classList.add("hidden");
-        }, 3000);
-    }
-}
+    initializeProfiles();
+});
