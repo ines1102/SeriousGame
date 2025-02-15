@@ -2,7 +2,7 @@ import Game from './game.js';
 import DragAndDropManager from './dragAndDrop.js';
 import socket from './websocket.js';
 
-// 📌 Configuration des avatars et chemins
+// 📌 Configuration des avatars
 const AVATAR_CONFIG = {
     male: {
         '1': '/Avatars/male1.jpeg',
@@ -17,7 +17,7 @@ const AVATAR_CONFIG = {
     default: '/Avatars/default.jpeg'
 };
 
-// 📌 Variables globales
+// Variables globales
 let gameInstance;
 let currentRoomId;
 let userData;
@@ -33,37 +33,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔄 Initialisation du jeu...');
     
     try {
-        // ✅ Récupération des données utilisateur
         userData = JSON.parse(localStorage.getItem('userData'));
         if (!userData) {
             throw new Error('Session expirée');
         }
 
-        // ✅ Récupération et validation de l'ID de room
         currentRoomId = new URLSearchParams(window.location.search).get('roomId');
         if (!currentRoomId) {
             throw new Error('Room ID manquant');
         }
 
-        // ✅ Attente de la connexion WebSocket
         await socket.waitForConnection();
         console.log('✅ Connecté au serveur');
 
-        // ✅ Initialisation de l'interface
         initializeUI();
 
-        // ✅ Initialisation du jeu
         gameInstance = new Game(socket);
-        window.gameInstance = gameInstance; // Pour le debugging
-
-        // ✅ Initialisation du drag & drop
         dragAndDrop = new DragAndDropManager(gameInstance, socket);
-        dragAndDrop.initialize();
+        dragAndDrop.initialize(); 
 
-        // ✅ Configuration des écouteurs WebSocket
         setupSocketListeners();
 
-        // ✅ Rejoindre la room
         socket.emit('joinRoom', { 
             ...userData, 
             roomCode: currentRoomId 
@@ -71,14 +61,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error("❌ Erreur lors de l'initialisation:", error);
-        showDisconnectOverlay(error.message);
-        setTimeout(() => {
-            window.location.href = '/choose-mode';
-        }, 2000);
     }
 });
 
-// 📌 Initialisation de l'interface utilisateur
+// 📌 Mise à jour de l'UI
 function initializeUI() {
     try {
         updatePlayerProfile(userData, false);
@@ -89,49 +75,31 @@ function initializeUI() {
     }
 }
 
-// 📌 Création des zones de jeu
-function initializeGameAreas() {
-    const gameBoard = document.querySelector('.game-board');
-    if (gameBoard) {
-        gameBoard.innerHTML = '';
-        ['player-hand', 'game-zones', 'opponent-hand'].forEach(zone => {
-            const div = document.createElement('div');
-            div.id = zone;
-            div.className = zone;
-            gameBoard.appendChild(div);
-        });
-    }
-}
-
-// 📌 Mise à jour du profil d'un joueur
+// 📌 Mise à jour du profil du joueur/adversaire
 function updatePlayerProfile(player, isOpponent = false) {
     const prefix = isOpponent ? 'opponent' : 'player';
     
-    // ✅ Mise à jour de l'avatar
+    // Mise à jour de l'avatar
     const avatarContainer = document.querySelector(`.${prefix}-avatar`);
     if (avatarContainer) {
         const avatarImg = avatarContainer.querySelector('img') || document.createElement('img');
         avatarImg.className = 'avatar-img';
         avatarImg.src = getAvatarPath(player.sex, player.avatarId);
         avatarImg.alt = `Avatar de ${player.name}`;
-
-        // ✅ Gestion des erreurs de chargement d'image
-        avatarImg.onerror = () => {
-            avatarImg.src = AVATAR_CONFIG.default;
-        };
+        avatarImg.onerror = () => avatarImg.src = AVATAR_CONFIG.default;
 
         if (!avatarContainer.contains(avatarImg)) {
             avatarContainer.appendChild(avatarImg);
         }
     }
 
-    // ✅ Mise à jour du nom
+    // Mise à jour du nom
     const nameElement = document.querySelector(`.${prefix}-name`);
     if (nameElement) {
         nameElement.textContent = player.name || 'Joueur inconnu';
     }
 
-    // ✅ Indication du tour
+    // Indication du tour
     updateTurnIndicator(prefix, player.id === gameInstance?.currentTurn);
 }
 
@@ -140,6 +108,22 @@ function updateTurnIndicator(prefix, isCurrentTurn) {
     const profile = document.querySelector(`.${prefix}-profile`);
     if (profile) {
         profile.classList.toggle('active-turn', isCurrentTurn);
+    }
+}
+
+// 📌 Initialisation des zones de jeu
+function initializeGameAreas() {
+    const gameBoard = document.querySelector('.game-board');
+    if (gameBoard) {
+        gameBoard.innerHTML = ''; // Nettoyage
+
+        const zones = ['player-hand', 'game-zones', 'opponent-hand'];
+        zones.forEach(zone => {
+            const div = document.createElement('div');
+            div.id = zone;
+            div.className = zone;
+            gameBoard.appendChild(div);
+        });
     }
 }
 
@@ -157,16 +141,15 @@ function initializeOpponentContainer() {
     }
 }
 
-// 📌 Configuration des écouteurs WebSocket
+// 📌 Écouteurs Socket.io
 function setupSocketListeners() {
     socket.on('updatePlayers', (players) => {
         const opponent = players.find(player => player.clientId !== userData.clientId);
-        if (opponent) {
-            updatePlayerProfile(opponent, true);
-        }
+        if (opponent) updatePlayerProfile(opponent, true);
     });
 
     socket.on('gameStart', (data) => {
+        console.log('🎮 Début de la partie:', data);
         handleGameStart(data);
     });
 
@@ -193,17 +176,36 @@ function setupSocketListeners() {
 
 // 📌 Gestion du début de partie
 function handleGameStart(data) {
+    if (!data.players || data.players.length < 2) {
+        console.error("❌ Pas assez de joueurs pour démarrer");
+        return;
+    }
+
     const currentPlayer = data.players.find(player => player.clientId === userData.clientId);
     const opponent = data.players.find(player => player.clientId !== userData.clientId);
 
-    if (!currentPlayer || !opponent) return;
+    if (!currentPlayer || !opponent) {
+        console.error("❌ Erreur d'attribution des joueurs");
+        return;
+    }
 
     updatePlayerProfile(currentPlayer, false);
     updatePlayerProfile(opponent, true);
+
+    if (data.hands?.playerHand) {
+        displayHand(data.hands.playerHand, true);
+    }
+
+    dragAndDrop.enableDragDrop();
 }
 
 // 📌 Gestion d'une carte jouée
 function handleCardPlayed(data) {
+    if (!data.cardId || !data.slot) {
+        console.error("❌ Données de carte invalides:", data);
+        return;
+    }
+
     const dropZone = document.querySelector(`[data-slot="${data.slot}"]`);
     if (dropZone && dragAndDrop) {
         dragAndDrop.processDrop({
@@ -216,35 +218,42 @@ function handleCardPlayed(data) {
 
 // 📌 Gestion du changement de tour
 function handleTurnUpdate(playerId) {
+    if (!gameInstance) return;
+
     gameInstance.currentTurn = playerId;
-    updateTurnIndicator('player', playerId === userData.clientId);
-    updateTurnIndicator('opponent', playerId !== userData.clientId);
-    dragAndDrop.setDraggable(playerId === userData.clientId);
+    const isPlayerTurn = playerId === userData.clientId;
+
+    updateTurnIndicator('player', isPlayerTurn);
+    updateTurnIndicator('opponent', !isPlayerTurn);
+
+    dragAndDrop.setDraggable(isPlayerTurn);
 }
 
-// 📌 Affichage de l'overlay de déconnexion
-function showDisconnectOverlay(message) {
-    const overlay = document.getElementById('disconnect-overlay');
-    if (overlay) {
-        overlay.querySelector('p').textContent = message;
-        overlay.classList.remove('hidden');
-        setTimeout(() => {
-            window.location.href = '/choose-mode';
-        }, 3000);
-    }
+// 📌 Affichage de la main
+function displayHand(cards, isPlayer) {
+    const handContainer = document.getElementById(isPlayer ? 'player-hand' : 'opponent-hand');
+    if (!handContainer || !Array.isArray(cards)) return;
+
+    handContainer.innerHTML = '';
+    cards.forEach(card => {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
+        cardElement.dataset.cardId = card.id;
+        cardElement.dataset.cardName = card.name;
+        cardElement.style.backgroundImage = isPlayer ? `url(${card.name})` : 'url(/Cartes/dos.png)';
+        
+        if (isPlayer) {
+            cardElement.draggable = true;
+            cardElement.addEventListener('dragstart', (e) => dragAndDrop.handleDragStart(e));
+        }
+
+        handContainer.appendChild(cardElement);
+    });
 }
 
 // 📌 Affichage des erreurs
 function showError(message) {
-    const errorToast = document.getElementById('error-message');
-    if (errorToast) {
-        errorToast.textContent = message;
-        errorToast.classList.remove('hidden');
-        setTimeout(() => {
-            errorToast.classList.add('hidden');
-        }, 3000);
-    }
+    console.error(message);
 }
 
-// 📌 Export des fonctions
-export { updatePlayerProfile, showDisconnectOverlay, showError, handleCardPlayed, handleTurnUpdate };
+export { updatePlayerProfile, showError, handleCardPlayed, handleTurnUpdate };
