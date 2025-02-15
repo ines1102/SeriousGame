@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const userAvatar = sessionStorage.getItem("userAvatar") || "/Avatars/default.jpeg";
     const roomId = sessionStorage.getItem("roomId");
 
+    console.log("📌 Vérification des données avant de charger `gameboard.html`");
+    console.log("🔍 `roomId` :", roomId);
+    console.log("🔍 `userName` :", userName);
+    console.log("🔍 `userAvatar` :", userAvatar);
+
     if (!userName || !userAvatar || !roomId) {
         console.error("⚠️ Données de session incomplètes !", { userName, userAvatar, roomId });
         alert("Erreur : données utilisateur incomplètes. Retour à l'accueil.");
@@ -45,6 +50,23 @@ document.addEventListener("DOMContentLoaded", () => {
         opponentNameElement.textContent = gameData.opponent.name;
         opponentAvatarElement.src = gameData.opponent.avatar;
 
+        // Vérification de l'avatar stocké
+        console.log("🎭 Avatar reçu pour l'adversaire :", gameData.opponent.avatar);
+    });
+
+    /** ✅ Gestion des déconnexions */
+    socket.on("player_disconnected", () => {
+        console.warn("❌ L'adversaire s'est déconnecté. Retour à l'accueil.");
+        alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
+        window.location.href = "/";
+    });
+
+    socket.on("disconnect", () => {
+        console.warn("❌ Vous avez été déconnecté du serveur. Retour à l'accueil.");
+        alert("Vous avez été déconnecté du serveur. Retour à l'accueil.");
+        window.location.href = "/";
+    });
+    
         // Affichage des mains de départ
         displayHand(gameData.decks.joueur1.main, playerHand);
         displayOpponentHand(gameData.decks.joueur2.main, opponentHand);

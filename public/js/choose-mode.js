@@ -40,42 +40,49 @@ document.addEventListener("DOMContentLoaded", () => {
     randomModeButton.addEventListener("click", () => {
         console.log("🔄 Recherche d'une room aléatoire...");
         loadingOverlay.classList.remove("hidden");
-
-        console.log("📌 Envoi de `find_random_room` avec : ", {
+    
+        console.log("📌 Envoi de `find_random_room` avec :", {
             name: userName,
             avatar: userAvatar
         });
-
+    
         socket.emit("find_random_room", { name: userName, avatar: userAvatar });
-
+    
         socket.once("room_found", (roomId) => {
             console.log(`✅ Room trouvée : ${roomId}`);
-
-            // **Forcer l'enregistrement des données avant de rediriger**
+    
+            // **Stockage sécurisé avant la redirection**
             sessionStorage.setItem("roomId", roomId);
             sessionStorage.setItem("userName", userName);
             sessionStorage.setItem("userAvatar", userAvatar);
-
+    
             console.log("📌 `roomId` enregistré :", sessionStorage.getItem("roomId"));
             console.log("📌 `userName` enregistré :", sessionStorage.getItem("userName"));
             console.log("📌 `userAvatar` enregistré :", sessionStorage.getItem("userAvatar"));
-
-            // ✅ Vérification immédiate du stockage avant redirection
+    
+            // ✅ Vérification du stockage avant la redirection
             setTimeout(() => {
-                console.log("✅ `sessionStorage` après 500ms : ", {
+                console.log("✅ `sessionStorage` après 500ms :", {
                     roomId: sessionStorage.getItem("roomId"),
                     userName: sessionStorage.getItem("userName"),
                     userAvatar: sessionStorage.getItem("userAvatar")
                 });
-
+    
+                if (!sessionStorage.getItem("roomId") || !sessionStorage.getItem("userName") || !sessionStorage.getItem("userAvatar")) {
+                    console.error("❌ Erreur : sessionStorage incomplet avant la redirection !");
+                    return;
+                }
+    
                 window.location.href = "/gameboard.html";
             }, 500);
         });
-
+    
         socket.once("error", (error) => {
             console.error(`❌ Erreur : ${error}`);
             loadingOverlay.classList.add("hidden");
-            showError(error);
+            errorToast.textContent = error;
+            errorToast.classList.add("show");
+            setTimeout(() => errorToast.classList.remove("show"), 3000);
         });
     });
 
