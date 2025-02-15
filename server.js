@@ -24,12 +24,6 @@ app.use(cors({ origin: CLIENT_URL }));
 app.use(express.json());
 app.use(express.static(path.join(path.resolve(), "public"))); 
 
-// Routes pour servir les pages HTML
-app.get("/", (req, res) => res.sendFile(path.join(path.resolve(), "public", "index.html")));
-app.get("/choose-mode", (req, res) => res.sendFile(path.join(path.resolve(), "public", "choose-mode.html")));
-app.get("/room-choice", (req, res) => res.sendFile(path.join(path.resolve(), "public", "room-choice.html")));
-app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "public", "gameboard.html")));
-
 // Stockage des rooms et joueurs
 const rooms = {}; 
 const reconnectingPlayers = new Map(); 
@@ -58,7 +52,7 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** ✅ Gestion des déconnexions avec **vérification** avant suppression */
+    /** ✅ Gestion des déconnexions avec **vérification avant suppression** */
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion détectée : ${socket.id}`);
 
@@ -72,12 +66,22 @@ io.on("connection", (socket) => {
 
                 console.log(`❌ Joueur ${disconnectedPlayer.name} marqué comme déconnecté dans Room ${roomId}`);
 
-                // Ajouter temporairement le joueur à la liste des reconnexions
+                // **Attendre 10 secondes et vérifier avec un ping**
                 reconnectingPlayers.set(socket.id, { roomId, player: disconnectedPlayer });
 
-                // **Attendre 10 secondes avant de supprimer définitivement**
+                let stillConnected = false;
+
+                const checkConnection = setInterval(() => {
+                    if (io.sockets.sockets.get(socket.id)) {
+                        stillConnected = true;
+                        clearInterval(checkConnection);
+                        console.log(`✅ ${disconnectedPlayer.name} est revenu, annulation de la suppression.`);
+                        reconnectingPlayers.delete(socket.id);
+                    }
+                }, 2000);
+
                 setTimeout(() => {
-                    if (!io.sockets.sockets.get(socket.id)) {
+                    if (!stillConnected) {
                         console.log(`🛑 Suppression confirmée de ${disconnectedPlayer.name} (déconnexion réelle)`);
                         rooms[roomId].players.splice(playerIndex, 1);
 
@@ -89,11 +93,8 @@ io.on("connection", (socket) => {
                             console.log(`🗑️ Suppression de Room ${roomId} car elle est vide.`);
                             delete rooms[roomId];
                         }
-                    } else {
-                        console.log(`✅ ${disconnectedPlayer.name} est revenu, annulation de la suppression.`);
-                        reconnectingPlayers.delete(socket.id);
                     }
-                }, 10000); // **Délai augmenté à 10 secondes**
+                }, 10000);
             }
         }
     });
