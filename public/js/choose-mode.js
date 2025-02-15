@@ -10,9 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const socket = io(); // Connexion au serveur Socket.io
 
-    // ✅ Vérification des données utilisateur stockées après `index.html`
-    const userName = sessionStorage.getItem("userName");
-    const userAvatar = sessionStorage.getItem("userAvatar");
+    // ✅ Vérification et récupération des données utilisateur stockées après `index.html`
+    let userName = sessionStorage.getItem("userName");
+    let userAvatar = sessionStorage.getItem("userAvatar");
 
     if (!userName || !userAvatar) {
         console.error("⚠️ Données utilisateur incomplètes !");
@@ -40,26 +40,23 @@ document.addEventListener("DOMContentLoaded", () => {
     randomModeButton.addEventListener("click", () => {
         console.log("🔄 Recherche d'une room aléatoire...");
         loadingOverlay.classList.remove("hidden");
-    
-        console.log("📌 Envoi de `find_random_room` avec :", {
-            name: userName,
-            avatar: userAvatar
-        });
-    
+
+        console.log("📌 Envoi de `find_random_room` avec :", { name: userName, avatar: userAvatar });
+
         socket.emit("find_random_room", { name: userName, avatar: userAvatar });
-    
+
         socket.once("room_found", (roomId) => {
             console.log(`✅ Room trouvée : ${roomId}`);
-    
+
             // **Stockage sécurisé avant la redirection**
             sessionStorage.setItem("roomId", roomId);
             sessionStorage.setItem("userName", userName);
             sessionStorage.setItem("userAvatar", userAvatar);
-    
+
             console.log("📌 `roomId` enregistré :", sessionStorage.getItem("roomId"));
             console.log("📌 `userName` enregistré :", sessionStorage.getItem("userName"));
             console.log("📌 `userAvatar` enregistré :", sessionStorage.getItem("userAvatar"));
-    
+
             // ✅ Vérification du stockage avant la redirection
             setTimeout(() => {
                 console.log("✅ `sessionStorage` après 500ms :", {
@@ -67,22 +64,35 @@ document.addEventListener("DOMContentLoaded", () => {
                     userName: sessionStorage.getItem("userName"),
                     userAvatar: sessionStorage.getItem("userAvatar")
                 });
-    
+
+                // 🔄 Réessai de stockage si nécessaire
                 if (!sessionStorage.getItem("roomId") || !sessionStorage.getItem("userName") || !sessionStorage.getItem("userAvatar")) {
-                    console.error("❌ Erreur : sessionStorage incomplet avant la redirection !");
+                    console.error("❌ Erreur : `sessionStorage` incomplet avant la redirection, tentative de correction...");
+                    sessionStorage.setItem("roomId", roomId);
+                    sessionStorage.setItem("userName", userName);
+                    sessionStorage.setItem("userAvatar", userAvatar);
+
+                    console.log("📌 `sessionStorage` corrigé :", {
+                        roomId: sessionStorage.getItem("roomId"),
+                        userName: sessionStorage.getItem("userName"),
+                        userAvatar: sessionStorage.getItem("userAvatar")
+                    });
+                }
+
+                // Vérification finale avant redirection
+                if (!sessionStorage.getItem("roomId") || !sessionStorage.getItem("userName") || !sessionStorage.getItem("userAvatar")) {
+                    console.error("❌ Erreur critique : `sessionStorage` reste incomplet après correction !");
                     return;
                 }
-    
+
                 window.location.href = "/gameboard.html";
             }, 500);
         });
-    
+
         socket.once("error", (error) => {
             console.error(`❌ Erreur : ${error}`);
             loadingOverlay.classList.add("hidden");
-            errorToast.textContent = error;
-            errorToast.classList.add("show");
-            setTimeout(() => errorToast.classList.remove("show"), 3000);
+            showError(error);
         });
     });
 
