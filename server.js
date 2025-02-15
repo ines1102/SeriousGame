@@ -152,7 +152,7 @@ io.on('connection', (socket) => {
             socket.emit('roomError', 'Données invalides');
             return;
         }
-    
+
         const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
         if (!room) {
             socket.emit('roomError', 'Room invalide ou pleine');
@@ -161,11 +161,12 @@ io.on('connection', (socket) => {
     
         socket.join(data.roomCode);
     
-        // 📌 Envoi immédiat des informations des joueurs
-        io.to(room.code).emit('updatePlayers', room.players);
+        // 📌 Envoi immédiat des données de l’adversaire
+        if (room.players.length === 2) {
+            const [player1, player2] = room.players;
     
-        if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
-            io.to(room.code).emit('gameStart', { roomCode, players: room.players });
+            io.to(player1.id).emit('updateOpponent', player2);
+            io.to(player2.id).emit('updateOpponent', player1);
         }
     });
 

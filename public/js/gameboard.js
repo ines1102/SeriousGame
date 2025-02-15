@@ -9,38 +9,34 @@ let opponentData = null;
 let isPlayerTurn = false;
 
 // 📌 Initialisation du jeu
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🔄 Initialisation du jeu...');
+import socket from './websocket.js'; // Assure-toi que le fichier websocket.js gère la connexion
 
-    try {
-        const userData = JSON.parse(localStorage.getItem('userData'));
-        if (!userData) throw new Error("Session expirée");
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("🔄 Initialisation du jeu...");
 
-        console.log("📌 Données utilisateur récupérées:", userData);
-        console.log("📌 Avatar attendu:", userData.avatarSrc);
-
-        await socket.waitForConnection();
-        console.log('✅ Connecté au serveur');
-
-        // 📌 Mise à jour du profil joueur
-        updatePlayerProfile(userData, false);
-
-        // 📌 Attente et mise à jour de l'adversaire dès qu'il rejoint
-        socket.on('updatePlayers', (players) => {
-            console.log("📌 Mise à jour des joueurs en cours...", players);
-
-            const opponent = players.find(p => p.clientId !== userData.clientId);
-            if (opponent) {
-                console.log(`📌 Mise à jour du profil adversaire: ${opponent.name}`);
-                updateOpponentProfile(opponent);
-            } else {
-                console.warn("⚠️ Aucun adversaire détecté.");
-            }
-        });
-
-    } catch (error) {
-        console.error("❌ Erreur lors de l'initialisation:", error);
+    // Récupération des informations de l'utilisateur
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (!userData) {
+        console.error("❌ Aucun utilisateur trouvé.");
+        return;
     }
+    
+    console.log("📌 Données utilisateur récupérées:", userData);
+
+    // 📌 Écoute de l'événement "updateOpponent" envoyé par le serveur
+    socket.on('updateOpponent', (opponentData) => {
+        console.log("📌 Mise à jour de l'adversaire:", opponentData);
+
+        if (!opponentData) {
+            console.warn("⚠️ Aucun adversaire détecté.");
+            return;
+        }
+
+        // 📌 Mise à jour de l'affichage de l'adversaire
+        document.querySelector('.opponent-name').textContent = opponentData.name || "Adversaire";
+        document.querySelector('.opponent-avatar img').src = opponentData.avatarSrc || "/Avatars/default.jpeg";
+        document.querySelector('.opponent-avatar img').alt = `Avatar de ${opponentData.name}`;
+    });
 });
 
 // ✅ Gestion des événements Socket.io
