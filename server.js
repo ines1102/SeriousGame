@@ -33,7 +33,10 @@ class GameServer {
                 MAX_PLAYERS_PER_ROOM: 2,
                 INITIAL_HAND_SIZE: 5,
                 CLEANUP_INTERVAL: 3600000, // 1 heure
-                MAX_INACTIVE_TIME: 3600000 // 1 heure
+                MAX_INACTIVE_TIME: 3600000, // 1 heure
+                INITIAL_HEALTH: 100,
+                INITIAL_ENERGY: 100,
+                TURN_TIMEOUT: 60000 // 1 minute par tour
             }
         };
 
@@ -73,10 +76,12 @@ class GameServer {
         });
 
         this.app.get('/health', (req, res) => {
-            res.json({ 
-                status: 'ok', 
+            res.json({
+                status: 'ok',
                 uptime: process.uptime(),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                activePlayers: this.roomManager.getActivePlayersCount(),
+                activeRooms: this.roomManager.getRoomsCount()
             });
         });
     }
@@ -112,8 +117,11 @@ class GameServer {
         socket.on('requestOpponent', () => this.handleOpponentRequest(socket));
         socket.on('cardPlayed', (data) => this.handleCardPlayed(socket, data));
         socket.on('disconnect', () => this.handleDisconnect(socket));
+        socket.on('surrender', () => this.handleSurrender(socket));
+        socket.on('chatMessage', (message) => this.handleChatMessage(socket, message));
     }
 
+    // Gestionnaires d'événements socket
     handleCreateRoom(socket, userData) {
         if (!this.validateUserData(userData)) {
             socket.emit('roomError', 'Données utilisateur invalides');
@@ -124,7 +132,8 @@ class GameServer {
             const roomCode = this.generateUniqueRoomCode();
             const room = this.roomManager.createRoom(roomCode, {
                 id: socket.id,
-                ...userData
+                ...userData,
+                lastActivity: Date.now()
             });
 
             socket.join(roomCode);
@@ -148,6 +157,7 @@ class GameServer {
                 name: data.name,
                 sex: data.sex,
                 avatarId: data.avatarId,
+                lastActivity: Date.now(),
                 ...data
             });
 
@@ -160,6 +170,8 @@ class GameServer {
             
             if (room.players.length === this.CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
                 this.startGame(room);
+            } else {
+                socket.emit('waitingForOpponent');
             }
         } catch (error) {
             console.error('Erreur join room:', error);
@@ -173,24 +185,34 @@ class GameServer {
             return;
         }
 
-        if (this.roomManager.waitingPlayers.length > 0) {
-            const opponent = this.roomManager.waitingPlayers.shift();
-            const roomCode = this.generateUniqueRoomCode();
-            const room = this.roomManager.createRoom(roomCode, opponent);
-            
-            this.roomManager.joinRoom(roomCode, {
-                id: socket.id,
-                ...userData
-            });
+        try {
+            if (this.roomManager.waitingPlayers.length > 0) {
+                const opponent = this.roomManager.waitingPlayers.shift();
+                const roomCode = this.generateUniqueRoomCode();
+                const room = this.roomManager.createRoom(roomCode, {
+                    ...opponent,
+                    lastActivity: Date.now()
+                });
+                
+                this.roomManager.joinRoom(roomCode, {
+                    id: socket.id,
+                    ...userData,
+                    lastActivity: Date.now()
+                });
 
-            socket.join(roomCode);
-            this.startGame(room);
-        } else {
-            this.roomManager.waitingPlayers.push({
-                id: socket.id,
-                ...userData
-            });
-            socket.emit('waitingForOpponent');
+                socket.join(roomCode);
+                this.startGame(room);
+            } else {
+                this.roomManager.waitingPlayers.push({
+                    id: socket.id,
+                    ...userData,
+                    lastActivity: Date.now()
+                });
+                socket.emit('waitingForOpponent');
+            }
+        } catch (error) {
+            console.error('Erreur matchmaking:', error);
+            socket.emit('roomError', 'Erreur lors de la recherche d\'une partie');
         }
     }
 
@@ -206,14 +228,41 @@ class GameServer {
 
     handleCardPlayed(socket, data) {
         const room = this.getRoomBySocket(socket);
+        if (!room || !this.isValidPlay(room, socket.id, data)) return;
+
+        try {
+            this.io.to(room.code).emit('cardPlayed', {
+                ...data,
+                playerId: socket.id
+            });
+
+            this.updateGameState(room, {
+                ...data,
+                playerId: socket.id
+            });
+        } catch (error) {
+            console.error('Erreur lors du jeu de carte:', error);
+            socket.emit('gameError', 'Erreur lors du jeu de la carte');
+        }
+    }
+
+    handleSurrender(socket) {
+        const room = this.getRoomBySocket(socket);
         if (!room) return;
 
-        this.io.to(room.code).emit('cardPlayed', {
-            ...data,
-            playerId: socket.id
-        });
+        this.endGame(room, socket.id, 'surrender');
+    }
 
-        this.updateGameState(room, data);
+    handleChatMessage(socket, message) {
+        const room = this.getRoomBySocket(socket);
+        if (!room) return;
+
+        const sanitizedMessage = this.sanitizeMessage(message);
+        this.io.to(room.code).emit('chatMessage', {
+            senderId: socket.id,
+            message: sanitizedMessage,
+            timestamp: Date.now()
+        });
     }
 
     handleDisconnect(socket) {
@@ -224,19 +273,38 @@ class GameServer {
             socket.to(room.code).emit('opponentDisconnected', {
                 playerId: socket.id
             });
+            
+            // Donner un délai pour la reconnexion
+            setTimeout(() => {
+                if (this.roomManager.playerRooms.has(socket.id)) {
+                    this.endGame(room, socket.id, 'disconnect');
+                }
+            }, 10000);
         }
 
-        this.roomManager.leaveRoom(socket.id);
+        this.roomManager.removeFromWaitingList(socket.id);
     }
 
+    // Méthodes de gestion du jeu
     startGame(room) {
-        const gameData = {
-            roomCode: room.code,
-            players: room.players.map(p => this.sanitizePlayerData(p))
-        };
+        try {
+            if (!room || !room.players || room.players.length !== this.CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
+                throw new Error('Configuration de room invalide');
+            }
 
-        this.io.to(room.code).emit('gameStart', gameData);
-        this.initializeGameState(room);
+            const gameData = {
+                roomCode: room.code,
+                players: room.players.map(p => this.sanitizePlayerData(p))
+            };
+
+            this.io.to(room.code).emit('gameStart', gameData);
+            this.initializeGameState(room);
+
+            console.log(`✅ Partie démarrée dans la room ${room.code}`);
+        } catch (error) {
+            console.error('❌ Erreur lors du démarrage de la partie:', error);
+            this.handleGameError(room, 'Erreur lors du démarrage de la partie');
+        }
     }
 
     updateGameState(room, data) {
