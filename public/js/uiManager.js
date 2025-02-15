@@ -41,34 +41,38 @@ export function updatePlayerProfile(player, isOpponent = false) {
         return;
     }
 
-    const prefix = isOpponent ? 'opponent' : 'player';
-    
-    waitForElement(`.${prefix}-profile`, (profileContainer) => {
-        try {
-            const avatarContainer = profileContainer.querySelector(`.${prefix}-avatar img`);
-            const nameContainer = profileContainer.querySelector(`.${prefix}-name`);
-            
-            if (!avatarContainer || !nameContainer) {
-                throw new Error(`Éléments manquants pour ${prefix}`);
-            }
-
-            // Mise à jour sécurisée des informations
-            nameContainer.textContent = player.name || 'Joueur inconnu';
-            
-            const avatarPath = getAvatarPath(player.sex, player.avatarId);
-            if (avatarPath) {
-                avatarContainer.src = avatarPath;
-                avatarContainer.alt = `Avatar de ${player.name}`;
-            }
-
-            console.log(`✅ Profil ${prefix} mis à jour:`, {
-                name: player.name,
-                avatar: avatarPath
-            });
-        } catch (error) {
-            console.error(`❌ Erreur lors de la mise à jour du profil ${prefix}:`, error);
+    try {
+        const prefix = isOpponent ? 'opponent' : 'player';
+        const profileElement = document.querySelector(`.${prefix}-profile`);
+        
+        if (!profileElement) {
+            throw new Error(`Élément ${prefix}-profile non trouvé`);
         }
-    }, 100); // Augmenter le nombre de tentatives si nécessaire
+
+        // Mise à jour avec gestion d'erreur
+        const avatarPath = getAvatarPath(player.sex, player.avatarId);
+        const avatarImg = profileElement.querySelector(`.${prefix}-avatar img`);
+        const nameElement = profileElement.querySelector(`.${prefix}-name`);
+
+        if (avatarImg) {
+            avatarImg.onerror = () => {
+                console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
+                avatarImg.src = AVATAR_CONFIG.default;
+            };
+            avatarImg.src = avatarPath;
+        }
+
+        if (nameElement) {
+            nameElement.textContent = player.name;
+        }
+
+        console.log(`✅ Profil ${prefix} mis à jour:`, {
+            name: player.name,
+            avatar: avatarPath
+        });
+    } catch (error) {
+        console.error(`❌ Erreur lors de la mise à jour du profil:`, error);
+    }
 }
 
 // ✅ Correction du problème de chargement des profils

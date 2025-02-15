@@ -21,21 +21,20 @@ socket.on('connect', () => {
     initializeGame();
 });
 
-function initializeGame() {
+export function initializeGame() {
     console.log("🔄 Initialisation du jeu...");
-    gameState.player = JSON.parse(localStorage.getItem('userData'));
-    gameState.roomId = localStorage.getItem('currentRoomId');
-
-    if (!gameState.player || !gameState.roomId) {
+    
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    
+    if (!userData || !userData.name || !userData.sex || !userData.avatarId) {
         console.warn("⚠️ Données de session incomplètes !");
+        // Rediriger vers la page d'accueil si les données sont incomplètes
+        window.location.href = '/';
         return;
     }
 
-    console.log("📌 Données utilisateur récupérées:", gameState.player);
-    console.log("📌 Room ID:", gameState.roomId);
-
-    socket.emit('joinGame', { roomId: gameState.roomId, player: gameState.player });
-    enableDragAndDrop();
+    // Initialiser le jeu avec les données utilisateur valides
+    return userData;
 }
 
 socket.on('gameStart', (data) => {

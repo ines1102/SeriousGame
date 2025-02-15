@@ -23,9 +23,11 @@ const CONFIG = {
         CARTES: path.join(__dirname, 'public', 'Cartes')
     },
     CORS_OPTIONS: {
-        origin: "https://seriousgame-ds65.onrender.com",
+        origin: ["https://seriousgame-ds65.onrender.com", "http://localhost:10000"],
         methods: ["GET", "POST"],
-        credentials: true
+        credentials: true,
+        allowedHeaders: ["Content-Type", "Authorization"],
+        maxAge: 600
     },
     GAME: {
         MAX_PLAYERS_PER_ROOM: 2,
@@ -66,7 +68,9 @@ app.get('/health', (req, res) => {
 const server = createServer(app);
 const io = new Server(server, {
     cors: CONFIG.CORS_OPTIONS,
-    transports: ['websocket']
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000
 });
 
 // 📌 Gestionnaire des rooms
@@ -240,8 +244,18 @@ io.on('connection', (socket) => {
         io.to(roomCode).emit('cardPlayed', data);
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
+        console.log(`👋 Joueur déconnecté (${reason}): ${socket.id}`);
         roomManager.leaveRoom(socket.id);
+        
+        // Informer les autres joueurs
+        const roomCode = roomManager.playerRooms.get(socket.id);
+        if (roomCode) {
+            socket.to(roomCode).emit('opponentDisconnected', {
+                reason: reason,
+                playerId: socket.id
+            });
+        }
     });
 });
 

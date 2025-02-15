@@ -2,7 +2,14 @@ import { updatePlayerProfile } from './uiManager.js';
 import { enableDragAndDrop } from './dragAndDrop.js';
 
 // 📌 Connexion au serveur WebSocket
-const socket = io();
+const socket = io({
+    transports: ['websocket'],
+    upgrade: false,
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    timeout: 10000
+});
 
 // 📌 Variables globales
 let userData = JSON.parse(localStorage.getItem('userData')) || {};
@@ -33,10 +40,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 📌 Configuration des événements WebSocket
 function setupSocketListeners() {
-    // ✅ Connexion réussie
+    socket.on('connect_error', (error) => {
+        console.error("❌ Erreur de connexion socket:", error);
+        showErrorMessage("Problème de connexion au serveur. Tentative de reconnexion...");
+    });
+    
     socket.on('connect', () => {
         console.log("✅ Connecté au serveur");
+        hideErrorMessage();
     });
+    
+    // Fonction d'affichage des erreurs
+    function showErrorMessage(message) {
+        const errorElement = document.getElementById('error-message');
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+    }
+    
+    function hideErrorMessage() {
+        const errorElement = document.getElementById('error-message');
+        if (errorElement) {
+            errorElement.classList.add('hidden');
+        }
+    }
 
     socket.on('gameStart', (data) => {
         console.log("🎮 Partie démarrée:", data);
