@@ -90,28 +90,11 @@ io.on("connection", (socket) => {
         }
     });
 
+    /** Gestion des déconnexions */
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion : ${socket.id}`);
         removePlayerFromRoom(socket.id);
     });
-
-    function removePlayerFromRoom(socketId) {
-        for (const roomId in rooms) {
-            const playerIndex = rooms[roomId].players.findIndex((player) => player.id === socketId);
-
-            if (playerIndex !== -1) {
-                console.log(`❌ Joueur ${rooms[roomId].players[playerIndex].name} supprimé de Room ${roomId}`);
-                rooms[roomId].players.splice(playerIndex, 1);
-            }
-
-            if (rooms[roomId].players.length === 0) {
-                console.log(`🗑️ Suppression de Room ${roomId} car elle est vide.`);
-                delete rooms[roomId];
-            } else {
-                io.to(roomId).emit("player_disconnected");
-            }
-        }
-    }
 
     /** Quitter une Room */
     socket.on("leave_room", () => {
