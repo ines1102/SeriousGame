@@ -233,11 +233,11 @@ io.on('connection', (socket) => {
     });
     });
 
-// Nettoyage périodique des rooms inactives
-setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
+    // Nettoyage périodique des rooms inactives
+    setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
 
-// Démarrage du serveur
-server.listen(CONFIG.PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
-});
+    // Démarrage du serveur
+    server.listen(CONFIG.PORT, '0.0.0.0', () => {
+        console.log(`\n🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
+    });
 });
