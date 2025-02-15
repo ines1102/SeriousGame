@@ -307,6 +307,148 @@ class GameServer {
         }
     }
 
+    initializeGameState(room) {
+        try {
+            room.gameState = {
+                status: 'playing',
+                turn: room.players[0].id,
+                playedCards: new Map(),
+                lastActivity: Date.now(),
+                playerStates: new Map(),
+                startTime: Date.now()
+            };
+    
+            // Initialiser l'état pour chaque joueur
+            room.players.forEach(player => {
+                const initialState = {
+                    health: this.CONFIG.GAME.INITIAL_HEALTH,
+                    energy: this.CONFIG.GAME.INITIAL_ENERGY,
+                    hand: this.generateInitialHand()
+                };
+                room.gameState.playerStates.set(player.id, initialState);
+    
+                // Envoyer la main initiale à chaque joueur
+                this.io.to(player.id).emit('initializeHands', {
+                    playerId: player.id,
+                    cards: initialState.hand
+                });
+            });
+    
+            // Notifier le premier tour
+            this.io.to(room.code).emit('turnUpdate', {
+                playerId: room.gameState.turn
+            });
+    
+            console.log(`🎮 Partie initialisée dans la room ${room.code}`);
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'initialisation de la partie:', error);
+            this.handleGameError(room, 'Erreur lors de l\'initialisation de la partie');
+        }
+    }
+    
+    // Méthode pour générer la main initiale
+    generateInitialHand() {
+        return Array.from({ length: this.CONFIG.GAME.INITIAL_HAND_SIZE }, (_, i) => ({
+            id: `card_${Date.now()}_${i}`,
+            type: 'basic',
+            value: Math.floor(Math.random() * 10) + 1,
+            image: `/Cartes/carte${i + 1}.png`
+        }));
+    }
+    
+    // Méthode pour vérifier si un coup est valide
+    isValidPlay(room, playerId, data) {
+        if (!room.gameState || room.gameState.status !== 'playing') {
+            return false;
+        }
+    
+        // Vérifier si c'est le tour du joueur
+        if (room.gameState.turn !== playerId) {
+            return false;
+        }
+    
+        // Vérifier si la carte appartient au joueur
+        const playerState = room.gameState.playerStates.get(playerId);
+        if (!playerState || !playerState.hand.some(card => card.id === data.cardId)) {
+            return false;
+        }
+    
+        // Vérifier si l'emplacement est valide
+        if (!data.slot || !data.slot.startsWith('player-')) {
+            return false;
+        }
+    
+        return true;
+    }
+    
+    // Méthode pour gérer les erreurs de jeu
+    handleGameError(room, errorMessage) {
+        console.error(`❌ Erreur de jeu dans la room ${room.code}:`, errorMessage);
+        
+        this.io.to(room.code).emit('gameError', {
+            message: errorMessage
+        });
+    
+        // Réinitialiser la room en cas d'erreur critique
+        room.gameState.status = 'error';
+        setTimeout(() => {
+            this.cleanupRoom(room.code);
+        }, 5000);
+    }
+    
+    // Méthode pour nettoyer une room
+    cleanupRoom(roomCode) {
+        const room = this.roomManager.getRoom(roomCode);
+        if (!room) return;
+    
+        // Notifier les joueurs
+        this.io.to(roomCode).emit('roomClosed', {
+            message: 'La partie a été interrompue'
+        });
+    
+        // Nettoyer la room
+        room.players.forEach(player => {
+            this.roomManager.playerRooms.delete(player.id);
+        });
+        this.roomManager.rooms.delete(roomCode);
+    }
+    
+    // Méthode pour vérifier les conditions de fin de partie
+    checkGameConditions(room) {
+        room.gameState.playerStates.forEach((state, playerId) => {
+            if (state.health <= 0) {
+                this.endGame(room, playerId, 'defeat');
+            }
+        });
+    }
+    
+    // Méthode pour terminer la partie
+    endGame(room, loserId, reason) {
+        const winnerId = room.players.find(p => p.id !== loserId)?.id;
+    
+        this.io.to(room.code).emit('gameEnd', {
+            winner: winnerId,
+            loser: loserId,
+            reason: reason
+        });
+    
+        room.gameState.status = 'ended';
+        
+        // Nettoyer la room après un délai
+        setTimeout(() => {
+            this.cleanupRoom(room.code);
+        }, 5000);
+    }
+    
+    // Méthode pour nettoyer les messages
+    sanitizeMessage(message) {
+        if (!message || typeof message !== 'string') {
+            return '';
+        }
+        // Nettoyer et limiter la longueur du message
+        return message.slice(0, 200).trim();
+    }
+
     updateGameState(room, data) {
         // Mettre à jour l'état du jeu
         room.gameState.playedCards.set(data.slot, data);
@@ -476,4 +618,4 @@ class RoomManager {
 const gameServer = new GameServer();
 gameServer.start();
 
-export default {gameServer, RoomManager};
+export default gameServer;
