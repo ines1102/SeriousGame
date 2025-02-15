@@ -407,6 +407,37 @@ class RoomManager {
         }
     }
 
+    // Ajout de la méthode manquante
+    removeFromWaitingList(playerId) {
+        this.waitingPlayers = this.waitingPlayers.filter(player => player.id !== playerId);
+    }
+
+    // Méthodes utilitaires supplémentaires
+    getActivePlayersCount() {
+        return this.playerRooms.size;
+    }
+
+    getRoomsCount() {
+        return this.rooms.size;
+    }
+
+    getRoom(roomCode) {
+        return this.rooms.get(roomCode);
+    }
+
+    getRoomByPlayerId(playerId) {
+        const roomCode = this.playerRooms.get(playerId);
+        return roomCode ? this.rooms.get(roomCode) : null;
+    }
+
+    isPlayerInRoom(playerId) {
+        return this.playerRooms.has(playerId);
+    }
+
+    isPlayerWaiting(playerId) {
+        return this.waitingPlayers.some(player => player.id === playerId);
+    }
+
     cleanupInactiveRooms() {
         const now = Date.now();
         for (const [roomCode, room] of this.rooms.entries()) {
@@ -417,11 +448,32 @@ class RoomManager {
                 this.rooms.delete(roomCode);
             }
         }
+
+        // Nettoyer aussi les joueurs en attente inactifs
+        this.waitingPlayers = this.waitingPlayers.filter(player => 
+            now - player.lastActivity < this.gameConfig.MAX_INACTIVE_TIME
+        );
+    }
+
+    // Méthode pour le débogage
+    getDiagnostics() {
+        return {
+            activeRooms: this.rooms.size,
+            activePlayers: this.playerRooms.size,
+            waitingPlayers: this.waitingPlayers.length,
+            rooms: Array.from(this.rooms.entries()).map(([code, room]) => ({
+                code,
+                playerCount: room.players.length,
+                status: room.gameState.status,
+                age: Date.now() - room.createdAt
+            }))
+        };
     }
 }
+
 
 // Démarrage du serveur
 const gameServer = new GameServer();
 gameServer.start();
 
-export default gameServer;
+export default {gameServer, RoomManager};
