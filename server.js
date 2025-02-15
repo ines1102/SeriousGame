@@ -5,7 +5,6 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomInt } from 'crypto';
-import Deck from './public/js/deck.js';
 
 // Configuration des chemins
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +19,6 @@ const CONFIG = {
         AVATARS: path.join(__dirname, 'public', 'Avatars'),
         JS: path.join(__dirname, 'public', 'js'),
         CSS: path.join(__dirname, 'public', 'css'),
-        FAVICON: path.join(__dirname, 'public', 'favicon_io'),
         CARTES: path.join(__dirname, 'public', 'Cartes')
     },
     CORS_OPTIONS: {
@@ -30,9 +28,8 @@ const CONFIG = {
     },
     GAME: {
         MAX_PLAYERS_PER_ROOM: 2,
-        INITIAL_HAND_SIZE: 5,
-        CLEANUP_INTERVAL: 3600000,
-        MAX_INACTIVE_TIME: 3600000
+        CLEANUP_INTERVAL: 600000, // 10 minutes
+        MAX_INACTIVE_TIME: 3600000 // 1 heure
     }
 };
 
@@ -84,8 +81,6 @@ class RoomManager {
             gameState: {
                 status: 'waiting',
                 turn: creator.id,
-                playedCards: new Map(),
-                playerDecks: new Map(),
                 startTime: Date.now()
             },
             createdAt: Date.now()
@@ -125,9 +120,10 @@ class RoomManager {
         }
     }
 }
-const roomManager = new RoomManager();
 
+const roomManager = new RoomManager();
 let waitingPlayers = []; // Liste des joueurs en attente
+
 io.on('connection', (socket) => {
     console.log(`✅ Joueur connecté: ${socket.id}`);
 
@@ -136,6 +132,7 @@ io.on('connection', (socket) => {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
+
         let roomCode;
         do {
             roomCode = randomInt(1000, 9999).toString();
@@ -192,6 +189,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
+        // ✅ Supprime le joueur de la liste d'attente
         waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);
         roomManager.leaveRoom(socket.id);
     });
