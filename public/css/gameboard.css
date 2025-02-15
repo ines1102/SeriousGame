@@ -313,3 +313,67 @@ body {
 .active-turn {
   animation: pulse 2s infinite;
 }
+
+/* Animations pour les mises à jour de profil */
+@keyframes profileUpdate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.profile-update-animation {
+    animation: profileUpdate 0.5s ease-in-out;
+}
+
+/* Animation de chargement */
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.loading-avatar {
+    position: relative;
+}
+
+.loading-avatar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 2px solid rgba(74, 144, 226, 0.3);
+    border-top-color: #4a90e2;
+    border-radius: 50%;
+    animation: rotate 1s linear infinite;
+}
+
+/* Animation pour les cartes jouées */
+@keyframes cardPlayed {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.played-card {
+    animation: cardPlayed 0.3s ease-out;
+}
+
+/* Style pour la zone de dépôt valide */
+.drop-area.valid-target {
+    box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+}
+
+/* Style pour la zone de dépôt invalide */
+.drop-area.invalid-target {
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
