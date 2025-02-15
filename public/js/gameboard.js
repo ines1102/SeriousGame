@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!userName || !userAvatar || !roomId) {
         console.error("⚠️ Données de session incomplètes !", { userName, userAvatar, roomId });
+        alert("Erreur : données utilisateur incomplètes. Retour à l'accueil.");
         window.location.href = "/"; // Redirection vers l'accueil si données manquantes
         return;
     }
@@ -34,7 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
             console.warn("⚠️ Aucun adversaire trouvé !");
             return;
         }
-
+        console.log(`🎮 Début du jeu ! Adversaire : ${gameData.opponent.name}`);
+        
         opponentNameElement.textContent = gameData.opponent.name;
         opponentAvatarElement.src = gameData.opponent.avatar || "/Avatars/default.jpeg";
 

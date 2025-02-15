@@ -15,7 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Récupération des informations utilisateur
     const userName = sessionStorage.getItem("userName");
     const userAvatar = sessionStorage.getItem("userAvatar");
-
+    sessionStorage.setItem("roomId", roomId);
+    
     if (userName) userNameElement.textContent = userName;
     if (userAvatar) userAvatarElement.src = userAvatar;
     else userAvatarElement.src = "/Avatars/default.jpeg"; // Avatar par défaut

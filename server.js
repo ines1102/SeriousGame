@@ -69,18 +69,26 @@ io.on("connection", (socket) => {
     });
 
     socket.on("join_room", ({ roomId, name, avatar }) => {
-        if (!rooms[roomId] || rooms[roomId].players.length >= 2) {
+        if (!rooms[roomId]) {
+            rooms[roomId] = { players: [] };
+        }
+
+        if (rooms[roomId].players.length >= 2) {
+            console.log(`❌ Room ${roomId} est déjà pleine.`);
             io.to(socket.id).emit("room_not_found");
-            console.log(`❌ Room ${roomId} introuvable ou pleine`);
             return;
         }
 
         socket.join(roomId);
         rooms[roomId].players.push({ id: socket.id, name, avatar });
 
-        console.log(`👥 ${name} a rejoint Room ${roomId}`);
-        io.to(roomId).emit("room_joined", roomId);
-        startGame(roomId);
+        console.log(`👥 ${name} a rejoint Room ${roomId}, joueurs actuellement dans la room: ${rooms[roomId].players.length}`);
+
+        if (rooms[roomId].players.length === 2) {
+            console.log(`✅ 2 joueurs dans Room ${roomId}, démarrage de la partie.`);
+            io.to(roomId).emit("room_joined", roomId);
+            startGame(roomId);
+        }
     });
 
     socket.on("disconnect", () => {

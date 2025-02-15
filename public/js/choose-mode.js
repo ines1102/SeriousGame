@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Récupération du nom et de l’avatar stockés après `index.html`
     const userName = sessionStorage.getItem("userName");
     const userAvatar = sessionStorage.getItem("userAvatar");
+    sessionStorage.setItem("roomId", roomId);
 
     if (userName) userNameElement.textContent = userName;
     if (userAvatar) userAvatarElement.src = userAvatar;
