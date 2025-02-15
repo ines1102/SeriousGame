@@ -224,4 +224,23 @@ function handleTurnUpdate(playerId) {
     console.log(`🎲 Tour mis à jour: ${isPlayerTurn ? 'Ton tour' : 'Tour de l’adversaire'}`);
 }
 
+function handleCardPlayed(data) {
+    if (!data.cardId || !data.slot) {
+        console.error("❌ Données de carte invalides:", data);
+        return;
+    }
+
+    const dropZone = document.querySelector(`[data-slot="${data.slot}"]`);
+    if (dropZone) {
+        const playedCard = document.createElement('img');
+        playedCard.src = data.cardSrc;
+        playedCard.classList.add('played-card');
+        dropZone.appendChild(playedCard);
+
+        console.log(`🃏 Carte jouée sur ${data.slot}:`, data.cardId);
+    } else {
+        console.error("❌ Zone de drop introuvable pour:", data.slot);
+    }
+}
+
 export { updatePlayerProfile, showError, handleCardPlayed, handleTurnUpdate };
