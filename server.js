@@ -14,6 +14,7 @@ const __dirname = path.dirname(__filename);
 
 // Configuration globale
 const CONFIG = {
+    PORT: process.env.PORT || 10000,
     CLIENT_URL: "https://seriousgame-ds65.onrender.com",
     STATIC_PATHS: {
         PUBLIC: path.join(__dirname, 'public'),
@@ -235,9 +236,8 @@ io.on('connection', (socket) => {
     // Nettoyage périodique des rooms inactives
     setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
 
-    // Démarrage du serveur
-    const PORT = process.env.PORT || 10000; // Render fournit un port
-    server.listen(PORT, () => {
-        console.log(`🚀 Serveur lancé sur le port ${PORT}`);
+    //Forcer Render à écouter sur `0.0.0.0`
+    server.listen(CONFIG.PORT, '0.0.0.0', () => {
+        console.log(`🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
     });
 });
