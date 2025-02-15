@@ -135,6 +135,22 @@ body {
     z-index: 91;
 }
 
+/* Zones des profils */
+#player-zone, #opponent-zone {
+    position: fixed;
+    width: 250px;
+    height: 100px;
+    background-color: #4b79a1;
+    color: white;
+    border-radius: 12px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 200;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
 #player-zone {
     right: 20px;
     bottom: 20px;
@@ -143,6 +159,33 @@ body {
 #opponent-zone {
     left: 20px;
     top: 20px;
+}
+
+/* Avatars */
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid white;
+    object-fit: cover;
+}
+
+/* Barres de vie */
+.health-bar {
+    width: 150px;
+    height: 20px;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 5px;
+    position: relative;
+}
+
+.health-bar-fill {
+    width: 100%;
+    height: 100%;
+    background-color: #4CAF50;
+    transition: width 0.3s ease;
 }
 
 .health-bar .health-text {
@@ -283,6 +326,11 @@ body {
         height: 100px;
     }
 
+    #player-zone, #opponent-zone {
+        width: 200px;
+        height: 80px;
+        padding: 8px 15px;
+    }
 
     .health-bar {
         width: 120px;
@@ -329,150 +377,4 @@ body {
         font-size: 10px;
         line-height: 15px;
     }
-}
-
-/* ✅ Ajustement de la taille des avatars */
-.avatar {
-    width: 40px; /* Taille réduite */
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid white;
-    object-fit: cover;
-}
-
-/* ✅ Correction : Taille fixe des avatars */
-.avatar-img {
-    width: 60px; /* Ajuste selon tes préférences */
-    height: 60px;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 2px solid white;
-}
-
-/* ✅ Ajustement pour les profils joueurs et adversaires */
-.player-avatar img,
-.opponent-avatar img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
-}
-
-/* ✅ Zone de profil réduite pour équilibrer */
-#player-zone, #opponent-zone {
-    width: 220px; /* Réduction */
-    height: 90px;
-    background-color: #4b79a1;
-    color: white;
-    border-radius: 12px;
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 200;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* ✅ Pour s'assurer que la barre de vie ne se compresse pas trop */
-.health-bar {
-    width: 140px;
-    height: 18px;
-    background-color: #e0e0e0;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 5px;
-    position: relative;
-}
-
-.health-bar-fill {
-    width: 100%;
-    height: 100%;
-    background-color: #4CAF50;
-    transition: width 0.3s ease;
-}
-
-@media (max-width: 768px) {
-    .avatar {
-        width: 35px;
-        height: 35px;
-    }
-
-    #player-zone, #opponent-zone {
-        width: 180px;
-        height: 80px;
-        padding: 6px 12px;
-    }
-
-    .health-bar {
-        width: 110px;
-        height: 15px;
-    }
-}
-
-@media (max-width: 480px) {
-    .avatar {
-        width: 30px;
-        height: 30px;
-    }
-
-    #player-zone, #opponent-zone {
-        width: 160px;
-        height: 70px;
-        padding: 5px 10px;
-    }
-
-    .health-bar {
-        width: 90px;
-        height: 12px;
-    }
-}
-
-/* ✅ Positionnement des profils */
-.profile-container {
-    position: fixed;
-    width: 220px;
-    height: 80px;
-    background-color: rgba(26, 55, 92, 0.7);
-    color: white;
-    border-radius: 12px;
-    padding: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 200;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-
-/* ✅ Profil du joueur (en bas à droite) */
-.profile-container.player {
-    right: 20px;
-    bottom: 20px;
-}
-
-/* ✅ Profil de l'adversaire (en haut à gauche) */
-.profile-container.opponent {
-    left: 20px;
-    top: 20px;
-}
-
-/* ✅ Ajustement des avatars */
-.profile-avatar img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 2px solid white;
-    object-fit: cover;
-}
-
-/* ✅ Style du nom */
-.profile-info {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.profile-name {
-    font-size: 18px;
-    font-weight: bold;
 }
