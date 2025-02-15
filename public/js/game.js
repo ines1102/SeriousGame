@@ -44,6 +44,17 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("🎭 Avatar reçu pour l'adversaire :", gameData.opponent.avatar);
         });
 
+        // ✅ Ajout d'un nouvel événement pour s'assurer que les profils sont bien mis à jour
+        socket.on("players_ready", (data) => {
+            console.log("✅ Confirmation : Les deux joueurs sont bien connectés.", data);
+
+            document.querySelector(".opponent-name").textContent = data.player2.name;
+            document.querySelector(".opponent-avatar img").src = data.player2.avatar;
+
+            document.querySelector(".player-name").textContent = data.player1.name;
+            document.querySelector(".player-avatar img").src = data.player1.avatar;
+        });
+
         socket.on("player_left", (data) => {
             console.warn("❌ L'adversaire a quitté la partie. Message reçu :", data.message);
             alert(data.message);

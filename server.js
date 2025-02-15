@@ -98,6 +98,9 @@ function startGame(roomId) {
         const deck = new Deck();
         const decks = deck.creerDecksJoueurs();
 
+        console.log(`🎮 Début de la partie dans Room ${roomId}`);
+        console.log(`👤 Joueur 1 : ${player1.name} - 👤 Joueur 2 : ${player2.name}`);
+
         io.to(player1.id).emit("game_start", {
             decks: decks.joueur1,
             turn: player1.name,
@@ -108,6 +111,12 @@ function startGame(roomId) {
             decks: decks.joueur2,
             turn: player1.name,
             opponent: { name: player1.name, avatar: player1.avatar }
+        });
+
+        // ✅ Correction : Ajout d'une confirmation aux joueurs qu'ils sont bien en jeu
+        io.to(roomId).emit("players_ready", {
+            player1: { name: player1.name, avatar: player1.avatar },
+            player2: { name: player2.name, avatar: player2.avatar }
         });
     });
 }
