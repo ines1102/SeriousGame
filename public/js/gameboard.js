@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const opponentHand = document.getElementById("opponent-hand");
     const turnIndicator = document.getElementById("turn-indicator");
 
+    // 🔍 Vérification des données utilisateur
     const userName = sessionStorage.getItem("userName");
     const userAvatar = sessionStorage.getItem("userAvatar") || "/Avatars/default.jpeg";
     const roomId = sessionStorage.getItem("roomId");
@@ -20,9 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("🔍 `userAvatar` :", userAvatar);
 
     if (!userName || !userAvatar || !roomId) {
-        console.error("⚠️ Données de session incomplètes !", { userName, userAvatar, roomId });
-        alert("Erreur : données utilisateur incomplètes. Retour à l'accueil.");
-        window.location.href = "/"; // Redirection vers l'accueil si données manquantes
+        console.error("⚠️ Données de session incomplètes !");
+        alert("Erreur : session corrompue. Retour à l'accueil.");
+        window.location.href = "/";
         return;
     }
 
@@ -66,48 +67,4 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Vous avez été déconnecté du serveur. Retour à l'accueil.");
         window.location.href = "/";
     });
-    
-        // Affichage des mains de départ
-        displayHand(gameData.decks.joueur1.main, playerHand);
-        displayOpponentHand(gameData.decks.joueur2.main, opponentHand);
-    });
-
-    /** ✅ Mise à jour du tour de jeu */
-    socket.on("update_turn", (currentTurn) => {
-        turnIndicator.textContent = currentTurn === userName ? "Votre tour !" : "Tour de l'adversaire";
-    });
-
-    /** ✅ Fonction pour afficher la main du joueur */
-    function displayHand(deck, handContainer) {
-        handContainer.innerHTML = "";
-        deck.forEach(card => {
-            const cardElement = document.createElement("img");
-            cardElement.src = card.name;
-            cardElement.classList.add("card");
-            handContainer.appendChild(cardElement);
-        });
-    }
-
-    /** ✅ Fonction pour afficher la main de l'adversaire */
-    function displayOpponentHand(deck, handContainer) {
-        handContainer.innerHTML = "";
-        for (let i = 0; i < deck.length; i++) {
-            const cardElement = document.createElement("div");
-            cardElement.classList.add("card-back");
-            handContainer.appendChild(cardElement);
-        }
-    }
-
-    /** ✅ Gestion des déconnexions */
-    socket.on("player_disconnected", () => {
-        console.warn("❌ L'adversaire s'est déconnecté. Retour à l'accueil.");
-        alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
-        window.location.href = "/";
-    });
-
-    socket.on("disconnect", () => {
-        console.warn("❌ Vous avez été déconnecté du serveur. Retour à l'accueil.");
-        alert("Vous avez été déconnecté du serveur. Retour à l'accueil.");
-        window.location.href = "/";
-    });
-});
+}); // ✅ Vérifier que cette accolade ferme bien `DOMContentLoaded`
