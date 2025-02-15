@@ -40,7 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             document.querySelector(".opponent-name").textContent = gameData.opponent.name;
             document.querySelector(".opponent-avatar img").src = gameData.opponent.avatar;
-
             console.log("🎭 Avatar reçu pour l'adversaire :", gameData.opponent.avatar);
         });
 
@@ -55,9 +54,16 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelector(".player-avatar img").src = data.player1.avatar;
         });
 
-        socket.on("player_left", (data) => {
-            console.warn("❌ L'adversaire a quitté la partie. Message reçu :", data.message);
-            alert(data.message);
+        /** ✅ Ajout de la gestion d'une déconnexion d'un joueur */
+        socket.on("opponent_disconnected", () => {
+            console.warn("❌ L'adversaire s'est déconnecté !");
+            alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
+            
+            // 🔴 Nettoyer les données et rediriger
+            sessionStorage.removeItem("userName");
+            sessionStorage.removeItem("userAvatar");
+            sessionStorage.removeItem("roomId");
+            
             window.location.href = "/";
         });
 
@@ -68,6 +74,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!socket.connected) {
                     console.error("❌ Vous avez été déconnecté définitivement. Retour à l'accueil.");
                     alert("Vous avez été déconnecté du serveur. Retour à l'accueil.");
+
+                    // 🔴 Nettoyer la session
+                    sessionStorage.removeItem("userName");
+                    sessionStorage.removeItem("userAvatar");
+                    sessionStorage.removeItem("roomId");
+
                     window.location.href = "/";
                 } else {
                     console.log("🔄 Reconnexion détectée, suppression du message de déconnexion.");
