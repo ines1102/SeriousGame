@@ -6,12 +6,13 @@ let socket;
 let userData = null;
 let opponentData = null;
 let currentRoomId = null;
+let playerHand = [];
+let opponentHand = [];
 
 /// Initialisation
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🔄 Initialisation du jeu...");
     
-    // Récupérer les données utilisateur
     userData = JSON.parse(localStorage.getItem('userData'));
     if (!userData || !userData.name) {
         console.error("❌ Données utilisateur manquantes !");
@@ -19,13 +20,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    console.log("📌 Données utilisateur récupérées:", userData);
+    // Récupérer le code de la room depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCode = urlParams.get('room');
 
-    // Initialiser le socket
+    if (!roomCode) {
+        console.error("❌ Code room manquant !");
+        window.location.href = '/room-choice';
+        return;
+    }
+
+    console.log("📌 Données utilisateur récupérées:", userData);
+    console.log("🎮 Room code:", roomCode);
+
     initializeSocket();
-    
-    // Mettre à jour le profil du joueur
     updatePlayerProfile(userData, false);
+
+    // Joindre la room après la connexion
+    socket.on('connect', () => {
+        console.log("✅ Connecté au serveur");
+        socket.emit('joinRoom', { 
+            ...userData, 
+            roomCode: roomCode 
+        });
+    });
 });
 
 function initializeSocket() {
@@ -38,35 +56,42 @@ function initializeSocket() {
 }
 
 function setupSocketListeners() {
-    socket.on('connect', () => {
-        console.log("✅ Connecté au serveur");
-        // Envoyer immédiatement une demande de mise à jour de l'adversaire
-        requestOpponentUpdate();
+    // Gestion de la connexion
+    socket.on('connect_error', (error) => {
+        console.error("❌ Erreur de connexion:", error);
+        showErrorMessage("Erreur de connexion au serveur");
     });
 
+    // Confirmation de connexion à la room
+    socket.on('roomJoined', (data) => {
+        console.log("✅ Room rejointe:", data);
+        currentRoomId = data.roomCode;
+    });
+
+    // Erreur de room
+    socket.on('roomError', (error) => {
+        console.error("❌ Erreur de room:", error);
+        showErrorMessage(error);
+    });
+
+    // Début de partie
     socket.on('gameStart', (data) => {
         console.log("🎮 Partie démarrée:", data);
-        if (!data || !data.players) {
-            console.error("❌ Données de partie invalides");
-            return;
-        }
+        if (!data || !data.players) return;
 
         currentRoomId = data.roomCode;
-        
-        // Trouver et mettre à jour l'adversaire
         const opponent = data.players.find(p => p.id !== socket.id);
+        
         if (opponent) {
-            console.log("👥 Adversaire trouvé dans gameStart:", opponent);
+            console.log("👥 Adversaire trouvé:", opponent);
             updateOpponentData(opponent);
         }
     });
 
+    // Mise à jour de l'adversaire
     socket.on('updateOpponent', (opponent) => {
-        console.log("📌 Réception updateOpponent:", opponent);
-        if (!opponent) {
-            console.warn("⚠️ Données adversaire invalides");
-            return;
-        }
+        if (!opponent) return;
+        console.log("📌 Mise à jour adversaire reçue:", opponent);
         updateOpponentData(opponent);
     });
 

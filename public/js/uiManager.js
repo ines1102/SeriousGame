@@ -15,11 +15,20 @@ const AVATAR_CONFIG = {
 
 // 📌 Fonction pour récupérer le bon chemin d'avatar
 function getAvatarPath(sex, avatarId) {
+    console.log("🎭 Récupération avatar:", { sex, avatarId });
+    
     if (!sex || !avatarId) {
-        console.warn("⚠️ Avatar non défini, utilisation de l'avatar par défaut");
+        console.warn("⚠️ Données avatar incomplètes");
         return AVATAR_CONFIG.default;
     }
-    return AVATAR_CONFIG[sex]?.[avatarId] || AVATAR_CONFIG.default;
+
+    const avatarPath = AVATAR_CONFIG[sex]?.[avatarId];
+    if (!avatarPath) {
+        console.warn("⚠️ Avatar non trouvé dans la configuration");
+        return AVATAR_CONFIG.default;
+    }
+
+    return avatarPath;
 }
 
 // ✅ Attente de l'affichage d'un élément avant exécution d'une fonction
@@ -35,49 +44,47 @@ function waitForElement(selector, callback, attempts = 50) {
 }
 
 // ✅ Mise à jour du profil joueur ou adversaire
+
 export function updatePlayerProfile(player, isOpponent = false) {
     if (!player) {
         console.warn("❌ Données du joueur manquantes");
         return;
     }
 
-    console.log(`🔄 Mise à jour du profil ${isOpponent ? 'opponent' : 'player'}:`, player);
-
     const prefix = isOpponent ? 'opponent' : 'player';
-    const profileContainer = document.querySelector(`.${prefix}-profile`);
-    
-    if (!profileContainer) {
-        console.error(`❌ Container ${prefix}-profile non trouvé`);
-        return;
-    }
+    console.log(`🔄 Mise à jour du profil ${prefix}:`, player);
 
-    try {
-        // Mise à jour du nom
-        const nameElement = profileContainer.querySelector(`.${prefix}-name`);
-        if (nameElement) {
-            nameElement.textContent = player.name || 'Joueur inconnu';
+    waitForElement(`.${prefix}-profile`, (profileContainer) => {
+        try {
+            // Mise à jour du nom
+            const nameElement = profileContainer.querySelector(`.${prefix}-name`);
+            if (nameElement) {
+                nameElement.textContent = player.name || 'Joueur inconnu';
+            }
+
+            // Mise à jour de l'avatar
+            const avatarContainer = profileContainer.querySelector(`.${prefix}-avatar img`);
+            if (avatarContainer) {
+                const avatarPath = getAvatarPath(player.sex, player.avatarId);
+                if (avatarPath) {
+                    avatarContainer.src = avatarPath;
+                    avatarContainer.alt = `Avatar de ${player.name}`;
+                }
+
+                avatarContainer.onerror = () => {
+                    console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
+                    avatarContainer.src = AVATAR_CONFIG.default;
+                };
+            }
+
+            console.log(`✅ Profil ${prefix} mis à jour:`, {
+                name: player.name,
+                avatar: getAvatarPath(player.sex, player.avatarId)
+            });
+        } catch (error) {
+            console.error(`❌ Erreur lors de la mise à jour du profil ${prefix}:`, error);
         }
-
-        // Mise à jour de l'avatar
-        const avatarImg = profileContainer.querySelector(`.${prefix}-avatar img`);
-        if (avatarImg) {
-            const avatarPath = getAvatarPath(player.sex, player.avatarId);
-            avatarImg.src = avatarPath;
-            avatarImg.alt = `Avatar de ${player.name}`;
-            
-            avatarImg.onerror = () => {
-                console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
-                avatarImg.src = AVATAR_CONFIG.default;
-            };
-        }
-
-        console.log(`✅ Profil ${prefix} mis à jour:`, {
-            name: player.name,
-            avatar: getAvatarPath(player.sex, player.avatarId)
-        });
-    } catch (error) {
-        console.error(`❌ Erreur lors de la mise à jour du profil ${prefix}:`, error);
-    }
+    });
 }
 
 // ✅ Correction du problème de chargement des profils
