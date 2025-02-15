@@ -13,10 +13,10 @@ const AVATAR_CONFIG = {
     default: '/Avatars/default.jpeg'
 };
 
-// ✅ Attente de l'affichage d'un élément avant exécution d'une fonction
-export function waitForElement(selector, callback, maxRetries = 50) {
+// ✅ Attente d'un élément HTML avant exécution
+export function waitForElement(selector, callback, maxRetries = 100) {
     let attempts = 0;
-    
+
     function checkElement() {
         const element = document.querySelector(selector);
         if (element) {
@@ -32,7 +32,7 @@ export function waitForElement(selector, callback, maxRetries = 50) {
     checkElement();
 }
 
-// ✅ Fonction pour récupérer le bon chemin d'avatar
+// ✅ Récupération sécurisée de l'avatar
 function getAvatarPath(sex, avatarId) {
     if (!sex || !avatarId) {
         console.warn("⚠️ Avatar non défini, utilisation de l'avatar par défaut");
@@ -41,7 +41,7 @@ function getAvatarPath(sex, avatarId) {
     return AVATAR_CONFIG[sex]?.[avatarId] || AVATAR_CONFIG.default;
 }
 
-// ✅ Mise à jour du profil joueur ou adversaire
+// ✅ Mise à jour des profils (joueur et adversaire)
 export function updatePlayerProfile(player, isOpponent = false) {
     if (!player || !player.name || !player.avatarId) {
         console.warn(`⚠️ Impossible de mettre à jour le profil de ${isOpponent ? 'l\'adversaire' : 'joueur'}`);
@@ -61,25 +61,29 @@ export function updatePlayerProfile(player, isOpponent = false) {
             return;
         }
 
+        // 📌 Mise à jour du nom et de l'avatar
         nameContainer.textContent = player.name || 'Joueur inconnu';
-
         const avatarPath = getAvatarPath(player.sex, player.avatarId);
         avatarContainer.src = avatarPath;
         avatarContainer.alt = `Avatar de ${player.name}`;
 
+        // 🔄 Gestion des erreurs de chargement des avatars
         avatarContainer.onerror = () => {
             console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
             avatarContainer.src = AVATAR_CONFIG.default;
         };
 
-        healthBar.style.width = '100%';
-        healthBar.dataset.health = 100;
+        // ✅ Réinitialisation de la barre de vie
+        if (healthBar) {
+            healthBar.style.width = '100%';
+            healthBar.dataset.health = 100;
+        }
 
         console.log(`📌 Profil mis à jour pour ${player.name}:`, player);
     });
 }
 
-// ✅ Correction du problème de chargement des profils
+// ✅ Attente du chargement du DOM pour initialiser les profils
 document.addEventListener('DOMContentLoaded', () => {
     console.log("📌 Initialisation de l'interface utilisateur...");
 
