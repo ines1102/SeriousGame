@@ -1,83 +1,68 @@
-import Deck from './deck.js';
-import { enableDragAndDrop } from './dragAndDrop.js';
-import { updatePlayerProfile } from './uiManager.js';
-
-const socket = io();
-window.gameSocket = socket;
-
-let gameState = {
-    roomId: null,
-    player: null,
-    opponent: null,
-    turn: null,
-    hand: [],
-    opponentHandSize: 0
-};
-
-const deckManager = new Deck(); // Création d'une instance de Deck
-
-socket.on('connect', () => {
-    console.log("✅ Connecté au serveur WebSocket");
-    initializeGame();
-});
-
-export function initializeGame() {
+document.addEventListener("DOMContentLoaded", () => {
     console.log("🔄 Initialisation du jeu...");
-    
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    
-    if (!userData || !userData.name || !userData.sex || !userData.avatarId) {
-        console.warn("⚠️ Données de session incomplètes !");
-        // Rediriger vers la page d'accueil si les données sont incomplètes
-        window.location.href = '/';
-        return;
-    }
 
-    // Initialiser le jeu avec les données utilisateur valides
-    return userData;
-}
+    // Vérification et récupération des données utilisateur
+    let userName = sessionStorage.getItem("userName");
+    let userAvatar = sessionStorage.getItem("userAvatar");
+    let roomId = sessionStorage.getItem("roomId");
 
-socket.on('gameStart', (data) => {
-    console.log("🎮 Partie commencée !");
-    gameState.opponent = data.players.find(p => p.clientId !== gameState.player.clientId);
-    gameState.turn = data.turn;
+    console.log("📌 Vérification des données avant connexion :", { roomId, userName, userAvatar });
 
-    console.log("🆚 Adversaire détecté :", gameState.opponent);
-    updatePlayerProfile(gameState.player, false);
-    updatePlayerProfile(gameState.opponent, true);
+    // 🔍 Double vérification avec un léger délai pour garantir que les données sont bien stockées
+    setTimeout(() => {
+        if (!userName || !userAvatar || !roomId) {
+            console.warn("⚠️ Données de session incomplètes, tentative de récupération...");
 
-    const decks = deckManager.creerDecksJoueurs();
-    gameState.hand = decks.joueur1.main;
-    renderPlayerHand();
+            userName = sessionStorage.getItem("userName");
+            userAvatar = sessionStorage.getItem("userAvatar");
+            roomId = sessionStorage.getItem("roomId");
 
-    gameState.opponentHandSize = 5;
-    renderOpponentHand();
+            console.log("📌 Vérification après récupération :", { roomId, userName, userAvatar });
+        }
+
+        if (!userName || !userAvatar || !roomId) {
+            console.error("❌ Échec : Données toujours incomplètes, retour à l'accueil.");
+            alert("Erreur : Données utilisateur manquantes. Retour à l'accueil.");
+            window.location.href = "/";
+            return;
+        }
+
+        console.log(`📌 Connexion en cours pour ${userName} avec avatar ${userAvatar} dans la room ${roomId}`);
+
+        const socket = io();
+        socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
+
+        /** ✅ Démarrage du jeu */
+        socket.on("game_start", (gameData) => {
+            console.log("✅ Game start reçu :", gameData);
+
+            if (!gameData.opponent) {
+                console.warn("⚠️ Aucun adversaire trouvé !");
+                return;
+            }
+
+            console.log(`🎮 Début du jeu pour ${userName}. Adversaire : ${gameData.opponent.name}`);
+
+            // Mise à jour de l'adversaire dans l'interface
+            document.querySelector(".opponent-name").textContent = gameData.opponent.name;
+            document.querySelector(".opponent-avatar img").src = gameData.opponent.avatar;
+
+            // Vérification de l'avatar reçu
+            console.log("🎭 Avatar reçu pour l'adversaire :", gameData.opponent.avatar);
+        });
+
+        /** ✅ Gestion des déconnexions */
+        socket.on("player_disconnected", () => {
+            console.warn("❌ L'adversaire s'est déconnecté. Retour à l'accueil.");
+            alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
+            window.location.href = "/";
+        });
+
+        socket.on("disconnect", () => {
+            console.warn("❌ Vous avez été déconnecté du serveur. Retour à l'accueil.");
+            alert("Vous avez été déconnecté du serveur. Retour à l'accueil.");
+            window.location.href = "/";
+        });
+
+    }, 300); // ✅ Ajout d'un délai de 300ms pour garantir la récupération des données
 });
-
-function renderPlayerHand() {
-    const playerHandElement = document.getElementById('player-hand');
-    playerHandElement.innerHTML = '';
-
-    gameState.hand.forEach((card, index) => {
-        const cardElement = document.createElement('div');
-        cardElement.classList.add('hand-card');
-        cardElement.id = `card-${index}`;
-        cardElement.style.backgroundImage = `url(${card.name})`;
-        cardElement.draggable = true;
-        playerHandElement.appendChild(cardElement);
-    });
-}
-
-function renderOpponentHand() {
-    const opponentHandElement = document.getElementById('opponent-hand');
-    opponentHandElement.innerHTML = '';
-
-    for (let i = 0; i < gameState.opponentHandSize; i++) {
-        const cardElement = document.createElement('div');
-        cardElement.classList.add('hand-card');
-        cardElement.style.backgroundImage = `url('/Cartes/dos.png')`;
-        opponentHandElement.appendChild(cardElement);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', initializeGame);
