@@ -188,6 +188,7 @@ class GameManager {
 // 📌 Configuration des middlewares et routes
 function setupServer() {
     const app = express();
+    // Configuration des chemins
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
 

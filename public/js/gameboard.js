@@ -12,7 +12,7 @@ const AVATAR_CONFIG = {
         '2': '../Avatars/female2.jpeg',
         '3': '../Avatars/female3.jpeg'
     },
-    default: '../Avatars/default.jpeg'
+    default: '../Avatars/default-avatar.jpeg'
 };
 
 // Variables globales
