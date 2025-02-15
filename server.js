@@ -24,7 +24,7 @@ app.use(cors({ origin: CLIENT_URL }));
 app.use(express.json());
 app.use(express.static(path.join(path.resolve(), "public")));
 
-// Routes pour servir les fichiers HTML
+// Routes pour servir les pages HTML
 app.get("/", (req, res) => res.sendFile(path.join(path.resolve(), "public", "index.html")));
 app.get("/choose-mode", (req, res) => res.sendFile(path.join(path.resolve(), "public", "choose-mode.html")));
 app.get("/room-choice", (req, res) => res.sendFile(path.join(path.resolve(), "public", "room-choice.html")));
@@ -32,7 +32,7 @@ app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "publ
 
 // Stockage des rooms et joueurs
 const rooms = {};
-const pendingDisconnects = new Map(); // Stocker les joueurs en attente de suppression
+const pendingDisconnects = new Map(); // Stocke les joueurs en attente de suppression
 
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
@@ -58,39 +58,6 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** ✅ Création et connexion à une Room */
-    socket.on("create_room", ({ roomId, name, avatar }) => {
-        if (!rooms[roomId]) {
-            rooms[roomId] = { players: [] };
-        }
-
-        socket.join(roomId);
-        rooms[roomId].players.push({ id: socket.id, name, avatar });
-
-        console.log(`🎲 Room ${roomId} créée par ${name}`);
-        io.to(socket.id).emit("room_created", roomId);
-    });
-
-    /** ✅ Rejoindre une Room existante */
-    socket.on("join_room", ({ roomId, name, avatar }) => {
-        if (!rooms[roomId] || rooms[roomId].players.length >= 2) {
-            console.log(`❌ Room ${roomId} introuvable ou pleine.`);
-            io.to(socket.id).emit("room_not_found");
-            return;
-        }
-
-        socket.join(roomId);
-        rooms[roomId].players.push({ id: socket.id, name, avatar });
-
-        console.log(`👥 ${name} a rejoint Room ${roomId}, joueurs actuellement : ${rooms[roomId].players.length}`);
-
-        if (rooms[roomId].players.length === 2) {
-            console.log(`✅ 2 joueurs connectés à Room ${roomId}, lancement du jeu.`);
-            io.to(roomId).emit("room_joined", roomId);
-            startGame(roomId);
-        }
-    });
-
     /** ✅ Gestion des déconnexions avec **attente avant suppression** */
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion détectée : ${socket.id}`);
@@ -106,7 +73,7 @@ io.on("connection", (socket) => {
 
                 console.log(`❌ Joueur ${disconnectedPlayer.name} marqué comme déconnecté dans Room ${roomId}`);
 
-                // **Mettre en attente pendant 10 secondes avant suppression**
+                // **Attendre 10s avant suppression**
                 pendingDisconnects.set(socket.id, setTimeout(() => {
                     if (pendingDisconnects.has(socket.id)) {
                         console.log(`🛑 Suppression confirmée de ${disconnectedPlayer.name} (déconnexion réelle)`);
@@ -121,7 +88,7 @@ io.on("connection", (socket) => {
                             delete rooms[roomId];
                         }
                     }
-                }, 10000)); // Attente de 10 secondes avant suppression
+                }, 10000));
             }
         }
     });
@@ -146,11 +113,6 @@ io.on("connection", (socket) => {
             io.to(socket.id).emit("force_leave_game");
         }
     });
-
-    /** ✅ Quitter une Room proprement */
-    socket.on("leave_room", () => {
-        removePlayerFromRoom(socket.id);
-    });
 });
 
 /** ✅ Fonction pour démarrer la partie */
@@ -162,18 +124,12 @@ function startGame(roomId) {
 
     const [player1, player2] = rooms[roomId].players;
 
-    import("./public/js/deck.js").then(({ default: Deck }) => {
-        const deck = new Deck();
-        const decks = deck.creerDecksJoueurs();
+    console.log(`🎮 Début de la partie dans Room ${roomId}`);
+    console.log(`👤 Joueur 1 : ${player1.name} - 👤 Joueur 2 : ${player2.name}`);
 
-        console.log(`🎮 Début de la partie dans Room ${roomId}`);
-        console.log(`👤 Joueur 1 : ${player1.name} - 👤 Joueur 2 : ${player2.name}`);
-
-        io.to(roomId).emit("game_start", {
-            decks,
-            player1: { name: player1.name, avatar: player1.avatar },
-            player2: { name: player2.name, avatar: player2.avatar }
-        });
+    io.to(roomId).emit("game_start", {
+        player1: { name: player1.name, avatar: player1.avatar },
+        player2: { name: player2.name, avatar: player2.avatar }
     });
 }
 

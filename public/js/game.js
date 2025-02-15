@@ -1,12 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
     console.log("🔄 Initialisation du jeu...");
 
+    // Vérification des données stockées dans sessionStorage
     let userName = sessionStorage.getItem("userName");
     let userAvatar = sessionStorage.getItem("userAvatar");
     let roomId = sessionStorage.getItem("roomId");
 
     console.log("📌 Vérification des données avant connexion :", { roomId, userName, userAvatar });
 
+    // Si les données sont manquantes, tentative de récupération après un court délai
     setTimeout(() => {
         if (!userName || !userAvatar || !roomId) {
             console.warn("⚠️ Données de session incomplètes, tentative de récupération...");
@@ -29,116 +31,99 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const socket = io();
 
-        /** ✅ Gérer la reconnexion proprement */
+        /** ✅ Gestion de la connexion au serveur */
         socket.on("connect", () => {
-            console.log(`✅ Reconnexion détectée, réenvoi des informations...`);
-            const storedUserName = sessionStorage.getItem("userName");
-            const storedUserAvatar = sessionStorage.getItem("userAvatar");
-            const storedRoomId = sessionStorage.getItem("roomId");
+            console.log(`✅ Connexion établie avec succès !`);
 
-            if (storedUserName && storedUserAvatar && storedRoomId) {
-                console.log(`📌 Renvoyant les infos : Room ${storedRoomId}, ${storedUserName}`);
-                socket.emit("rejoin_game", { roomId: storedRoomId, name: storedUserName, avatar: storedUserAvatar });
-            }
+            // Envoi des informations du joueur pour rejoindre la partie
+            socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
         });
 
-        /** ✅ Émission de l'événement pour rejoindre la partie */
-        socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
-
-        /** ✅ Réception de l'événement `game_start` */
+        /** ✅ Événement : démarrage du jeu */
         socket.on("game_start", (gameData) => {
             console.log("✅ Game start reçu :", gameData);
-        
-            if (!gameData.opponent) {
-                console.warn("⚠️ Aucun adversaire trouvé !");
+
+            if (!gameData.player1 || !gameData.player2) {
+                console.warn("⚠️ Joueurs manquants dans la game_start !");
                 return;
             }
-        
-            console.log(`🎮 Début du jeu pour ${userName}. Adversaire : ${gameData.opponent.name}`);
-        
-            // 🔴 Mise à jour du profil de l'adversaire
-            const opponentNameElement = document.querySelector(".opponent-name");
-            const opponentAvatarElement = document.querySelector(".opponent-avatar img");
 
-            if (opponentNameElement && opponentAvatarElement) {
-                opponentNameElement.textContent = gameData.opponent.name;
-                opponentAvatarElement.src = gameData.opponent.avatar;
-                console.log("🎭 Avatar de l'adversaire mis à jour :", gameData.opponent.avatar);
-            } else {
-                console.error("❌ Impossible de mettre à jour l'adversaire, éléments introuvables !");
-            }
+            // Affichage des profils des joueurs
+            console.log(`🎮 Début du jeu pour ${userName}. Adversaire : ${gameData.player2.name}`);
+
+            document.querySelector(".player-name").textContent = gameData.player1.name;
+            document.querySelector(".player-avatar img").src = gameData.player1.avatar;
+
+            document.querySelector(".opponent-name").textContent = gameData.player2.name;
+            document.querySelector(".opponent-avatar img").src = gameData.player2.avatar;
         });
 
-        /** ✅ Confirmation que les joueurs sont prêts */
+        /** ✅ Événement : confirmation que les deux joueurs sont prêts */
         socket.on("players_ready", (data) => {
             console.log("✅ Confirmation : Les deux joueurs sont bien connectés.", data);
 
-            document.querySelector(".opponent-name").textContent = data.player2.name;
-            document.querySelector(".opponent-avatar img").src = data.player2.avatar;
-
+            // Mise à jour des profils des joueurs
             document.querySelector(".player-name").textContent = data.player1.name;
             document.querySelector(".player-avatar img").src = data.player1.avatar;
+
+            document.querySelector(".opponent-name").textContent = data.player2.name;
+            document.querySelector(".opponent-avatar img").src = data.player2.avatar;
         });
 
-        /** ✅ Gestion d'une déconnexion d'un joueur */
+        /** ✅ Événement : déconnexion de l'adversaire */
         socket.on("opponent_disconnected", () => {
             console.warn("❌ L'adversaire s'est déconnecté !");
             alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
-            
-            // 🔴 Nettoyer les données et rediriger
+
+            // Nettoyer les données et rediriger
             sessionStorage.removeItem("userName");
             sessionStorage.removeItem("userAvatar");
             sessionStorage.removeItem("roomId");
-            
+
             window.location.href = "/";
         });
 
-        /** ✅ Si l'adversaire revient, mise à jour de son profil */
+        /** ✅ Événement : reconnexion de l'adversaire */
         socket.on("opponent_reconnected", (data) => {
             console.log(`✅ ${data.name} est revenu !`);
-        
-            // 🔄 Mise à jour du profil de l'adversaire
+
+            // Mise à jour immédiate du profil de l'adversaire
             document.querySelector(".opponent-name").textContent = data.name;
             document.querySelector(".opponent-avatar img").src = data.avatar;
-        
-            // 🔴 Supprimer le message de déconnexion
+
+            // Suppression du message de déconnexion
             document.getElementById("disconnect-overlay").classList.add("hidden");
         });
 
-        /** ✅ Gérer la déconnexion du joueur lui-même */
+        /** ✅ Gestion de la déconnexion du joueur */
         socket.on("disconnect", () => {
-            console.warn("❌ Vous avez été déconnecté du serveur. Vérification...");
-            
+            console.warn("❌ Vous avez été déconnecté du serveur. Vérification en cours...");
+
             setTimeout(() => {
                 if (!socket.connected) {
-                    console.error("❌ Vous avez été déconnecté définitivement. Retour à l'accueil.");
+                    console.error("❌ Déconnexion permanente. Redirection vers l'accueil.");
                     alert("Vous avez été déconnecté du serveur. Retour à l'accueil.");
-        
-                    // 🔴 Nettoyer la session
+
+                    // Nettoyage de la session
                     sessionStorage.removeItem("userName");
                     sessionStorage.removeItem("userAvatar");
                     sessionStorage.removeItem("roomId");
-        
+
                     window.location.href = "/";
                 } else {
                     console.log("🔄 Reconnexion détectée, suppression du message de déconnexion.");
                     document.getElementById("disconnect-overlay").classList.add("hidden");
                 }
-            }, 2000);
+            }, 3000);
         });
 
-        /** ✅ Forcer une reconnexion automatique si la connexion est perdue */
-        setTimeout(() => {
-            if (!socket.connected) {
-                console.warn("❌ Connexion interrompue, tentative de reconnexion...");
-                socket.connect();
-            }
-        }, 5000);
-
-        /** ✅ Gérer l'événement `reconnect` pour enlever le message de déconnexion */
+        /** ✅ Gestion de la reconnexion automatique */
         socket.on("reconnect", () => {
             console.log("🔄 Reconnexion détectée, suppression du message de déconnexion.");
             document.getElementById("disconnect-overlay").classList.add("hidden");
+
+            // Réenvoi des informations du joueur après reconnexion
+            socket.emit("rejoin_game", { roomId, name: userName, avatar: userAvatar });
         });
 
     }, 300);
