@@ -132,7 +132,7 @@ io.on('connection', (socket) => {
         if (!userData || !userData.name) {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
-        }
+        }a
         let roomCode;
         do {
             roomCode = randomInt(1000, 9999).toString();

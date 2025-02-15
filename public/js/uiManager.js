@@ -14,13 +14,22 @@ const AVATAR_CONFIG = {
 };
 
 // ✅ Attente de l'affichage d'un élément avant exécution d'une fonction
-export function waitForElement(selector, callback) {
-    const element = document.querySelector(selector);
-    if (element) {
-        callback(element);
-    } else {
-        setTimeout(() => waitForElement(selector, callback), 100);
+export function waitForElement(selector, callback, maxRetries = 50) {
+    let attempts = 0;
+    
+    function checkElement() {
+        const element = document.querySelector(selector);
+        if (element) {
+            callback(element);
+        } else if (attempts < maxRetries) {
+            attempts++;
+            setTimeout(checkElement, 100);
+        } else {
+            console.warn(`⚠️ L'élément "${selector}" n'a pas été trouvé après ${maxRetries} tentatives.`);
+        }
     }
+
+    checkElement();
 }
 
 // ✅ Fonction pour récupérer le bon chemin d'avatar
@@ -73,11 +82,17 @@ export function updatePlayerProfile(player, isOpponent = false) {
 // ✅ Correction du problème de chargement des profils
 document.addEventListener('DOMContentLoaded', () => {
     console.log("📌 Initialisation de l'interface utilisateur...");
-    
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    if (userData) {
-        updatePlayerProfile(userData, false);
-    } else {
-        console.warn("⚠️ Aucun utilisateur trouvé dans localStorage.");
-    }
+
+    waitForElement('.player-profile', () => {
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (userData) {
+            updatePlayerProfile(userData, false);
+        } else {
+            console.warn("⚠️ Aucun utilisateur trouvé dans localStorage.");
+        }
+    });
+
+    waitForElement('.opponent-profile', () => {
+        console.log("📌 Conteneur adversaire détecté. En attente de mise à jour...");
+    });
 });
