@@ -1,306 +1,281 @@
-/* Variables et Reset */
+Je vais vous fournir le CSS correspondant pour `choose-mode.css` :
+
+```css
 :root {
-  --primary-color: #4a90e2;
-  --secondary-color: #50b04f;
-  --background-color: #f5f6fa;
-  --card-background: #ffffff;
-  --text-color: #2d3436;
-  --border-color: #dfe6e9;
-  --hover-color: #357abd;
-  --error-color: #e74c3c;
-  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --transition: all 0.3s ease;
+    --primary-color: #4a90e2;
+    --secondary-color: #50b04f;
+    --background-color: #f5f6fa;
+    --card-background: #ffffff;
+    --text-color: #2d3436;
+    --border-color: #dfe6e9;
+    --hover-color: #357abd;
+    --error-color: #e74c3c;
+    --success-color: #2ecc71;
+    --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
 }
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
-  font-family: 'Arial', sans-serif;
-  background-color: var(--background-color);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Container principal */
 .container {
-  width: 100%;
-  max-width: 500px;
-  margin: 0 auto;
+    width: 100%;
+    max-width: 480px;
+    padding: 20px;
 }
 
-/* Carte de sélection de mode */
 .mode-selection-card {
-  background: var(--card-background);
-  border-radius: 15px;
-  padding: 2rem;
-  box-shadow: var(--box-shadow);
-  transform: translateY(0);
-  transition: var(--transition);
+    background: var(--card-background);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: var(--box-shadow);
+    text-align: center;
 }
 
-.mode-selection-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Section info utilisateur */
+/* Info utilisateur */
 .user-info {
-  display: flex;
-  align-items: center;
-  padding-bottom: 1.5rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
 }
 
 .avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  border: 3px solid var(--primary-color);
-  margin-right: 1rem;
-  object-fit: cover;
-  transition: var(--transition);
-}
-
-.avatar:hover {
-  transform: scale(1.05);
-  border-color: var(--secondary-color);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--primary-color);
 }
 
 .username {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: var(--text-color);
+    font-size: 1.2rem;
+    font-weight: bold;
 }
 
-/* Titre */
 h2 {
-  text-align: center;
-  color: var(--text-color);
-  margin-bottom: 2rem;
-  font-size: 1.8rem;
+    margin-bottom: 30px;
+    color: var(--text-color);
 }
 
 /* Boutons de mode */
 .mode-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .btn-mode {
-  padding: 1.2rem;
-  background: var(--card-background);
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.8rem;
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: var(--text-color);
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-mode i {
-  font-size: 1.3rem;
-  color: var(--primary-color);
-  transition: var(--transition);
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary-color);
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .btn-mode:hover {
-  border-color: var(--primary-color);
-  transform: translateY(-2px);
-  box-shadow: var(--box-shadow);
+    background: var(--hover-color);
+    transform: translateY(-2px);
 }
 
-.btn-mode:hover i {
-  transform: scale(1.1);
-}
-
-.btn-mode::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: var(--primary-color);
-  opacity: 0;
-  transition: var(--transition);
-  pointer-events: none;
-}
-
-.btn-mode:hover::after {
-  opacity: 0.1;
+.btn-mode i {
+    font-size: 1.2rem;
 }
 
 /* Overlay de chargement */
 .loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  opacity: 1;
-  transition: var(--transition);
-}
-
-.loading-overlay.hidden {
-  opacity: 0;
-  pointer-events: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
 }
 
 .loading-content {
-  background: var(--card-background);
-  padding: 2rem;
-  border-radius: 15px;
-  text-align: center;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: var(--box-shadow);
+    background: var(--card-background);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
 }
 
 .loading-content h3 {
-  color: var(--text-color);
-  margin-bottom: 1rem;
+    margin-bottom: 15px;
 }
 
-/* Spinner */
-.spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid var(--border-color);
-  border-top: 5px solid var(--primary-color);
-  border-radius: 50%;
-  margin: 1.5rem auto;
-  animation: spin 1s linear infinite;
+.loading-content p {
+    margin: 15px 0;
+    color: var(--text-color);
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Bouton d'annulation */
 .btn-cancel {
-  margin-top: 1.5rem;
-  padding: 0.8rem 1.5rem;
-  background: var(--error-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
-  transition: var(--transition);
+    margin-top: 20px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: var(--error-color);
+    color: white;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .btn-cancel:hover {
-  background: #c0392b;
-  transform: translateY(-2px);
+    background: #c0392b;
 }
 
 /* Toast d'erreur */
 .error-toast {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-100px);
-  background: var(--error-color);
-  color: white;
-  padding: 1rem 2rem;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  box-shadow: var(--box-shadow);
-  opacity: 0;
-  transition: var(--transition);
-  z-index: 1001;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--error-color);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    transition: var(--transition);
+    pointer-events: none;
 }
 
 .error-toast.show {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
+    opacity: 1;
 }
 
 .error-toast i {
-  font-size: 1.2rem;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .container {
-      padding: 1rem;
-  }
-
-  .mode-selection-card {
-      padding: 1.5rem;
-  }
-
-  .avatar {
-      width: 50px;
-      height: 50px;
-  }
-
-  h2 {
-      font-size: 1.5rem;
-  }
-
-  .btn-mode {
-      padding: 1rem;
-      font-size: 1rem;
-  }
+    font-size: 1.2rem;
 }
 
 /* Animations */
-@keyframes fadeIn {
-  from {
-      opacity: 0;
-      transform: translateY(20px);
-  }
-  to {
-      opacity: 1;
-      transform: translateY(0);
-  }
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
+.hidden {
+    display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .container {
+        padding: 15px;
+    }
+
+    .mode-selection-card {
+        padding: 20px;
+    }
+
+    .btn-mode {
+        padding: 12px;
+        font-size: 1rem;
+    }
+
+    .avatar {
+        width: 50px;
+        height: 50px;
+    }
+
+    .username {
+        font-size: 1.1rem;
+    }
+}
+
+/* Effets de hover et focus */
+.btn-mode:focus,
+.btn-cancel:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.3);
+}
+
+/* Animations supplémentaires */
 .mode-selection-card {
-  animation: fadeIn 0.5s ease forwards;
+    animation: fadeIn 0.5s ease;
 }
 
-/* État des boutons désactivés */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* État désactivé */
 .btn-mode:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
 }
 
-.btn-mode:disabled:hover {
-  border-color: var(--border-color);
-  transform: none;
-  box-shadow: none;
+/* États actifs */
+.btn-mode:active {
+    transform: scale(0.98);
 }
+```
 
-.btn-mode:disabled i {
-  transform: none;
-}
+Ce CSS fournit :
+1. Un design moderne et responsive
+2. Des animations fluides
+3. Des états de hover et focus
+4. Un overlay de chargement élégant
+5. Un système de toast pour les erreurs
+6. Une gestion des différents états des boutons
+7. Des transitions douces
+8. Une adaptation mobile
+
+Les principales caractéristiques incluent :
+- Utilisation de variables CSS pour la cohérence
+- Animations fluides pour une meilleure UX
+- Design responsive
+- États interactifs pour les boutons
+- Gestion de l'accessibilité
+- Support des icônes Font Awesome
+- Système de notification d'erreur
+
+N'oubliez pas que ce CSS suppose que vous utilisez Font Awesome pour les icônes et qu'il est optimisé pour fonctionner avec le HTML que vous avez fourni.​​​​​​​​​​​​​​​​
