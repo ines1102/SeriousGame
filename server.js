@@ -23,6 +23,8 @@ const io = new Server(server, {
 app.use(cors({ origin: CLIENT_URL }));
 app.use(express.json());
 app.use(express.static(path.join(path.resolve(), "public"))); // Servir les fichiers statiques
+// 🔴 Ajout pour servir les images des avatars
+app.use("/Avatars", express.static(path.join(path.resolve(), "public", "Avatars")));
 
 // Routes pour servir les pages HTML
 app.get("/", (req, res) => res.sendFile(path.join(path.resolve(), "public", "index.html")));
@@ -93,26 +95,31 @@ io.on("connection", (socket) => {
     /** 🔌 Déconnexion d'un joueur */
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion détectée : ${socket.id}`);
-
+    
         let roomId = null;
         for (const id in rooms) {
             const playerIndex = rooms[id].players.findIndex((player) => player.id === socket.id);
-
+    
             if (playerIndex !== -1) {
                 roomId = id;
                 console.log(`❌ Joueur ${rooms[id].players[playerIndex].name} déconnecté de la room ${roomId}`);
-
-                // 🔴 Informer l'autre joueur s'il reste dans la partie
+    
+                // 🔴 Vérifier si l'autre joueur est toujours là avant de le marquer comme seul joueur restant
                 if (rooms[roomId].players.length === 2) {
                     const remainingPlayer = rooms[roomId].players.find((p) => p.id !== socket.id);
-                    io.to(remainingPlayer.id).emit("opponent_disconnected");
+                    if (io.sockets.sockets.get(remainingPlayer.id)) {
+                        console.log(`⚠️ L'autre joueur ${remainingPlayer.name} est toujours connecté.`);
+                        io.to(remainingPlayer.id).emit("opponent_disconnected");
+                    } else {
+                        console.log(`❌ L'autre joueur aussi semble déconnecté.`);
+                    }
                 }
-
+    
                 rooms[id].players.splice(playerIndex, 1);
                 break;
             }
         }
-
+    
         if (roomId && rooms[roomId].players.length === 1) {
             console.log(`⚠️ Un seul joueur reste dans la room ${roomId}, mais le jeu continue.`);
         } else if (roomId && rooms[roomId].players.length === 0) {

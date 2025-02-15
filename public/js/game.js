@@ -32,15 +32,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         socket.on("game_start", (gameData) => {
             console.log("✅ Game start reçu :", gameData);
-
+        
             if (!gameData.opponent) {
                 console.warn("⚠️ Aucun adversaire trouvé !");
                 return;
             }
-
+        
+            console.log(`🎮 Début du jeu pour ${userName}. Adversaire : ${gameData.opponent.name}`);
+        
+            // 🔴 Mise à jour du profil de l'adversaire
             document.querySelector(".opponent-name").textContent = gameData.opponent.name;
             document.querySelector(".opponent-avatar img").src = gameData.opponent.avatar;
-            console.log("🎭 Avatar reçu pour l'adversaire :", gameData.opponent.avatar);
+            console.log("🎭 Avatar de l'adversaire mis à jour :", gameData.opponent.avatar);
         });
 
         // ✅ Ajout d'un nouvel événement pour s'assurer que les profils sont bien mis à jour
@@ -74,12 +77,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!socket.connected) {
                     console.error("❌ Vous avez été déconnecté définitivement. Retour à l'accueil.");
                     alert("Vous avez été déconnecté du serveur. Retour à l'accueil.");
-
+        
                     // 🔴 Nettoyer la session
                     sessionStorage.removeItem("userName");
                     sessionStorage.removeItem("userAvatar");
                     sessionStorage.removeItem("roomId");
-
+        
                     window.location.href = "/";
                 } else {
                     console.log("🔄 Reconnexion détectée, suppression du message de déconnexion.");
