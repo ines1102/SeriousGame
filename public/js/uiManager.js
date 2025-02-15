@@ -12,6 +12,15 @@ const AVATAR_CONFIG = {
     },
     default: '/Avatars/default.jpeg'
 };
+// ✅ Attente de l'affichage d'un élément avant exécution d'une fonction
+export function waitForElement(selector, callback) {
+    const element = document.querySelector(selector);
+    if (element) {
+        callback(element);
+    } else {
+        setTimeout(() => waitForElement(selector, callback), 100);
+    }
+}
 
 // ✅ Fonction pour récupérer le bon chemin d'avatar
 function getAvatarPath(sex, avatarId) {
@@ -52,21 +61,17 @@ export function updatePlayerProfile(player, isOpponent = false) {
             return;
         }
 
-        // ✅ Mise à jour du nom
         nameContainer.textContent = player.name || 'Joueur inconnu';
 
-        // ✅ Mise à jour de l'avatar
         const avatarPath = getAvatarPath(player.sex, player.avatarId);
         avatarContainer.src = avatarPath;
         avatarContainer.alt = `Avatar de ${player.name}`;
 
-        // ✅ Gestion des erreurs de chargement d'avatar
         avatarContainer.onerror = () => {
             console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
             avatarContainer.src = AVATAR_CONFIG.default;
         };
 
-        // ✅ Réinitialisation de la barre de vie
         healthBar.style.width = '100%';
         healthBar.dataset.health = 100;
 

@@ -1,3 +1,5 @@
+import { waitForElement } from './uiManager.js';
+
 export function enableDragAndDrop() {
     waitForElement('.hand-card', () => {
         const cards = document.querySelectorAll('.hand-card');
