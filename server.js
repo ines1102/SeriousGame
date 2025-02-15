@@ -4,25 +4,22 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs/promises';
 import { randomInt } from 'crypto';
 import Deck from './public/js/deck.js';
 
-// Configuration des chemins
+// 📌 Configuration des chemins
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration globale
+// 📌 Configuration globale
 const CONFIG = {
     PORT: process.env.PORT || 10000,
     CLIENT_URL: "https://seriousgame-ds65.onrender.com",
     STATIC_PATHS: {
         PUBLIC: path.join(__dirname, 'public'),
         AVATARS: path.join(__dirname, 'public', 'Avatars'),
-        JS: path.join(__dirname, 'public', 'js'),
-        CSS: path.join(__dirname, 'public', 'css'),
-        FAVICON: path.join(__dirname, 'public', 'favicon_io'),
-        CARTES: path.join(__dirname, 'public', 'Cartes')
+        CARTES: path.join(__dirname, 'public', 'Cartes'),
+        FAVICON: path.join(__dirname, 'public', 'favicon_io')
     },
     CORS_OPTIONS: {
         origin: "https://seriousgame-ds65.onrender.com",
@@ -31,13 +28,22 @@ const CONFIG = {
     },
     GAME: {
         MAX_PLAYERS_PER_ROOM: 2,
-        INITIAL_HAND_SIZE: 5,
         CLEANUP_INTERVAL: 3600000, // 1 heure
         MAX_INACTIVE_TIME: 3600000 // 1 heure
     }
 };
 
-// Gestionnaire de Room
+// 📌 Fonction pour valider les données utilisateur
+function validateUserData(userData) {
+    return userData &&
+        typeof userData.name === 'string' &&
+        userData.name.length >= 2 &&
+        userData.name.length <= 20 &&
+        ['male', 'female'].includes(userData.sex) &&
+        typeof userData.avatarId === 'string';
+}
+
+// 📌 Gestionnaire des Rooms
 class RoomManager {
     constructor() {
         this.rooms = new Map();
@@ -52,8 +58,6 @@ class RoomManager {
             gameState: {
                 status: 'waiting',
                 turn: creator.id,
-                playedCards: new Map(),
-                playerDecks: new Map(),
                 startTime: Date.now()
             },
             createdAt: Date.now()
@@ -67,29 +71,58 @@ class RoomManager {
 
     joinRoom(roomCode, player) {
         const room = this.rooms.get(roomCode);
-        if (!room || room.players.length >= CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
-            return null;
-        }
+        if (!room || room.players.length >= CONFIG.GAME.MAX_PLAYERS_PER_ROOM) return null;
 
         room.players.push(player);
         this.playerRooms.set(player.id, roomCode);
         console.log(`👋 ${player.name} a rejoint la room ${roomCode}`);
         return room;
     }
+
+    leaveRoom(playerId) {
+        const roomCode = this.playerRooms.get(playerId);
+        if (!roomCode) return;
+
+        const room = this.rooms.get(roomCode);
+        if (!room) return;
+
+        room.players = room.players.filter(p => p.id !== playerId);
+        this.playerRooms.delete(playerId);
+
+        if (room.players.length === 0) {
+            this.rooms.delete(roomCode);
+            console.log(`🗑️ Room ${roomCode} supprimée`);
+        }
+    }
+
+    cleanInactiveRooms() {
+        const now = Date.now();
+        let cleanedCount = 0;
+
+        for (const [roomCode, room] of this.rooms) {
+            if (now - room.createdAt > CONFIG.GAME.MAX_INACTIVE_TIME) {
+                this.rooms.delete(roomCode);
+                room.players.forEach(player => this.playerRooms.delete(player.id));
+                cleanedCount++;
+            }
+        }
+
+        if (cleanedCount > 0) {
+            console.log(`🧹 ${cleanedCount} rooms inactives supprimées`);
+        }
+    }
 }
 
-// Configuration du serveur
+// 📌 Initialisation du serveur
 const app = express();
 app.use(cors(CONFIG.CORS_OPTIONS));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(express.static(CONFIG.STATIC_PATHS.PUBLIC));
-
-// Servir correctement les fichiers statiques
-app.use('/Avatars', express.static(path.join(__dirname, 'public', 'Avatars')));
+app.use('/Avatars', express.static(CONFIG.STATIC_PATHS.AVATARS));
 app.use('/Cartes', express.static(CONFIG.STATIC_PATHS.CARTES));
+app.use('/favicon_io', express.static(CONFIG.STATIC_PATHS.FAVICON));
 
-// 📌 Définition des routes dynamiques
+// 📌 Routes HTML
 const routes = [
     { path: '/', file: 'index.html' },
     { path: '/choose-mode', file: 'choose-mode.html' },
@@ -103,7 +136,7 @@ routes.forEach(route => {
     });
 });
 
-// 🔍 Route de monitoring (statut serveur)
+// 📌 Route pour vérifier le statut du serveur
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
 });
@@ -118,39 +151,23 @@ const io = new Server(server, {
 // 📌 Gestion des Rooms
 const roomManager = new RoomManager();
 
-let waitingPlayers = []; // ✅ Liste des joueurs en attente
 io.on('connection', (socket) => {
     console.log(`✅ Joueur connecté: ${socket.id}`);
 
-    socket.on('findRandomGame', (userData) => {
-        if (!userData || !userData.name) {
+    socket.on('createRoom', (userData) => {
+        if (!validateUserData(userData)) {
             socket.emit('roomError', 'Données utilisateur invalides');
             return;
         }
-    
-        console.log(`🎲 ${userData.name} cherche une partie aléatoire...`);
-    
-        if (waitingPlayers.length > 0) {
-            // Associer avec le premier joueur en attente
-            const opponent = waitingPlayers.shift();
-            let roomCode = randomInt(1000, 9999).toString();
-    
-            // Créer une nouvelle room
-            const room = roomManager.createRoom(roomCode, opponent);
-            roomManager.joinRoom(roomCode, { id: socket.id, ...userData });
-    
-            // Ajouter les deux joueurs dans la même room
-            socket.join(roomCode);
-            io.to(opponent.id).emit('gameStart', { roomCode });
-            io.to(socket.id).emit('gameStart', { roomCode });
-    
-            console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans la room ${roomCode}`);
-        } else {
-            // Aucun joueur en attente, ajouter le joueur à la liste d'attente
-            waitingPlayers.push({ id: socket.id, ...userData });
-            socket.emit('waitingForOpponent');
-            console.log(`⌛ ${userData.name} est en attente d'un adversaire...`);
-        }
+
+        let roomCode;
+        do {
+            roomCode = randomInt(1000, 9999).toString();
+        } while (roomManager.rooms.has(roomCode));
+
+        const room = roomManager.createRoom(roomCode, { id: socket.id, ...userData });
+        socket.join(roomCode);
+        socket.emit('roomCreated', { roomCode });
     });
 
     socket.on('joinRoom', (data) => {
@@ -158,32 +175,56 @@ io.on('connection', (socket) => {
             socket.emit('roomError', 'Données invalides');
             return;
         }
-    
+
         const room = roomManager.joinRoom(data.roomCode, { id: socket.id, ...data });
-    
-        console.log(`📌 Joueurs dans la room ${data.roomCode}:`, room ? room.players : '❌ Room introuvable'); // ✅ Debug
-    
         if (!room) {
             socket.emit('roomError', 'Room invalide ou pleine');
             return;
         }
-    
+
         socket.join(data.roomCode);
-    
-        // 🔄 Mise à jour des joueurs
-        io.to(data.roomCode).emit('updatePlayers', room.players);
+        if (room.players.length === CONFIG.GAME.MAX_PLAYERS_PER_ROOM) {
+            io.to(room.code).emit('gameStart', { roomCode });
+        }
     });
-    
-    // Gérer la déconnexion d'un joueur en attente
+
+    // 📌 Matchmaking aléatoire
+    socket.on('findRandomGame', (userData) => {
+        if (!validateUserData(userData)) {
+            socket.emit('roomError', 'Données utilisateur invalides');
+            return;
+        }
+
+        console.log(`🎲 ${userData.name} cherche une partie aléatoire...`);
+
+        if (roomManager.waitingPlayers.length > 0) {
+            const opponent = roomManager.waitingPlayers.shift();
+            let roomCode = randomInt(1000, 9999).toString();
+            const room = roomManager.createRoom(roomCode, opponent);
+            roomManager.joinRoom(roomCode, { id: socket.id, ...userData });
+
+            socket.join(roomCode);
+            io.to(opponent.id).emit('gameStart', { roomCode });
+            io.to(socket.id).emit('gameStart', { roomCode });
+
+            console.log(`🎮 Match trouvé ! ${opponent.name} vs ${userData.name} dans la room ${roomCode}`);
+        } else {
+            roomManager.waitingPlayers.push({ id: socket.id, ...userData });
+            socket.emit('waitingForOpponent');
+            console.log(`⌛ ${userData.name} est en attente d'un adversaire...`);
+        }
+    });
+
     socket.on('disconnect', () => {
-        waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);
+        roomManager.waitingPlayers = roomManager.waitingPlayers.filter(p => p.id !== socket.id);
+        roomManager.leaveRoom(socket.id);
     });
 });
 
-// Nettoyage périodique des rooms inactives
+// 🔄 Nettoyage des rooms inactives
 setInterval(() => roomManager.cleanInactiveRooms(), CONFIG.GAME.CLEANUP_INTERVAL);
 
-// Forcer Render à écouter sur `0.0.0.0`
+// 🚀 Lancement du serveur
 server.listen(CONFIG.PORT, '0.0.0.0', () => {
-    console.log(`🚀 Serveur lancé sur le port ${CONFIG.PORT}`);
+    console.log(`🚀 Serveur en ligne sur le port ${CONFIG.PORT}`);
 });
