@@ -56,3 +56,5 @@ function initializeOpponentContainer() {
         `;
     }
 }
+
+export { updatePlayerProfile };

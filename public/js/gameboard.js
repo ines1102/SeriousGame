@@ -53,11 +53,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 socket.on('updatePlayers', (players) => {
     console.log('🔄 Mise à jour des joueurs:', players);
 
-    // ✅ Trouver l’adversaire
-    const opponent = players.find(player => player.clientId !== userData.clientId);
-    if (opponent) {
-        updatePlayerProfile(opponent, true);
+    if (!players || players.length < 2) {
+        console.warn("⚠️ Pas assez de joueurs pour une mise à jour.");
+        return;
     }
+
+    // Identifier le joueur actuel et l'adversaire
+    const currentPlayer = players.find(p => p.clientId === userData.clientId);
+    const opponent = players.find(p => p.clientId !== userData.clientId); // ✅ Correction
+
+    if (!currentPlayer || !opponent) {
+        console.warn("⚠️ Impossible de récupérer les informations des joueurs.");
+        return;
+    }
+
+    // ✅ Mise à jour du profil du joueur
+    updatePlayerProfile(currentPlayer, false);
+
+    // ✅ Mise à jour du profil de l'adversaire
+    updatePlayerProfile(opponent, true);
 });
 
 socket.on('gameStart', (data) => {
