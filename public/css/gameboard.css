@@ -1,478 +1,305 @@
-/* Réinitialisation et styles de base */
+/* 📌 Variables et reset */
+:root {
+  --primary-color: #4a90e2;
+  --secondary-color: #50b04f;
+  --background-color: #f5f6fa;
+  --card-background: #ffffff;
+  --text-color: #2d3436;
+  --border-color: #dfe6e9;
+  --hover-color: #357abd;
+  --error-color: #e74c3c;
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s ease;
+  
+  /* Ajout de variables spécifiques au jeu */
+  --health-bar-height: 10px;
+  --card-width: 120px;
+  --card-height: 168px;
+  --slot-gap: 10px;
+}
+
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-    background-color: #f0f4f8;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  min-height: 100vh;
+  overflow: hidden;
 }
 
-/* Structure principale */
+/* 📌 Container principal */
+#game-container {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  padding: 20px;
+  gap: 20px;
+  position: relative;
+}
+
+/* 📌 Profils des joueurs */
+.player-profile,
+.opponent-profile {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: var(--card-background);
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: var(--box-shadow);
+  transition: var(--transition);
+}
+
+.player-avatar,
+.opponent-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--primary-color);
+}
+
+.player-avatar img,
+.opponent-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.player-name,
+.opponent-name {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+/* 📌 Barres de vie */
+.player-health-bar,
+.opponent-health-bar {
+  flex: 1;
+  height: var(--health-bar-height);
+  background: var(--border-color);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.player-health-bar-fill,
+.opponent-health-bar-fill {
+  height: 100%;
+  background: var(--secondary-color);
+  transition: width 0.5s ease;
+}
+
+/* 📌 Zones de jeu */
 .game-board {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    padding: 20px;
-    position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
 }
 
-/* Zones de jeu */
 .play-area {
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-    width: 100%;
-    max-width: 800px;
-    position: relative;
-    z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  width: 100%;
+  max-width: 1200px;
 }
 
 .game-areas {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-}
-
-/* Zones de drop */
-.drop-area {
-    width: 90px;
-    height: 130px;
-    border: 2px dashed #ccc;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    background-color: rgba(255, 255, 255, 0.5);
-    position: relative;
-    z-index: 90;
-}
-
-.drop-area.drop-hover {
-    border-color: #4b79a1;
-    background-color: rgba(75, 121, 161, 0.2);
-    transform: scale(1.05);
-    z-index: 95;
-}
-
-.drop-area.droppable {
-    border-color: #4b79a1;
-    background-color: rgba(75, 121, 161, 0.05);
-}
-
-/* ✅ Correction pour que les cartes forment un arc vers le haut */
-.hand {
-  position: fixed;
-  left: 50%;
-  width: 600px;
-  height: 160px;
-  transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  align-items: flex-end;
-  pointer-events: none;
+  gap: var(--slot-gap);
 }
 
-/* ✅ Ajustement de la position du joueur */
-.player-hand {
-  bottom: 50px; /* 🔼 Remonté pour être bien visible */
+.drop-area {
+  width: var(--card-width);
+  height: var(--card-height);
+  border: 2px dashed var(--border-color);
+  border-radius: 10px;
+  transition: var(--transition);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-/* ✅ Ajustement de la position de l'adversaire */
-.opponent-hand {
-  top: 50px; /* 🔽 Ajusté pour ne pas descendre trop bas */
+.drop-area.dragover {
+  border-color: var(--primary-color);
+  background: rgba(74, 144, 226, 0.1);
 }
 
-/* ✅ Cartes légèrement surélevées et bien positionnées */
+/* 📌 Mains des joueurs */
+.hand {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px;
+}
+
 .hand-card {
-  position: absolute;
-  width: 90px;
-  height: 130px;
-  background-size: contain;
-  background-repeat: no-repeat;
+  width: var(--card-width);
+  height: var(--card-height);
+  background-size: cover;
   background-position: center;
+  border-radius: 10px;
+  box-shadow: var(--box-shadow);
+  transition: var(--transition);
   cursor: pointer;
-  transition: transform 0.15s ease-in-out;
-  transform-origin: bottom center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  pointer-events: auto;
 }
 
-/* Effet au survol des cartes dans la main du joueur */
 .player-hand .hand-card:hover {
-  transform: translateY(-20px) scale(1.1);
-  transition: transform 0.2s ease-in-out;
-  z-index: 1000;
+  transform: translateY(-10px);
 }
 
-/* ✅ Empêche un déplacement exagéré */
-.hand-card:hover {
-  transform-origin: center bottom;
-}
-
-/* Carte draggable */
 .hand-card.dragging {
-  opacity: 0.6;
-  transform: scale(1.1);
-  z-index: 1000;
-  cursor: grabbing;
+  opacity: 0.5;
 }
 
-
-/* Carte jouée */
-.played-card {
-    width: 100%;
-    height: 100%;
-    border-radius: 8px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    transition: transform 0.3s ease;
-    z-index: 91;
+/* 📌 Zone du deck */
+.deck-area {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-#player-zone {
-    right: 20px;
-    bottom: 20px;
+.deck {
+  width: var(--card-width);
+  height: var(--card-height);
+  position: relative;
 }
 
-#opponent-zone {
-    left: 20px;
-    top: 20px;
+.card-back {
+  width: 100%;
+  height: 100%;
+  background-image: url('/Cartes/dos.png');
+  background-size: cover;
+  border-radius: 10px;
+  box-shadow: var(--box-shadow);
 }
 
-.health-bar .health-text {
-    position: absolute;
-    width: 100%;
-    text-align: center;
-    line-height: 20px;
-    color: white;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    font-size: 12px;
-    font-weight: bold;
+/* 📌 Indicateur de tour */
+.turn-indicator {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card-background);
+  padding: 10px 20px;
+  border-radius: 20px;
+  box-shadow: var(--box-shadow);
+  font-weight: bold;
 }
 
-/* Prévisualisation */
-.fullscreen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-}
-
-.preview-content {
-    position: relative;
-    max-width: 90%;
-    max-height: 90vh;
-    animation: zoomIn 0.3s ease;
-}
-
-@keyframes zoomIn {
-    from {
-        transform: scale(0.5);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-#preview-image {
-    max-width: 100%;
-    max-height: 90vh;
-    object-fit: contain;
-    border-radius: 15px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-}
-
-.close-preview {
-    position: absolute;
-    top: -40px;
-    right: -40px;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: transform 0.2s ease;
-}
-
-.close-preview:hover {
-    transform: scale(1.1);
-}
-
-/* Overlay de déconnexion */
+/* 📌 Overlays et messages */
 .disconnect-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 3000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
-.disconnect-content {
-    background-color: white;
-    padding: 30px;
-    border-radius: 15px;
-    text-align: center;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+.disconnect-message {
+  background: var(--card-background);
+  padding: 30px;
+  border-radius: 15px;
+  text-align: center;
+  max-width: 400px;
 }
 
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #4b79a1;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
+.status-message,
+.error-message {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 5px;
+  background: var(--card-background);
+  box-shadow: var(--box-shadow);
+  z-index: 100;
 }
 
+.error-message {
+  background: var(--error-color);
+  color: white;
+}
 
 .hidden {
-    display: none !important;
+  display: none;
 }
 
-/* Animation pour les cartes jouées */
-@keyframes cardPlace {
-    from {
-        transform: scale(0.8) translateY(-20px);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
+/* 📌 Loading screen */
+.loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(245, 246, 250, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2em;
+  z-index: 1000;
 }
 
-.played-card {
-    animation: cardPlace 0.3s ease forwards;
-}
+/* 📌 Media Queries */
+@media (max-width: 1024px) {
+  :root {
+    --card-width: 100px;
+    --card-height: 140px;
+    --slot-gap: 8px;
+  }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .drop-area {
-        width: 70px;
-        height: 100px;
-    }
-
-    .hand-card {
-        width: 70px;
-        height: 100px;
-    }
-
-
-    .health-bar {
-        width: 120px;
-    }
-
-    .play-area {
-        gap: 20px;
-    }
-
-    .game-areas {
-        gap: 10px;
-    }
-}
-
-/* Support pour les écrans plus petits */
-@media (max-width: 480px) {
-    .drop-area {
-        width: 60px;
-        height: 85px;
-    }
-
-    .hand-card {
-        width: 60px;
-        height: 85px;
-    }
-
-    #player-zone, #opponent-zone {
-        width: 180px;
-        height: 70px;
-        padding: 5px 10px;
-    }
-
-    .avatar {
-        width: 40px;
-        height: 40px;
-    }
-
-    .health-bar {
-        width: 100px;
-        height: 15px;
-    }
-
-    .health-bar .health-text {
-        font-size: 10px;
-        line-height: 15px;
-    }
-}
-
-/* ✅ Ajustement de la taille des avatars */
-.avatar {
-    width: 40px; /* Taille réduite */
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid white;
-    object-fit: cover;
-}
-
-/* ✅ Correction : Taille fixe des avatars */
-.avatar-img {
-    width: 60px; /* Ajuste selon tes préférences */
-    height: 60px;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 2px solid white;
-}
-
-/* ✅ Ajustement pour les profils joueurs et adversaires */
-.player-avatar img,
-.opponent-avatar img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
-}
-
-/* ✅ Zone de profil réduite pour équilibrer */
-#player-zone, #opponent-zone {
-    width: 220px; /* Réduction */
-    height: 90px;
-    background-color: #4b79a1;
-    color: white;
-    border-radius: 12px;
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 200;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* ✅ Pour s'assurer que la barre de vie ne se compresse pas trop */
-.health-bar {
-    width: 140px;
-    height: 18px;
-    background-color: #e0e0e0;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 5px;
-    position: relative;
-}
-
-.health-bar-fill {
-    width: 100%;
-    height: 100%;
-    background-color: #4CAF50;
-    transition: width 0.3s ease;
-}
-
-@media (max-width: 768px) {
-    .avatar {
-        width: 35px;
-        height: 35px;
-    }
-
-    #player-zone, #opponent-zone {
-        width: 180px;
-        height: 80px;
-        padding: 6px 12px;
-    }
-
-    .health-bar {
-        width: 110px;
-        height: 15px;
-    }
-}
-
-@media (max-width: 480px) {
-    .avatar {
-        width: 30px;
-        height: 30px;
-    }
-
-    #player-zone, #opponent-zone {
-        width: 160px;
-        height: 70px;
-        padding: 5px 10px;
-    }
-
-    .health-bar {
-        width: 90px;
-        height: 12px;
-    }
-}
-
-/* ✅ Positionnement des profils */
-.profile-container {
-    position: fixed;
-    width: 220px;
-    height: 80px;
-    background-color: rgba(26, 55, 92, 0.7);
-    color: white;
-    border-radius: 12px;
+  .game-board {
     padding: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 200;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .play-area {
+    gap: 20px;
+  }
 }
 
-/* ✅ Profil du joueur (en bas à droite) */
-.profile-container.player {
-    right: 20px;
-    bottom: 20px;
+@media (max-width: 768px) {
+  :root {
+    --card-width: 80px;
+    --card-height: 112px;
+    --slot-gap: 5px;
+  }
+
+  #game-container {
+    padding: 10px;
+  }
+
+  .player-avatar,
+  .opponent-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .deck-area {
+    right: 10px;
+  }
 }
 
-/* ✅ Profil de l'adversaire (en haut à gauche) */
-.profile-container.opponent {
-    left: 20px;
-    top: 20px;
+/* 📌 Animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
-/* ✅ Ajustement des avatars */
-.profile-avatar img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 2px solid white;
-    object-fit: cover;
-}
-
-/* ✅ Style du nom */
-.profile-info {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.profile-name {
-    font-size: 18px;
-    font-weight: bold;
+.active-turn {
+  animation: pulse 2s infinite;
 }

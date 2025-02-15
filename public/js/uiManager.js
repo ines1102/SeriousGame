@@ -36,44 +36,6 @@ function waitForElement(selector, callback, attempts = 50) {
 
 // ✅ Mise à jour du profil joueur ou adversaire
 export function updatePlayerProfile(player, isOpponent = false) {
-    if (!player || !player.name || !player.avatarId) {
-        console.warn(`⚠️ Impossible de mettre à jour le profil de ${isOpponent ? 'l\'adversaire' : 'joueur'}`);
-        return;
-    }
-
-    const prefix = isOpponent ? 'opponent' : 'player';
-
-    waitForElement(`.${prefix}-profile`, (profileContainer) => {
-        const avatarContainer = profileContainer.querySelector(`.${prefix}-avatar img`);
-        const nameContainer = profileContainer.querySelector(`.${prefix}-name`);
-        const healthBarFill = profileContainer.querySelector(`.${prefix}-health-bar .${prefix}-health-bar-fill`);
-
-        if (!avatarContainer || !nameContainer || !healthBarFill) {
-            console.warn(`⚠️ Conteneurs introuvables pour ${prefix}`);
-            return;
-        }
-
-        // Mise à jour des informations
-        nameContainer.textContent = player.name || 'Joueur inconnu';
-        const avatarPath = getAvatarPath(player.sex, player.avatarId);
-        avatarContainer.src = avatarPath;
-        avatarContainer.alt = `Avatar de ${player.name}`;
-
-        // Gestion d'erreur si l'image ne charge pas
-        avatarContainer.onerror = () => {
-            console.warn(`⚠️ Erreur de chargement de l'avatar pour ${player.name}`);
-            avatarContainer.src = AVATAR_CONFIG.default;
-        };
-
-        // Réinitialisation de la barre de vie
-        healthBarFill.style.width = '100%';
-        healthBarFill.dataset.health = 100;
-
-        console.log(`📌 Profil mis à jour pour ${player.name}:`, player);
-    });
-}
-
-export function updatePlayerProfile(player, isOpponent = false) {
     if (!player) {
         console.warn("❌ Données du joueur manquantes");
         return;
