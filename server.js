@@ -162,6 +162,7 @@ app.use(cors(CONFIG.CORS_OPTIONS));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(CONFIG.STATIC_PATHS.PUBLIC));
+app.use('/Avatars', express.static(CONFIG.STATIC_PATHS.AVATARS));
 
 // 📌 Définition des routes dynamiques
 const routes = [

@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Initialisation du drag & drop
         dragAndDrop = new DragAndDropManager(gameInstance, socket);
-        await dragAndDrop.initialize();
+        dragAndDrop.initialize(); // ✅ Supprime `await` ici car `initialize()` n'est pas asynchrone.
 
         // Configuration des écouteurs Socket.io
         setupSocketListeners();
