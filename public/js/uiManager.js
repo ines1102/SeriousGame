@@ -49,21 +49,23 @@ class UIManager {
     }
 
     // Mise à jour des profils
-    updatePlayerProfile(player, isOpponent = false) {
-        if (!player) {
-            console.warn("❌ Données du joueur manquantes");
-            return;
+    updatePlayerProfile(playerData) {
+        console.log("🔄 Mise à jour du profil player:", playerData);
+    
+        const playerAvatarElement = document.querySelector(".player-avatar img");
+        const playerNameElement = document.querySelector(".player-name");
+    
+        const avatarPath = this.getAvatarPath(playerData.sex, playerData.avatarId);
+        console.log(`✅ Avatar récupéré : ${avatarPath}`);
+    
+        if (playerAvatarElement) {
+            playerAvatarElement.src = avatarPath;
+            playerAvatarElement.alt = `Avatar de ${playerData.name}`;
         }
-
-        const prefix = isOpponent ? 'opponent' : 'player';
-        console.log(`🔄 Mise à jour du profil ${prefix}:`, player);
-
-        // Ajouter à la file d'attente de mise à jour
-        const updateId = `${prefix}_${Date.now()}`;
-        this.profileUpdateQueue.set(updateId, { player, isOpponent });
-
-        // Traiter la file d'attente
-        this.processProfileUpdateQueue();
+    
+        if (playerNameElement) {
+            playerNameElement.textContent = playerData.name || "Joueur inconnu";
+        }
     }
 
     // Traitement de la file d'attente des mises à jour

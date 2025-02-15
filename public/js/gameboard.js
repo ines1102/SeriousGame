@@ -23,6 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     console.log(`📌 Connexion en cours pour ${userName} avec avatar ${userAvatar} dans la room ${roomId}`);
 
+    // Vérifier l'affichage de l'avatar
+    const userAvatarElement = document.querySelector(".player-avatar img");
+    userAvatarElement.src = userAvatar;
+
     playerNameElement.textContent = userName;
     playerAvatarElement.src = userAvatar;
 

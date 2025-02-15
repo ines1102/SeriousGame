@@ -21,6 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
+    console.log(`📌 Utilisateur : ${userName}, Avatar : ${userAvatar}`);
+
     // ✅ Mise à jour de l'interface utilisateur
     userNameElement.textContent = userName;
     userAvatarElement.src = userAvatar || "/Avatars/default.jpeg";
@@ -37,18 +39,26 @@ document.addEventListener("DOMContentLoaded", () => {
     /** ✅ Mode Joueur Aléatoire */
     randomModeButton.addEventListener("click", () => {
         console.log("🔄 Recherche d'une room aléatoire...");
-        loadingOverlay.classList.remove("hidden"); // Afficher l'overlay
-    
+        loadingOverlay.classList.remove("hidden");
+
         socket.emit("find_random_room", { name: userName, avatar: userAvatar });
-    
+
         socket.once("room_found", (roomId) => {
             console.log(`✅ Room trouvée : ${roomId}`);
-            
-            // Vérification du stockage de `roomId`
+
+            // Stocker `roomId` et `userAvatar` avant la redirection
             sessionStorage.setItem("roomId", roomId);
-            console.log("📌 `roomId` enregistré dans sessionStorage :", sessionStorage.getItem("roomId"));
-    
+            console.log("📌 `roomId` enregistré :", sessionStorage.getItem("roomId"));
+
             window.location.href = "/gameboard.html";
+        });
+
+        socket.once("error", (error) => {
+            console.error(`❌ Erreur : ${error}`);
+            loadingOverlay.classList.add("hidden");
+            errorMessageElement.textContent = error;
+            errorToast.classList.add("show");
+            setTimeout(() => errorToast.classList.remove("show"), 3000);
         });
     });
 
