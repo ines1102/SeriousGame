@@ -1,19 +1,68 @@
-// 📌 Vérifier si la room a 2 joueurs et démarrer la partie
-function startGameIfReady(roomId) {
-    const players = Object.values(rooms[roomId].players);
-    if (players.length === 2) {
-        console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
+document.addEventListener("DOMContentLoaded", async () => {
+    console.log("🔄 Initialisation du jeu...");
 
-        // S'assurer que les joueurs sont bien dans la room
-        console.log(`📌 Vérification : joueurs dans la Room ${roomId}`, io.sockets.adapter.rooms.get(roomId));
+    const userName = sessionStorage.getItem("userName");
+    const userAvatar = sessionStorage.getItem("userAvatar");
+    const roomId = sessionStorage.getItem("roomId");
 
-        io.to(roomId).emit("game_start", {
-            player1: players[0],
-            player2: players[1]
-        });
+    console.log("📌 Vérification des données avant connexion :", { roomId, userName, userAvatar });
 
-        console.log("📌 Profils des joueurs envoyés aux clients :", players);
-    } else {
-        console.warn(`⚠️ Pas assez de joueurs dans la Room ${roomId}, en attente...`);
+    if (!userName || !userAvatar || !roomId) {
+        console.error("❌ Données utilisateur incomplètes, retour à l'accueil.");
+        alert("Erreur : Données utilisateur manquantes. Retour à l'accueil.");
+        window.location.href = "/";
+        return;
     }
-}
+
+    // Connexion au serveur
+    const socket = io();
+
+    // 🔍 **Écouter tous les événements**
+    socket.onAny((event, data) => {
+        console.log(`📩 Événement reçu : ${event}`, data);
+    });
+
+    // ✅ Vérification : écoute active de l'événement `game_start`
+    console.log("👂 En attente de l'événement `game_start`...");
+
+    // ✅ Envoi de la demande de connexion
+    socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
+
+    // ✅ Mise à jour du profil joueur
+    document.getElementById("player-name").textContent = userName;
+    document.getElementById("player-avatar").src = userAvatar;
+
+    // ✅ Écoute de l'événement `game_start`
+    socket.on("game_start", (gameData) => {
+        console.log("✅ Événement `game_start` reçu !", gameData);
+
+        const player1 = gameData.player1;
+        const player2 = gameData.player2;
+
+        let opponent;
+        if (player1.name === userName) {
+            opponent = player2;
+        } else {
+            opponent = player1;
+        }
+
+        if (!opponent) {
+            console.warn("⚠️ Aucun adversaire trouvé !");
+            return;
+        }
+
+        // 🎭 **Mise à jour du profil adversaire**
+        document.getElementById("opponent-name").textContent = opponent.name;
+        document.getElementById("opponent-avatar").src = opponent.avatar;
+
+        // ✅ **Affichage dans la console client**
+        console.log("📌 Profils des joueurs mis à jour (Client) :");
+        console.log("👤 Joueur :", { name: userName, avatar: userAvatar });
+        console.log("👤 Adversaire :", { name: opponent.name, avatar: opponent.avatar });
+    });
+
+    // ✅ Vérification en cas d'absence de `game_start`
+    setTimeout(() => {
+        console.log("⏳ Vérification : aucun `game_start` reçu après 5 secondes ?");
+    }, 5000);
+});
