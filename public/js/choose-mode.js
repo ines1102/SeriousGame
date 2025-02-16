@@ -20,73 +20,72 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function initSocket() {
         if (socket && socket.connected) {
-            console.warn('⚠️ Socket déjà connecté, inutile de réinitialiser.');
+            console.warn('⚠️ WebSocket déjà connecté.');
             return;
         }
 
-        socket = io('https://seriousgame-ds65.onrender.com', {
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 2000,
-            timeout: 60000
-        });
+        // ✅ Retarder l’ouverture de WebSocket pour éviter la coupure immédiate
+        setTimeout(() => {
+            socket = io('https://seriousgame-ds65.onrender.com', {
+                transports: ['websocket', 'polling'], // ✅ Polling en fallback
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 2000,
+                timeout: 60000
+            });
 
-        socket.on('connect', () => {
-            console.log('✅ Connecté au serveur Socket.IO');
-            reconnectAttempts = 0;
-        });
+            socket.on('connect', () => {
+                console.log('✅ Connecté au serveur WebSocket');
+                reconnectAttempts = 0; // ✅ Reset du compteur de reconnexion
+            });
 
-        socket.on('connect_error', (error) => {
-            reconnectAttempts++;
-            console.error(`❌ Erreur de connexion (tentative ${reconnectAttempts}):`, error);
-            if (reconnectAttempts >= 5) {
-                alert('Impossible de se connecter au serveur. Vérifiez votre connexion.');
-                hideLoading();
-            }
-        });
+            socket.on('connect_error', (error) => {
+                reconnectAttempts++;
+                console.error(`❌ Erreur de connexion (tentative ${reconnectAttempts}):`, error);
 
-        socket.on('waitingForPlayer', () => {
-            console.log('⌛ En attente d\'un adversaire...');
-            showLoading('En attente d\'un adversaire...', 'Recherche en cours');
-            waitingPlayers.classList.remove('hidden');
-        });
+                if (reconnectAttempts >= 5) {
+                    console.warn("🛠 Passage en mode `polling`...");
+                    socket.io.opts.transports = ['polling']; // ✅ Force polling si WebSocket échoue
+                }
+            });
 
-        socket.on('waitingPlayersUpdate', (count) => {
-            console.log(`👥 Joueurs en attente: ${count}`);
-            updateWaitingPlayers(count);
-        });
+            socket.on('disconnect', (reason) => {
+                console.warn(`⚠️ Déconnecté : ${reason}`);
 
-        socket.on('gameStart', (gameState) => {
-            console.log('🎮 Partie trouvée:', gameState);
-            try {
-                localStorage.setItem('gameState', JSON.stringify(gameState));
-                showLoading('Adversaire trouvé !', 'Préparation de la partie...');
-                setTimeout(() => {
-                    console.log('🔄 Redirection vers game-room.html');
-                    window.location.href = '/game-room.html';
-                }, 1500);
-            } catch (error) {
-                console.error('🚨 Erreur lors de la sauvegarde ou de la redirection:', error);
-                alert('Une erreur est survenue, veuillez rafraîchir la page.');
-            }
-        });
+                if (reason === "transport close" || reason === "ping timeout") {
+                    console.log("🔄 Reconnexion automatique...");
+                    setTimeout(() => socket.connect(), 2000); // ✅ Tentative de reconnexion
+                }
+            });
 
-        socket.on('error', (error) => {
-            console.error('🚨 Erreur du serveur:', error);
-            alert(error.message || 'Une erreur est survenue.');
-            hideLoading();
-        });
+            socket.on('waitingForPlayer', () => {
+                console.log('⌛ En attente d\'un adversaire...');
+                showLoading('En attente d\'un adversaire...', 'Recherche en cours');
+                waitingPlayers.classList.remove('hidden');
+            });
 
-        socket.on('disconnect', (reason) => {
-            console.warn(`⚠️ Déconnecté du serveur: ${reason}`);
-            if (reason === 'io server disconnect') {
-                socket.connect();
-            }
-        });
+            socket.on('waitingPlayersUpdate', (count) => {
+                console.log(`👥 Joueurs en attente: ${count}`);
+                updateWaitingPlayers(count);
+            });
+
+            socket.on('gameStart', (gameState) => {
+                console.log('🎮 Partie trouvée:', gameState);
+                try {
+                    localStorage.setItem('gameState', JSON.stringify(gameState));
+                    showLoading('Adversaire trouvé !', 'Préparation de la partie...');
+                    setTimeout(() => {
+                        console.log('🔄 Redirection vers game-room.html');
+                        window.location.href = '/game-room.html';
+                    }, 1500);
+                } catch (error) {
+                    console.error('🚨 Erreur lors de la sauvegarde ou de la redirection:', error);
+                    alert('Une erreur est survenue, veuillez rafraîchir la page.');
+                }
+            });
+        }, 1000); // ✅ Retarde la connexion WebSocket pour éviter les interruptions immédiates
     }
 
-    // ✅ Sélection du mode de jeu
     window.selectMode = function(mode) {
         console.log('🎯 Mode sélectionné:', mode);
 
@@ -112,28 +111,14 @@ document.addEventListener('DOMContentLoaded', function() {
             loadingMessage.appendChild(subText);
         }
         loadingOverlay.classList.add('active');
-        console.log(`🔄 Affichage du chargement: ${message}`);
-    }
-
-    function hideLoading() {
-        loadingOverlay.classList.remove('active');
-        loadingMessage.innerHTML = '';
-        console.log('✅ Masquage du chargement');
     }
 
     function updateWaitingPlayers(count) {
         if (playerCount) {
             playerCount.textContent = count;
         }
-        loadingMessage.textContent = count > 0 
-            ? `${count} joueur${count > 1 ? 's' : ''} en attente` 
-            : 'En attente d\'adversaire...';
+        loadingMessage.textContent = count > 0 ? `${count} joueur${count > 1 ? 's' : ''} en attente` : 'En attente d\'adversaire...';
     }
 
-    window.addEventListener('beforeunload', () => {
-        if (socket) {
-            console.log('🔌 Déconnexion propre du socket avant de quitter la page.');
-            socket.disconnect();
-        }
-    });
+    initSocket();
 });

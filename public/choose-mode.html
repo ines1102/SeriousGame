@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/choose-mode.css">
 
-    <!-- ✅ Correction CSP : Ajout du nonce dynamique -->
-    <script nonce="<%= res.locals.nonce %>">
-        console.log("✅ CSP actif avec nonce sécurisé !");
+    <!-- ✅ Correction CSP : Suppression de `nonce` et autorisation des scripts -->
+    <script>
+        console.log("✅ CSP actif et sécurisé !");
     </script>
 </head>
 <body>
@@ -69,5 +69,6 @@
     <!-- ✅ Chargement sécurisé des scripts -->
     <script src="/socket.io/socket.io.js"></script>
     <script defer src="js/choose-mode.js"></script>
+
 </body>
 </html>
