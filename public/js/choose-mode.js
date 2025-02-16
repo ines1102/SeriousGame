@@ -1,64 +1,68 @@
 // choose-mode.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Récupérer les données du joueur
     const playerData = JSON.parse(localStorage.getItem('playerData'));
     if (!playerData) {
         window.location.href = '/';
         return;
     }
 
-    // Éléments du DOM
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingMessage = document.getElementById('loadingMessage');
+    const waitingPlayers = document.getElementById('waitingPlayers');
     let socket;
 
-    // Initialiser le joueur
+    // Initialiser l'affichage du joueur
     document.getElementById('playerName').textContent = playerData.name;
     document.getElementById('playerAvatar').src = `Avatars/${playerData.avatar}`;
 
-    // Initialiser Socket.IO
     function initSocket() {
-        // Initialisation de socket avec l'URL correcte
         socket = io('https://seriousgame-ds65.onrender.com', {
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
         });
 
-        setupSocketListeners();
-    }
-
-    function setupSocketListeners() {
         socket.on('connect', () => {
-            console.log('Connecté au serveur');
+            console.log('Connecté au serveur Socket.IO');
         });
 
         socket.on('connect_error', (error) => {
             console.error('Erreur de connexion:', error);
             hideLoading();
-            alert('Erreur de connexion au serveur. Veuillez réessayer.');
+            alert('Erreur de connexion au serveur. Veuillez rafraîchir la page.');
+        });
+
+        socket.on('waiting', () => {
+            console.log('En attente d\'un adversaire');
+            showLoading('En attente d\'un adversaire...', 'Recherche en cours');
+            waitingPlayers.classList.remove('hidden');
         });
 
         socket.on('waitingPlayersUpdate', (count) => {
             console.log('Joueurs en attente:', count);
-            updateWaitingMessage(count);
-        });
-
-        socket.on('waiting', () => {
-            console.log('En attente d\'adversaire');
-            showLoading('En attente d\'adversaire...', 'Recherche en cours');
+            updateWaitingPlayers(count);
         });
 
         socket.on('gameStart', (gameState) => {
-            console.log('Partie trouvée!');
+            console.log('Partie trouvée, état:', gameState);
             localStorage.setItem('gameState', JSON.stringify(gameState));
-            showLoading('Adversaire trouvé!', 'Redirection...');
+            showLoading('Adversaire trouvé !', 'Préparation de la partie...');
             
+            // Redirection avec délai pour l'animation
             setTimeout(() => {
-                window.location.href = '/game-room.html';
+                try {
+                    console.log('Redirection vers game-room.html');
+                    window.location.href = '/game-room.html';
+                } catch (error) {
+                    console.error('Erreur de redirection:', error);
+                    alert('Erreur lors de la redirection. Veuillez rafraîchir la page.');
+                }
             }, 1500);
         });
 
         socket.on('error', (error) => {
-            console.error('Erreur:', error);
+            console.error('Erreur reçue:', error);
             hideLoading();
             alert(error.message || 'Une erreur est survenue');
         });
@@ -73,35 +77,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (mode === 'random') {
-            showLoading('Connexion au serveur...');
             console.log('Envoi de la demande de partie aléatoire');
+            showLoading('Connexion au serveur...');
             socket.emit('joinRandomGame', playerData);
         } else if (mode === 'friend') {
             window.location.href = '/room-choice.html';
         }
     };
 
-    // Fonctions utilitaires
     function showLoading(message, subMessage = '') {
         loadingMessage.textContent = message;
         if (subMessage) {
-            const subText = loadingOverlay.querySelector('.loading-subtext');
-            if (subText) subText.textContent = subMessage;
+            const subText = document.createElement('div');
+            subText.className = 'loading-subtext';
+            subText.textContent = subMessage;
+            loadingMessage.appendChild(subText);
         }
         loadingOverlay.classList.add('active');
-        console.log('Loading shown:', message);
+        console.log('Affichage du chargement:', message);
     }
 
     function hideLoading() {
         loadingOverlay.classList.remove('active');
-        console.log('Loading hidden');
+        console.log('Masquage du chargement');
     }
 
-    function updateWaitingMessage(count) {
-        if (count > 0) {
-            loadingMessage.textContent = `${count} joueur${count > 1 ? 's' : ''} en attente`;
-        } else {
-            loadingMessage.textContent = 'En attente d\'adversaire...';
+    function updateWaitingPlayers(count) {
+        const playerCount = document.getElementById('playerCount');
+        if (playerCount) {
+            playerCount.textContent = count;
         }
+        
+        loadingMessage.textContent = count > 0 ?
+            `${count} joueur${count > 1 ? 's' : ''} en attente` :
+            'En attente d\'adversaire...';
     }
 });

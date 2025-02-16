@@ -159,43 +159,73 @@ setInterval(() => {
 io.on('connection', (socket) => {
     console.log('Nouveau joueur connecté:', socket.id);
 
-    socket.on('joinRandomGame', (playerData) => {
+    // Gestion du matchmaking aléatoire
+    socket.on('joinRandomGame', async (playerData) => {
+        console.log('Joueur cherche une partie:', socket.id);
+        
         const player = {
             socketId: socket.id,
             name: playerData.name,
             avatar: playerData.avatar
         };
 
+        // Vérifier si le joueur est déjà en attente
+        if (waitingPlayers.has(socket.id)) {
+            console.log('Joueur déjà en attente');
+            return;
+        }
+
         // Vérifier si le joueur est déjà dans une partie
         if (playerGameMap.has(socket.id)) {
+            console.log('Joueur déjà dans une partie');
             socket.emit('error', { message: 'Vous êtes déjà dans une partie' });
             return;
         }
 
         if (waitingPlayers.size > 0) {
-            // Trouver un adversaire
+            // Trouver un adversaire disponible
             const [opponentId, opponentData] = Array.from(waitingPlayers.entries())[0];
+            if (opponentId === socket.id) {
+                console.log('Même joueur, ignoré');
+                return;
+            }
+
+            console.log('Adversaire trouvé:', opponentId);
+            
+            // Retirer l'adversaire de la file d'attente
             waitingPlayers.delete(opponentId);
             waitingPlayersCount--;
-            io.emit('waitingPlayersUpdate', waitingPlayersCount);
-
+            
             // Créer la partie
+            const gameId = Math.random().toString(36).substr(2, 9);
             const game = new Game(opponentData);
             game.addPlayer(player);
-            activeGames.set(game.id, game);
+            
+            activeGames.set(gameId, game);
+            playerGameMap.set(socket.id, gameId);
+            playerGameMap.set(opponentId, gameId);
 
-            // Associer les joueurs à la partie
-            playerGameMap.set(socket.id, game.id);
-            playerGameMap.set(opponentId, game.id);
-
-            // Notifier les joueurs
-            io.to(socket.id).emit('gameStart', game.getGameState(socket.id));
+            console.log('Partie créée:', gameId);
+            
+            // Notifier les deux joueurs
+            const gameState = game.getGameState(socket.id);
+            socket.emit('gameStart', gameState);
             io.to(opponentId).emit('gameStart', game.getGameState(opponentId));
+            
+            // Émettre la mise à jour du nombre de joueurs en attente
+            io.emit('waitingPlayersUpdate', waitingPlayersCount);
         } else {
+            // Ajouter le joueur à la file d'attente
             waitingPlayers.set(socket.id, player);
             waitingPlayersCount++;
-            io.emit('waitingPlayersUpdate', waitingPlayersCount);
+            
+            console.log('Joueur ajouté à la file d\'attente. Total:', waitingPlayersCount);
+            
+            // Notifier le joueur qu'il est en attente
             socket.emit('waiting');
+            
+            // Émettre la mise à jour du nombre de joueurs en attente
+            io.emit('waitingPlayersUpdate', waitingPlayersCount);
         }
     });
 
