@@ -5,22 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Health Royale - Inscription</title>
     
-    <!-- Supprimer la base URL qui cause des problèmes -->
-    
     <!-- Favicon -->
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+    <link rel="icon" type="image/png" href="favicon_io/favicon-32x32.png">
     
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/index.css">
+    
+    <!-- Police Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header class="game-header">
             <h1 class="fade-in">Health Royale</h1>
-            <p class="subtitle fade-in">Entrez dans l'arène et affrontez vos adversaires !</p>
+            <p class="subtitle fade-in">Entrez dans l'arène et défiez vos adversaires !</p>
         </header>
 
         <main class="registration-form fade-in">
@@ -46,7 +45,10 @@
                     <input type="hidden" id="selectedAvatar" name="selectedAvatar">
                 </div>
 
-                <button type="submit" class="btn btn-primary">Commencer l'aventure</button>
+                <button type="submit" class="btn btn-primary">
+                    Commencer l'aventure
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
             </form>
         </main>
     </div>

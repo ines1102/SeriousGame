@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import cors from 'cors';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -11,53 +12,18 @@ const __dirname = dirname(__filename);
 const app = express();
 const server = createServer(app);
 
-// Configuration de Socket.IO avec CORS
+// Configuration de Socket.IO
 const io = new Server(server, {
     cors: {
-        origin: "https://seriousgame-ds65.onrender.com:1000",
-        methods: ["GET", "POST"],
-        credentials: true
+        origin: "*",
+        methods: ["GET", "POST"]
     }
 });
 
-// Middleware pour CORS
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://seriousgame-ds65.onrender.com:1000');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    next();
-});
-
-// Configuration pour servir les fichiers statiques
-app.use(express.static(join(__dirname, 'public')));
-
-// Routes spécifiques pour les ressources CSS et JS
-app.get('/css/:file', (req, res) => {
-    res.sendFile(join(__dirname, 'public', 'css', req.params.file));
-});
-
-app.get('/js/:file', (req, res) => {
-    res.sendFile(join(__dirname, 'public', 'js', req.params.file));
-});
-
-// Routes pour les images
-app.get('/Avatars/:file', (req, res) => {
-    res.sendFile(join(__dirname, 'public', 'Avatars', req.params.file));
-});
-
-app.get('/Cartes/:file', (req, res) => {
-    res.sendFile(join(__dirname, 'public', 'Cartes', req.params.file));
-});
-
-// Route pour le favicon
-app.get('/favicon_io/:file', (req, res) => {
-    res.sendFile(join(__dirname, 'public', 'favicon_io', req.params.file));
-});
-
-
-// Servir les fichiers statiques
-app.use(express.static(join(__dirname, 'public')));
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
 
 // Structures de données pour la gestion du jeu
 const waitingPlayers = new Map();
@@ -123,7 +89,7 @@ class Game {
         return {
             id: Math.random().toString(36).substr(2, 9),
             ...type,
-            image: `/cards/${type.name.toLowerCase()}.jpg`
+            image: `cards/${type.name.toLowerCase()}.jpg`
         };
     }
 
@@ -166,7 +132,7 @@ class Game {
     }
 }
 
-// Gestion des connexions Socket.IO
+// Configuration des événements Socket.IO
 io.on('connection', (socket) => {
     console.log('Nouveau joueur connecté:', socket.id);
 
@@ -242,8 +208,12 @@ io.on('connection', (socket) => {
 
     // Déconnexion
     socket.on('disconnect', () => {
+        console.log('Joueur déconnecté:', socket.id);
+        
+        // Nettoyer la file d'attente
         waitingPlayers.delete(socket.id);
         
+        // Gérer la déconnexion dans une partie
         const gameId = playerSessions.get(socket.id);
         if (gameId) {
             const game = games.get(gameId);
@@ -260,12 +230,32 @@ io.on('connection', (socket) => {
 });
 
 // Routes Express
-app.get('/*', (req, res) => {
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', message: 'Server is running' });
+});
+
+// Route pour tous les autres chemins (SPA)
+app.get('*', (req, res) => {
     res.sendFile(join(__dirname, 'public', 'index.html'));
+});
+
+// Gestion des erreurs
+app.use((err, req, res, next) => {
+    console.error('Erreur:', err);
+    res.status(500).json({ error: 'Une erreur est survenue sur le serveur' });
 });
 
 // Démarrage du serveur
 const PORT = process.env.PORT || 1000;
-server.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Serveur démarré sur http://0.0.0.0:${PORT}`);
+});
+
+// Gestion de l'arrêt gracieux
+process.on('SIGTERM', () => {
+    console.log('SIGTERM reçu. Arrêt gracieux...');
+    server.close(() => {
+        console.log('Serveur arrêté');
+        process.exit(0);
+    });
 });
