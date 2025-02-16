@@ -25,30 +25,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("player-name").textContent = userName;
     document.getElementById("player-avatar").src = userAvatar;
 
-    // ✅ Réception des informations du jeu
+    // ✅ Écoute de l'événement `game_start` pour récupérer l'adversaire
     socket.on("game_start", (gameData) => {
         console.log("✅ Game start reçu :", gameData);
 
-        if (!gameData.opponent) {
+        if (!gameData.opponent || !gameData.opponent.name || !gameData.opponent.avatar) {
             console.warn("⚠️ Aucun adversaire trouvé !");
             return;
         }
 
-        // 🎭 **Mise à jour du profil de l'adversaire**
-        const opponentNameElement = document.getElementById("opponent-name");
-        const opponentAvatarElement = document.getElementById("opponent-avatar");
+        // 🎭 **Mise à jour du profil adversaire**
+        document.getElementById("opponent-name").textContent = gameData.opponent.name;
+        document.getElementById("opponent-avatar").src = gameData.opponent.avatar;
+        console.log("🎭 Profil adversaire mis à jour :", gameData.opponent.name, gameData.opponent.avatar);
 
-        if (opponentNameElement && opponentAvatarElement) {
-            opponentNameElement.textContent = gameData.opponent.name;
-            opponentAvatarElement.src = gameData.opponent.avatar;
-            console.log("🎭 Profil adversaire mis à jour :", gameData.opponent.name, gameData.opponent.avatar);
-        } else {
-            console.error("❌ Élément HTML adversaire non trouvé.");
-        }
-
-        // 📌 Mise en place des cartes des joueurs
+        // 📌 Mise en place des cartes
         displayHand(gameData.playerHand, document.getElementById("player-hand"));
         displayOpponentHand(gameData.opponentHand, document.getElementById("opponent-hand"));
+    });
+
+    // ✅ Vérification de l'adversaire lorsqu'un joueur rejoint
+    socket.on("player_joined", (data) => {
+        console.log("👥 Nouvel adversaire détecté :", data);
+
+        if (data.name !== userName) {
+            document.getElementById("opponent-name").textContent = data.name;
+            document.getElementById("opponent-avatar").src = data.avatar;
+        }
     });
 
     // ✅ Mise à jour du tour de jeu
@@ -116,25 +119,4 @@ document.addEventListener("DOMContentLoaded", async () => {
             handContainer.appendChild(cardBack);
         });
     }
-
-    /** ✅ **Drag and Drop des cartes** */
-    document.querySelectorAll(".drop-area").forEach((dropArea) => {
-        dropArea.addEventListener("dragover", (event) => {
-            event.preventDefault();
-        });
-
-        dropArea.addEventListener("drop", (event) => {
-            event.preventDefault();
-            const cardSrc = event.dataTransfer.getData("cardSrc");
-            if (cardSrc) {
-                const img = document.createElement("img");
-                img.src = cardSrc;
-                img.classList.add("card");
-                dropArea.appendChild(img);
-
-                // Envoyer l'action au serveur
-                socket.emit("play_card", { roomId, player: userName, card: cardSrc, slot: dropArea.dataset.slot });
-            }
-        });
-    });
 });

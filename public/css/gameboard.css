@@ -1,3 +1,4 @@
+/* Variables globales */
 :root {
     --primary-color: #4a90e2;
     --secondary-color: #50b04f;
@@ -47,15 +48,7 @@ body {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    border: 3px solid var(--primary-color);
-    object-fit: cover;
-}
-
-.player-avatar img {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: 3px solid var(--primary-color);
+    border: 3px solid #4a90e2;
     object-fit: cover;
 }
 
@@ -107,4 +100,23 @@ body {
     padding: 20px;
     width: 100%;
     max-width: 600px;
+}
+
+/* Zone de jeu */
+.drop-area {
+    width: 80px;
+    height: 120px;
+    border: 2px dashed var(--border-color);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Indicateur de tour */
+.turn-indicator {
+    margin-top: 10px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary-color);
 }
