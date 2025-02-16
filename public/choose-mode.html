@@ -10,6 +10,18 @@
     <link rel="stylesheet" href="css/choose-mode.css">
 </head>
 <body>
+    <script>
+        var conn = new WebSocket('wss://seriousgame-ds65.onrender.com');
+    
+        conn.onopen = function() {
+            console.log("✅ Connexion WebSocket établie !");
+            conn.send("Hello, serveur WebSocket !");
+        };
+    
+        conn.onmessage = function(event) {
+            console.log("📩 Réponse serveur :", event.data);
+        };
+    </script>
     <!-- Bouton retour -->
     <button id="backButton" class="back-btn">
         <span class="back-icon">←</span>
