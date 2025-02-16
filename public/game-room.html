@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Royale - En jeu</title>
+    
+    <!-- Base URL -->
+    <base href="https://seriousgame-ds65.onrender.com:1000/">
+    
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/game-room.css">
+    
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Profil de l'adversaire -->
+        <div class="opponent-section">
+            <div class="opponent-profile">
+                <div class="profile-info">
+                    <div class="profile-avatar">
+                        <img id="opponent-avatar" src="/Avatars/default.jpeg" alt="Avatar de l'adversaire">
+                    </div>
+                    <div class="profile-name" id="opponent-name">En attente...</div>
+                </div>
+                <div class="health-container">
+                    <div class="health-bar">
+                        <div id="opponent-health-bar" class="health-bar-fill" style="width: 100%;"></div>
+                    </div>
+                    <div class="health-value" id="opponent-health-value">100</div>
+                </div>
+                <div class="cards-count" id="opponent-cards">
+                    Cartes: <span>0</span>
+                </div>
+            </div>
+            <div id="opponent-board" class="game-board opponent-board">
+                <div class="drop-area" data-position="0"></div>
+                <div class="drop-area" data-position="1"></div>
+                <div class="drop-area" data-position="2"></div>
+                <div class="drop-area" data-position="3"></div>
+                <div class="drop-area" data-position="4"></div>
+            </div>
+        </div>
+
+        <!-- Zone centrale -->
+        <div class="center-zone">
+            <div class="turn-indicator">
+                <div id="turn-marker" class="turn-marker">🎯</div>
+                <span id="turn-text">Votre tour</span>
+            </div>
+            <div id="action-log" class="action-log">
+                <!-- Les actions seront ajoutées ici dynamiquement -->
+            </div>
+        </div>
+
+        <!-- Zone du joueur -->
+        <div class="player-section">
+            <div id="player-board" class="game-board player-board">
+                <div class="drop-area" data-position="0"></div>
+                <div class="drop-area" data-position="1"></div>
+                <div class="drop-area" data-position="2"></div>
+                <div class="drop-area" data-position="3"></div>
+                <div class="drop-area" data-position="4"></div>
+            </div>
+            <div class="player-profile">
+                <div class="profile-info">
+                    <div class="profile-avatar">
+                        <img id="player-avatar" src="/Avatars/default.jpeg" alt="Votre avatar">
+                    </div>
+                    <div class="profile-name" id="player-name">Vous</div>
+                </div>
+                <div class="health-container">
+                    <div class="health-bar">
+                        <div id="player-health-bar" class="health-bar-fill" style="width: 100%;"></div>
+                    </div>
+                    <div class="health-value" id="player-health-value">100</div>
+                </div>
+                <div class="cards-count" id="player-cards">
+                    Cartes: <span>0</span>
+                </div>
+            </div>
+            <div id="player-hand" class="player-hand">
+                <!-- Les cartes du joueur seront ajoutées ici dynamiquement -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales -->
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="game-result">Partie terminée</h2>
+            <p id="game-stats"></p>
+            <button id="play-again-btn" class="btn btn-primary">Rejouer</button>
+            <button id="quit-game-btn" class="btn btn-secondary">Quitter</button>
+        </div>
+    </div>
+
+    <!-- Templates -->
+    <template id="card-template">
+        <div class="card" draggable="true">
+            <div class="card-inner">
+                <div class="card-header">
+                    <span class="card-name"></span>
+                    <span class="card-cost"></span>
+                </div>
+                <div class="card-image">
+                    <img src="" alt="Card image">
+                </div>
+                <div class="card-stats">
+                    <span class="card-attack"></span>
+                    <span class="card-health"></span>
+                </div>
+                <div class="card-description"></div>
+            </div>
+        </div>
+    </template>
+
+    <script src="/js/game-room.js"></script>
+</body>
+</html>

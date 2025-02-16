@@ -1,132 +1,148 @@
-/* Général */
-body {
+/* styles.css */
+:root {
+  --primary-color: #4a90e2;
+  --secondary-color: #50b04f;
+  --background-color: #f5f6fa;
+  --text-color: #2d3436;
+  --border-color: #dfe6e9;
+  --hover-color: #357abd;
+}
+
+* {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f9;
-  display: flex;
-  flex-direction: column;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
   min-height: 100vh;
 }
 
-/* Container principal */
 .container {
-  display: flex;
-  justify-content: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Boutons */
+.btn {
+  display: inline-flex;
   align-items: center;
-  flex-grow: 1;
-  padding: 20px;
+  justify-content: center;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--hover-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #428f41;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(80, 176, 79, 0.2);
+}
+
+/* Cartes */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Bouton retour */
+.back-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background-color: white;
+  color: var(--primary-color);
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  z-index: 100;
+}
+
+.back-btn:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.back-btn::before {
+  content: '←';
+  font-size: 1.2rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+      opacity: 0;
+      transform: translateY(20px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* Utils */
+.text-center {
   text-align: center;
 }
 
-button {
-  background-color: #4CAF50;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin: 10px;
+.mb-4 {
+  margin-bottom: 1.5rem;
 }
 
-button:hover {
-  background-color: #45a049;
-}
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+      padding: 1rem;
+  }
 
-
-/* Header général */
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  background-color: #4CAF50;
-  color: white;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 1000;
-}
-
-header h1 {
-  margin: 0;
-  font-size: 24px;
-}
-
-header .header-left, header .header-right {
-  display: flex;
-  align-items: center;
-}
-
-/* Chat */
-#chatArea {
-  margin-top: 100px; /* Décalage pour éviter le header fixe */
-  padding: 20px;
-  max-width: 600px;
-  margin: 20px auto;
-  background-color: white;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-#messages {
-  list-style-type: none;
-  padding: 0;
-}
-
-#messages li {
-  padding: 10px;
-  background-color: #f1f1f1;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-form {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-form input {
-  flex: 1;
-  padding: 10px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-}
-
-form button {
-  padding: 10px 20px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-form button:hover {
-  background-color: #45a049;
-}
-/* Avatar */
-img.avatar-img {
-  width: 80px;  /* Taille réduite des avatars */
-  height: 80px; /* Taille réduite des avatars */
-  border-radius: 50%;  /* Rendre l'avatar circulaire */
-  object-fit: cover;  /* Assurez-vous que l'image est bien recadrée dans le cercle */
-  margin-bottom: 10px; /* Un petit espace sous l'avatar */
-}
-
-/* Pour les images dans le formulaire (avatars sélectionnés) */
-#avatar-selection img {
-  width: 60px;  /* Taille réduite */
-  height: 60px; /* Taille réduite */
-  border-radius: 50%; /* Rendre l'image circulaire */
-  cursor: pointer;
-  margin: 5px;
-  object-fit: cover;  /* Assurez-vous que l'image est bien recadrée dans le cercle */
-}
-
-#avatar-selection img.selected {
-  border: 3px solid #007bff; /* Un petit cadre bleu pour l'avatar sélectionné */
+  .btn {
+      padding: 0.7rem 1.2rem;
+  }
 }

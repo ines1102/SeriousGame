@@ -1,55 +1,77 @@
-<!-- choose-mode.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Choisir le Mode de Jeu</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
-        }
-        .mode-container {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 30px;
-        }
-        .mode-button {
-            padding: 20px 40px;
-            font-size: 18px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
-        }
-        .mode-button:hover {
-            background-color: #0056b3;
-        }
-    </style>
+    <title>Health Royale - Choix du Mode</title>
+    
+    <!-- Base URL -->
+    <base href="https://seriousgame-ds65.onrender.com:1000/">
+    
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/choose-mode.css">
 </head>
 <body>
-    <h1>Choisir le Mode de Jeu</h1>
-    <div class="mode-container">
-        <button class="mode-button" onclick="chooseMode('random')">Mode Aléatoire</button>
-        <button class="mode-button" onclick="chooseMode('friend')">Jouer entre Amis</button>
+    <a href="/" class="back-btn">Retour</a>
+
+    <div class="container">
+        <div class="welcome-section fade-in">
+            <div class="player-info">
+                <div class="player-avatar">
+                    <img id="playerAvatar" src="/Avatars/default.jpeg" alt="Avatar du joueur">
+                </div>
+                <h2 id="playerName">Joueur</h2>
+            </div>
+        </div>
+
+        <main class="modes-container">
+            <div class="mode-card random-mode fade-in">
+                <div class="mode-icon">🎲</div>
+                <h3>Mode Aléatoire</h3>
+                <p>Affrontez un adversaire aléatoire</p>
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">⚡</span>
+                        <span>Matchmaking rapide</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🏆</span>
+                        <span>Nouveaux défis</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary play-btn" data-mode="random">
+                    Jouer en Aléatoire
+                </button>
+            </div>
+
+            <div class="mode-card friend-mode fade-in">
+                <div class="mode-icon">👥</div>
+                <h3>Jouer avec un Ami</h3>
+                <p>Créez ou rejoignez une partie privée</p>
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">🔒</span>
+                        <span>Partie privée</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🤝</span>
+                        <span>Entre amis</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary play-btn" data-mode="friend">
+                    Jouer avec un Ami
+                </button>
+            </div>
+        </main>
     </div>
 
-    <script>
-        function chooseMode(mode) {
-            if (mode === 'random') {
-                // Redirection vers la salle d'attente pour le mode aléatoire
-                window.location.href = 'waiting-room.html';
-            } else if (mode === 'friend') {
-                // Redirection vers la page de choix de room
-                window.location.href = 'room-choice.html';
-            }
-        }
-    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/choose-mode.js"></script>
 </body>
 </html>

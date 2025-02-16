@@ -1,177 +1,133 @@
-/* Variables globales */
-:root {
-  --primary-color: #4a90e2;
-  --secondary-color: #50b04f;
-  --background-color: #f5f6fa;
-  --card-background: #ffffff;
-  --text-color: #2d3436;
-  --border-color: #dfe6e9;
-  --hover-color: #357abd;
-}
-
-/* Reset et styles de base */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Arial', sans-serif;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  line-height: 1.6;
-}
-
-.container {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-}
-
-.login-card {
-  background: var(--card-background);
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 400px;
-}
-
-h1 {
+/* index.css */
+.game-header {
   text-align: center;
-  color: var(--primary-color);
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
+.subtitle {
+  color: var(--text-color);
+  font-size: 1.2rem;
+  opacity: 0.8;
 }
 
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
+.registration-form {
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-input, select {
-  width: 100%;
-  padding: 0.8rem;
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
-  font-size: 1rem;
-  outline: none;
-}
-
-input:focus, select:focus {
-  border-color: var(--primary-color);
+.registration-form .card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2.5rem;
 }
 
 .avatar-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 1.5rem;
   margin-top: 1rem;
 }
 
 .avatar-option {
   position: relative;
-  width: 100%;
-  padding-bottom: 100%; /* Aspect ratio 1:1 */
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
   cursor: pointer;
-  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .avatar-option img {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1;
   object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  transition: all 0.3s ease;
 }
 
-.avatar-option.selected {
+.avatar-option:hover img {
+  transform: scale(1.05);
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-color);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
 }
 
-.btn-primary {
-  width: 100%;
-  padding: 1rem;
-  background-color: var(--primary-color);
+.avatar-option.selected img {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.avatar-option::after {
+  content: '✓';
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 25px;
+  height: 25px;
+  background: var(--primary-color);
   color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s ease;
 }
 
-.btn-primary:hover {
-  background-color: var(--hover-color);
+.avatar-option.selected::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+      opacity: 0;
+      transform: translateY(20px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: slideIn 0.5s ease forwards;
+}
+
+.game-header h1 {
+  animation-delay: 0.2s;
+}
+
+.subtitle {
+  animation-delay: 0.4s;
+}
+
+.registration-form {
+  animation-delay: 0.6s;
 }
 
 /* Responsive Design */
-@media (max-width: 480px) {
-  .container {
-      padding: 1rem;
-  }
-
-  .login-card {
+@media (max-width: 768px) {
+  .registration-form .card {
       padding: 1.5rem;
   }
 
   .avatar-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.8rem;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 1rem;
   }
 }
 
-.error-message {
+/* Background Pattern */
+body::before {
+  content: '';
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #ff4444;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 1000;
-}
-
-.error-message.show {
-  opacity: 1;
-}
-
-/* Style pour indiquer l'état offline */
-body.offline .connection-dependent {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/* Style pour les avatars */
-.avatar-option {
-  cursor: pointer;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.avatar-option:hover {
-  transform: scale(1.05);
-}
-
-.avatar-option.selected {
-  border-color: #4CAF50;
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  opacity: 0.1;
+  z-index: -1;
 }
