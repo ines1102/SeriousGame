@@ -89,6 +89,17 @@ io.on("connection", (socket) => {
         }
     }
 
+    // 📌 Vérification manuelle si `game_start` a été envoyé
+    socket.on("check_game_start", ({ roomId }) => {
+        const players = Object.values(rooms[roomId]?.players || {});
+        if (players.length === 2) {
+            console.log(`🔄 RÉÉMISSION de \`game_start\` pour Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
+            io.to(roomId).emit("game_start", { player1: players[0], player2: players[1] });
+        } else {
+            console.log(`⚠️ Impossible d'envoyer \`game_start\` : il manque un joueur dans Room ${roomId}`);
+        }
+    });
+    
     // 📌 Gestion des déconnexions
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion : ${socket.id}`);
