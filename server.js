@@ -22,8 +22,18 @@ const io = new Server(server, {
 });
 
 // Middleware de sécurité et de parsing
-app.use(helmet());
-app.use(express.json());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://seriousgame-ds65.onrender.com"],
+            connectSrc: ["'self'", "https://seriousgame-ds65.onrender.com", "wss://seriousgame-ds65.onrender.com"],
+            imgSrc: ["'self'", "data:"],
+            styleSrc: ["'self'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"]
+        }
+    }
+}));app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // CORS headers
