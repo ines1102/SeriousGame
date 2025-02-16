@@ -95,26 +95,30 @@ io.on("connection", (socket) => {
             waitingPlayer = null;
         }
     });
-});
 
-// 📌 Vérifier si la room a 2 joueurs et démarrer la partie
-function startGameIfReady(roomId) {
-    const players = Object.values(rooms[roomId].players);
-    if (players.length === 2) {
-        io.to(roomId).emit("game_start", {
-            player1: players[0],
-            player2: players[1],
-        });
+    // 📌 Vérifier si la room a 2 joueurs et démarrer la partie
+    function startGameIfReady(roomId) {
+        const players = Object.values(rooms[roomId].players);
+        if (players.length === 2) {
+            console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
 
-        // 🔄 Envoi des profils mis à jour aux deux joueurs
-        io.to(roomId).emit("update_profiles", rooms[roomId].players);
+            // ✅ Affichage des infos des joueurs sur le serveur
+            console.log("📌 Profils des joueurs mis à jour :");
+            console.log("👤 Joueur 1 :", players[0]);
+            console.log("👤 Joueur 2 :", players[1]);
+
+            io.to(roomId).emit("game_start", {
+                player1: players[0],
+                player2: players[1],
+            });
+        }
     }
-}
 
-// 📌 Générer un ID unique de 4 chiffres pour les rooms privées
-function generateRoomId() {
-    return Math.floor(1000 + Math.random() * 9000).toString();
-}
+    // 📌 Générer un ID unique de 4 chiffres pour les rooms privées
+    function generateRoomId() {
+        return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+});
 
 // 📌 Démarrer le serveur
 httpServer.listen(PORT, () => console.log(`🚀 Serveur en ligne sur http://localhost:${PORT}`));
