@@ -16,12 +16,10 @@ const io = new Server(server, {
     cors: { origin: CLIENT_URL, methods: ["GET", "POST"] }
 });
 
-// Middleware
 app.use(cors({ origin: CLIENT_URL }));
 app.use(express.json());
 app.use(express.static(path.join(path.resolve(), "public")));
 
-// Routes
 app.get("/", (req, res) => res.sendFile(path.join(path.resolve(), "public", "index.html")));
 app.get("/choose-mode", (req, res) => res.sendFile(path.join(path.resolve(), "public", "choose-mode.html")));
 app.get("/room-choice", (req, res) => res.sendFile(path.join(path.resolve(), "public", "room-choice.html")));
@@ -29,25 +27,22 @@ app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "publ
 
 // Stockage des rooms et des joueurs
 const rooms = {};
-const playerStatus = {}; // Suivi de la connexion des joueurs
-const DISCONNECT_TIMEOUT = 10000; // Attente de 10 secondes avant suppression
+const playerStatus = {};
+const DISCONNECT_TIMEOUT = 10000; // Attente de 10s avant suppression
 
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
-    // Ajoute le joueur à la liste des joueurs actifs
-    playerStatus[socket.id] = { connected: true, roomId: null };
-
-    /** 🎮 Mode Joueur Aléatoire */
     socket.on("find_random_room", (playerData) => {
         let roomId = Object.keys(rooms).find((id) => rooms[id].players.length === 1);
         if (!roomId) {
             roomId = Math.floor(1000 + Math.random() * 9000).toString();
             rooms[roomId] = { players: [] };
         }
+
         socket.join(roomId);
         rooms[roomId].players.push({ id: socket.id, ...playerData });
-        playerStatus[socket.id].roomId = roomId;
+        playerStatus[socket.id] = { connected: true, roomId };
 
         console.log(`👥 Joueur ajouté : ${playerData.name} dans Room ${roomId}`);
 
@@ -58,31 +53,6 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** 🎮 Mode Jouer entre amis */
-    socket.on("create_room", ({ roomId, name, avatar }) => {
-        if (!rooms[roomId]) rooms[roomId] = { players: [] };
-        socket.join(roomId);
-        rooms[roomId].players.push({ id: socket.id, name, avatar });
-        playerStatus[socket.id].roomId = roomId;
-        io.to(socket.id).emit("room_created", roomId);
-    });
-
-    socket.on("join_room", ({ roomId, name, avatar }) => {
-        if (!rooms[roomId] || rooms[roomId].players.length >= 2) {
-            io.to(socket.id).emit("room_not_found");
-            return;
-        }
-        socket.join(roomId);
-        rooms[roomId].players.push({ id: socket.id, name, avatar });
-        playerStatus[socket.id].roomId = roomId;
-
-        if (rooms[roomId].players.length === 2) {
-            io.to(roomId).emit("room_joined", roomId);
-            startGame(roomId);
-        }
-    });
-
-    /** 🔄 Gestion des reconnexions */
     socket.on("rejoin_game", ({ roomId, name, avatar }) => {
         if (!rooms[roomId]) {
             console.warn(`⚠️ Tentative de reconnexion à Room ${roomId}, mais elle n'existe plus.`);
@@ -90,27 +60,38 @@ io.on("connection", (socket) => {
             return;
         }
 
-        if (!rooms[roomId].players.some((p) => p.id === socket.id)) {
-            rooms[roomId].players.push({ id: socket.id, name, avatar });
-            console.log(`🔄 ${name} tente de rejoindre Room ${roomId} après reconnexion.`);
+        // Trouver l'ancien socket ID du joueur
+        let oldSocketId = Object.keys(playerStatus).find(id => playerStatus[id].roomId === roomId && !playerStatus[id].connected);
+
+        if (oldSocketId) {
+            console.log(`🔄 ${name} est revenu ! Assignation de ${socket.id} à la place de ${oldSocketId}`);
+
+            // Associer le nouvel ID socket
+            playerStatus[socket.id] = playerStatus[oldSocketId];
+            playerStatus[socket.id].connected = true;
+
+            // Mettre à jour la room
+            rooms[roomId].players = rooms[roomId].players.map(player => 
+                player.id === oldSocketId ? { ...player, id: socket.id } : player
+            );
+
+            // Supprimer l'ancien ID
+            delete playerStatus[oldSocketId];
         }
 
         socket.join(roomId);
-        playerStatus[socket.id].connected = true;
         io.to(socket.id).emit("rejoined", roomId);
     });
 
-    /** ✅ Gestion améliorée des déconnexions */
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion détectée : ${socket.id}`);
         const roomId = playerStatus[socket.id]?.roomId;
 
         if (roomId) {
-            console.log(`⚠️ Joueur ${socket.id} marqué comme déconnecté, attente 10s pour reconnection...`);
+            console.log(`⚠️ Joueur ${socket.id} marqué comme déconnecté, attente ${DISCONNECT_TIMEOUT / 1000}s pour reconnexion...`);
 
             playerStatus[socket.id].connected = false;
 
-            // Attendre 10 secondes avant suppression
             setTimeout(() => {
                 if (!playerStatus[socket.id]?.connected) {
                     console.warn(`❌ Joueur ${socket.id} réellement déconnecté.`);
@@ -122,13 +103,11 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** ✅ Quitter une Room */
     socket.on("leave_room", () => {
         removePlayerFromRoom(socket.id);
     });
 });
 
-/** 🎮 Fonction pour démarrer la partie */
 function startGame(roomId) {
     if (!rooms[roomId] || rooms[roomId].players.length !== 2) return;
     const [player1, player2] = rooms[roomId].players;
@@ -145,7 +124,6 @@ function startGame(roomId) {
     });
 }
 
-/** ✅ Fonction de suppression différée */
 function removePlayerFromRoom(socketId) {
     const roomId = playerStatus[socketId]?.roomId;
     if (!roomId || !rooms[roomId]) return;
@@ -164,5 +142,4 @@ function removePlayerFromRoom(socketId) {
     delete playerStatus[socketId];
 }
 
-// Démarrer le serveur
 server.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
