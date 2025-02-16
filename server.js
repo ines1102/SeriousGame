@@ -1,7 +1,6 @@
 import express from 'express';
 import { createServer } from 'http';
-import { Server as SocketIOServer } from 'socket.io';
-import { WebSocketServer } from 'ws';
+import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import helmet from 'helmet';
@@ -12,17 +11,31 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const server = createServer(app);
-const PORT = process.env.PORT || 10000;
 
-// ✅ Génération d'un nonce sécurisé pour CSP
-const nonce = Buffer.from(crypto.randomBytes(16)).toString("base64");
+// ✅ Configuration WebSocket (avec polling en fallback)
+const io = new Server(server, {
+    cors: {
+        origin: "https://seriousgame-ds65.onrender.com",
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['websocket', 'polling'], // ✅ Ajout de polling en cas d'échec WebSocket
+    allowEIO3: true, // ✅ Compatibilité avec d'anciennes versions de WebSocket
+    pingTimeout: 60000, // ✅ WebSocket reste connecté plus longtemps
+    pingInterval: 25000 // ✅ Ping régulier pour maintenir la connexion
+});
 
-// ✅ Sécurité avec Helmet (CSP, XSS Protection, etc.)
+// ✅ Middleware de sécurité avec CSP assoupli
+app.use((req, res, next) => {
+    res.locals.nonce = crypto.randomBytes(16).toString("base64");
+    next();
+});
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://seriousgame-ds65.onrender.com", "'unsafe-inline'"], // ✅ Suppression du nonce
+            scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://seriousgame-ds65.onrender.com", "'unsafe-inline'"], // ✅ Suppression de nonce
             connectSrc: ["'self'", "https://seriousgame-ds65.onrender.com", "wss://seriousgame-ds65.onrender.com"],
             imgSrc: ["'self'", "data:"],
             styleSrc: ["'self'", "https://fonts.googleapis.com"],
@@ -33,143 +46,150 @@ app.use(helmet({
     }
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ✅ Configuration CORS
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://seriousgame-ds65.onrender.com');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.locals.nonce = Buffer.from(crypto.randomBytes(16)).toString("base64");
-    next();
-});
-
 // ✅ Servir les fichiers statiques
-app.use(express.static('public'));
+app.use(express.static(join(__dirname, 'public')));
 
-// ---------------------------------------------------------
-// ✅ WebSocket natif (`ws`) - Connexion et gestion des rooms
-// ---------------------------------------------------------
+// ✅ Gestion des joueurs en attente et des parties
+let waitingPlayers = new Map();
+let activeGames = new Map();
+let playerGameMap = new Map();
 
-const wss = new WebSocketServer({ server });
-const wsClients = new Map();
+// ✅ Classe de gestion des parties
+class Game {
+    constructor(player1) {
+        this.id = Math.random().toString(36).substring(7);
+        this.players = new Map([[player1.socketId, player1]]);
+        this.state = {
+            board: { [player1.socketId]: Array(5).fill(null) },
+            health: { [player1.socketId]: 100 },
+            cards: { [player1.socketId]: this.generateInitialHand() }
+        };
+        this.currentTurn = null;
+        this.status = 'waiting';
+        this.createdAt = Date.now();
+    }
 
-wss.on('connection', (ws) => {
-    console.log('🔗 Client WebSocket connecté');
+    addPlayer(player) {
+        if (this.players.size >= 2) return false;
+        this.players.set(player.socketId, player);
+        this.state.board[player.socketId] = Array(5).fill(null);
+        this.state.health[player.socketId] = 100;
+        this.state.cards[player.socketId] = this.generateInitialHand();
 
-    ws.on('message', (message) => {
-        console.log(`📩 Message reçu: ${message}`);
-        ws.send(`📤 Réponse serveur: ${message}`);
-    });
+        if (this.players.size === 2) {
+            this.status = 'playing';
+            this.currentTurn = Array.from(this.players.keys())[Math.floor(Math.random() * 2)];
+        }
 
-    ws.on('close', () => {
-        console.log('❌ Client WebSocket déconnecté');
-        wsClients.delete(ws);
-    });
+        return true;
+    }
 
-    ws.send('🚀 Connexion WebSocket réussie !');
-});
+    generateInitialHand() {
+        return Array(5).fill(null).map(() => this.generateCard());
+    }
 
-// ---------------------------------------------------------
-// ✅ Socket.IO - Gestion avancée (Rooms, Matchmaking, Chat)
-// ---------------------------------------------------------
+    generateCard() {
+        const cardTypes = [
+            { name: "Soigneur", cost: 2, attack: 1, health: 3, effect: "heal" },
+            { name: "Guerrier", cost: 3, attack: 3, health: 3, effect: "damage" },
+            { name: "Défenseur", cost: 1, attack: 1, health: 4, effect: "shield" }
+        ];
+        return {
+            id: Math.random().toString(36).substring(7),
+            ...cardTypes[Math.floor(Math.random() * cardTypes.length)],
+            image: `Cartes/${cardTypes.name.toLowerCase()}.png`
+        };
+    }
 
-const io = new SocketIOServer(server, {
-    cors: {
-        origin: "https://seriousgame-ds65.onrender.com",
-        methods: ["GET", "POST"],
-        credentials: true
-    },
-    transports: ['websocket'], // ✅ Force WebSocket uniquement
-    allowEIO3: true,
-    pingTimeout: 60000,
-    pingInterval: 25000
-});
+    getOpponent(playerId) {
+        return Array.from(this.players.keys()).find(id => id !== playerId);
+    }
+}
 
-const waitingPlayers = new Set();
-const games = new Map();
+// ✅ Gestion WebSocket
+io.on("connection", (socket) => {
+    console.log(`✅ WebSocket connecté : ${socket.id}`);
 
-io.on('connection', (socket) => {
-    console.log(`🔗 Client Socket.IO connecté: ${socket.id}`);
+    // ✅ Gestion du matchmaking
+    socket.on("joinRandomGame", (playerData) => {
+        console.log(`🎯 Joueur en recherche : ${socket.id}`);
 
-    socket.on('joinRandomGame', (playerData) => {
-        console.log(`👤 ${playerData.name} cherche une partie...`);
-        
+        if (playerGameMap.has(socket.id) || waitingPlayers.has(socket.id)) return;
+
         if (waitingPlayers.size > 0) {
-            const opponentSocket = Array.from(waitingPlayers)[0];
-            waitingPlayers.delete(opponentSocket);
+            const [opponentId, opponentData] = waitingPlayers.entries().next().value;
+            waitingPlayers.delete(opponentId);
 
-            const room = `game-${socket.id}-${opponentSocket.id}`;
-            games.set(room, { players: [socket, opponentSocket] });
+            const game = new Game(opponentData);
+            game.addPlayer({ socketId: socket.id, name: playerData.name, avatar: playerData.avatar });
 
-            socket.join(room);
-            opponentSocket.join(room);
+            activeGames.set(game.id, game);
+            playerGameMap.set(socket.id, game.id);
+            playerGameMap.set(opponentId, game.id);
 
-            io.to(room).emit('gameStart', { room, players: [playerData, opponentSocket.playerData] });
-            console.log(`🎮 Match trouvé ! Room: ${room}`);
+            io.to(socket.id).emit("gameStart", game.getGameState(socket.id));
+            io.to(opponentId).emit("gameStart", game.getGameState(opponentId));
         } else {
-            waitingPlayers.add(socket);
-            socket.emit('waitingForPlayer');
-            console.log(`⌛ Joueur en attente...`);
+            waitingPlayers.set(socket.id, { socketId: socket.id, name: playerData.name, avatar: playerData.avatar });
+            socket.emit("waitingForPlayer");
         }
     });
 
-    socket.on('sendMessage', (data) => {
-        const { room, message } = data;
-        console.log(`💬 Message dans ${room}: ${message}`);
-        io.to(room).emit('receiveMessage', { sender: socket.id, message });
-    });
+    // ✅ Gestion de la déconnexion et reconnexion
+    socket.on("disconnect", (reason) => {
+        console.warn(`⚠️ WebSocket déconnecté : ${reason}`);
 
-    socket.on('disconnect', () => {
-        console.log('❌ Client déconnecté');
-        waitingPlayers.delete(socket);
-    });
+        if (waitingPlayers.has(socket.id)) {
+            waitingPlayers.delete(socket.id);
+        }
 
-    socket.emit('message', '🚀 Connexion Socket.IO réussie');
+        const gameId = playerGameMap.get(socket.id);
+        if (gameId) {
+            const game = activeGames.get(gameId);
+            const opponent = game?.getOpponent(socket.id);
+
+            if (opponent) {
+                io.to(opponent).emit("playerDisconnected", { message: "Votre adversaire s'est déconnecté" });
+            }
+
+            game?.players.forEach((player) => playerGameMap.delete(player.socketId));
+            activeGames.delete(gameId);
+        }
+
+        // ✅ Tentative de reconnexion immédiate
+        if (reason === "transport close" || reason === "ping timeout") {
+            console.log("🔄 Tentative de reconnexion...");
+            setTimeout(() => socket.connect(), 2000);
+        }
+    });
 });
 
-// ---------------------------------------------------------
-// ✅ Routes API et Health Check
-// ---------------------------------------------------------
-
+// ✅ Route de santé
 app.get('/health', (req, res) => {
-    res.status(200).json({
-        status: 'OK',
-        message: 'Serveur actif avec WebSocket & Socket.IO !'
-    });
+    res.status(200).json({ status: "OK", waitingPlayers: waitingPlayers.size, activeGames: activeGames.size });
 });
 
+// ✅ Route par défaut pour le front-end
 app.get('*', (req, res) => {
     res.sendFile(join(__dirname, 'public', 'index.html'));
 });
 
-// ---------------------------------------------------------
 // ✅ Gestion des erreurs
-// ---------------------------------------------------------
-
 app.use((err, req, res, next) => {
-    console.error('🚨 Erreur serveur:', err);
-    res.status(500).json({ error: 'Erreur interne du serveur' });
+    console.error("🚨 Erreur serveur :", err);
+    res.status(500).json({ error: "Erreur serveur" });
 });
 
-// ---------------------------------------------------------
-// ✅ Lancement du serveur
-// ---------------------------------------------------------
-
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Serveur WebSocket & Socket.IO démarré sur le port ${PORT}`);
+// ✅ Démarrage du serveur
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`🚀 Serveur démarré sur le port ${PORT}`);
 });
 
-// ---------------------------------------------------------
-// ✅ Gestion des arrêts propres (SIGTERM)
-// ---------------------------------------------------------
-
-process.on('SIGTERM', () => {
-    console.log('🛑 Arrêt du serveur en cours...');
+// ✅ Gestion de l'arrêt du serveur
+process.on("SIGTERM", () => {
     server.close(() => {
-        console.log('🛑 Serveur arrêté proprement');
+        console.log("🛑 Serveur arrêté proprement");
         process.exit(0);
     });
 });
