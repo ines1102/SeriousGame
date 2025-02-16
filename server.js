@@ -4,7 +4,7 @@ import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// 📌 Configuration pour ES Module
+// 📌 Configuration ES Module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -23,14 +23,44 @@ app.get("/choose-mode", (req, res) => res.sendFile(path.join(__dirname, "public/
 app.get("/room-choice", (req, res) => res.sendFile(path.join(__dirname, "public/room-choice.html")));
 app.get("/gameboard", (req, res) => res.sendFile(path.join(__dirname, "public/gameboard.html")));
 
-// 📌 Gestion des rooms et joueurs
+// 📌 Gestion des rooms et des joueurs
 let rooms = {};
-let waitingPlayer = null; // Pour stocker un joueur en attente de partie aléatoire
+let waitingPlayer = null; // Stocker un joueur en attente de match aléatoire
 
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
-    // 📌 Rejoindre une room spécifique (mode avec un ami)
+    // 📌 Mode Aléatoire : Trouver une room disponible
+    socket.on("find_random_room", ({ name, avatar }) => {
+        if (waitingPlayer) {
+            const roomId = generateRoomId();
+            rooms[roomId] = { players: {} };
+
+            // Associer les deux joueurs à la même room
+            rooms[roomId].players[waitingPlayer.id] = waitingPlayer;
+            rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
+
+            // Faire rejoindre la room
+            io.to(waitingPlayer.id).emit("game_found", { roomId });
+            io.to(socket.id).emit("game_found", { roomId });
+
+            io.sockets.sockets.get(waitingPlayer.id).join(roomId);
+            socket.join(roomId);
+
+            console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} vs ${name} dans Room ${roomId}`);
+
+            // Lancer la partie
+            startGameIfReady(roomId);
+
+            waitingPlayer = null; // Reset attente
+        } else {
+            // Stocker le joueur en attente
+            waitingPlayer = { id: socket.id, name, avatar };
+            console.log(`⌛ Joueur ${name} en attente d'un adversaire...`);
+        }
+    });
+
+    // 📌 Mode Avec un Ami : Rejoindre une room spécifique
     socket.on("join_private_game", ({ roomId, name, avatar }) => {
         if (!rooms[roomId]) {
             rooms[roomId] = { players: {} };
@@ -41,38 +71,8 @@ io.on("connection", (socket) => {
 
         console.log(`👥 Joueur ${name} a rejoint Room ${roomId}`);
 
-        // Vérifier si la room a 2 joueurs et lancer le jeu
+        // Vérifier si la room est complète et démarrer la partie
         startGameIfReady(roomId);
-    });
-
-    // 📌 Mode Aléatoire : Rejoindre un adversaire aléatoire
-    socket.on("join_random_game", ({ name, avatar }) => {
-        if (waitingPlayer) {
-            const roomId = generateRoomId();
-            rooms[roomId] = { players: {} };
-
-            // Associer les deux joueurs à la même room
-            rooms[roomId].players[waitingPlayer.id] = waitingPlayer;
-            rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
-
-            io.to(waitingPlayer.id).emit("game_found", { roomId });
-            io.to(socket.id).emit("game_found", { roomId });
-
-            // Faire rejoindre la room
-            io.sockets.sockets.get(waitingPlayer.id).join(roomId);
-            socket.join(roomId);
-
-            console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} vs ${name} dans Room ${roomId}`);
-
-            // Lancer la partie
-            startGameIfReady(roomId);
-
-            waitingPlayer = null; // Reset l'attente
-        } else {
-            // Stocker le joueur en attente
-            waitingPlayer = { id: socket.id, name, avatar };
-            console.log(`⌛ Joueur ${name} en attente d'un adversaire...`);
-        }
     });
 
     // 📌 Jouer une carte
@@ -88,9 +88,8 @@ io.on("connection", (socket) => {
             if (rooms[roomId].players[socket.id]) {
                 delete rooms[roomId].players[socket.id];
 
-                // Si l'autre joueur est toujours présent, il doit être informé
-                const remainingPlayers = Object.keys(rooms[roomId].players);
-                if (remainingPlayers.length === 0) {
+                // Si la room devient vide, la supprimer
+                if (Object.keys(rooms[roomId].players).length === 0) {
                     delete rooms[roomId];
                     console.log(`🗑️ Suppression de la Room ${roomId}`);
                 } else {
@@ -106,7 +105,7 @@ io.on("connection", (socket) => {
     });
 });
 
-// 📌 Fonction pour démarrer une partie si 2 joueurs sont prêts
+// 📌 Vérifier si la room a 2 joueurs et démarrer la partie
 function startGameIfReady(roomId) {
     const players = Object.values(rooms[roomId].players);
     if (players.length === 2) {
