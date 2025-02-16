@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingMessage = document.getElementById('loadingMessage');
     const waitingPlayers = document.getElementById('waitingPlayers');
     const playerCount = document.getElementById('playerCount');
+    const randomModeBtn = document.getElementById('randomModeBtn');
+    const friendModeBtn = document.getElementById('friendModeBtn');
 
     let socket = null;
     let reconnectAttempts = 0;
@@ -24,7 +26,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // ✅ Retarder l’ouverture de WebSocket pour éviter la coupure immédiate
         setTimeout(() => {
             socket = io('https://seriousgame-ds65.onrender.com', {
                 transports: ['websocket', 'polling'], // ✅ Polling en fallback
@@ -36,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             socket.on('connect', () => {
                 console.log('✅ Connecté au serveur WebSocket');
-                reconnectAttempts = 0; // ✅ Reset du compteur de reconnexion
+                reconnectAttempts = 0; 
             });
 
             socket.on('connect_error', (error) => {
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (reconnectAttempts >= 5) {
                     console.warn("🛠 Passage en mode `polling`...");
-                    socket.io.opts.transports = ['polling']; // ✅ Force polling si WebSocket échoue
+                    socket.io.opts.transports = ['polling'];
                 }
             });
 
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (reason === "transport close" || reason === "ping timeout") {
                     console.log("🔄 Reconnexion automatique...");
-                    setTimeout(() => socket.connect(), 2000); // ✅ Tentative de reconnexion
+                    setTimeout(() => socket.connect(), 2000);
                 }
             });
 
@@ -83,10 +84,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Une erreur est survenue, veuillez rafraîchir la page.');
                 }
             });
-        }, 1000); // ✅ Retarde la connexion WebSocket pour éviter les interruptions immédiates
+        }, 1000);
     }
 
-    window.selectMode = function(mode) {
+    // ✅ Gestion des boutons via `addEventListener()`
+    if (randomModeBtn) {
+        randomModeBtn.addEventListener('click', () => {
+            selectMode('random');
+        });
+    }
+
+    if (friendModeBtn) {
+        friendModeBtn.addEventListener('click', () => {
+            selectMode('friend');
+        });
+    }
+
+    function selectMode(mode) {
         console.log('🎯 Mode sélectionné:', mode);
 
         if (!socket) {
@@ -100,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (mode === 'friend') {
             window.location.href = '/room-choice.html';
         }
-    };
+    }
 
     function showLoading(message, subMessage = '') {
         loadingMessage.textContent = message;

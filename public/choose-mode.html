@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/choose-mode.css">
 
-    <!-- ✅ Correction CSP : Suppression de `nonce` et autorisation des scripts -->
     <script>
         console.log("✅ CSP actif et sécurisé !");
     </script>
@@ -32,7 +31,7 @@
 
         <!-- Choix du mode de jeu -->
         <div class="modes-container">
-            <div class="mode-card fade-in delay-1" id="randomMode">
+            <div class="mode-card fade-in delay-1">
                 <div class="mode-icon">🎲</div>
                 <h3>Mode Aléatoire</h3>
                 <p>Affrontez un adversaire au hasard</p>
@@ -41,7 +40,7 @@
                 </button>
             </div>
 
-            <div class="mode-card fade-in delay-2" id="friendMode">
+            <div class="mode-card fade-in delay-2">
                 <div class="mode-icon">👥</div>
                 <h3>Partie Privée</h3>
                 <p>Jouez avec un ami</p>
