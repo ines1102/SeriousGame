@@ -22,6 +22,7 @@ app.get("/gameboard", (req, res) => res.sendFile(path.join(__dirname, "public/ga
 
 let rooms = {};
 let waitingPlayer = null;
+let disconnectedPlayers = {}; // Stocker temporairement les joueurs déconnectés
 
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
@@ -43,7 +44,6 @@ io.on("connection", (socket) => {
             console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} vs ${name} dans Room ${roomId}`);
 
             startGameIfReady(roomId);
-
             waitingPlayer = null;
         } else {
             waitingPlayer = { id: socket.id, name, avatar };
@@ -83,9 +83,9 @@ io.on("connection", (socket) => {
 
     socket.on("check_game_start", ({ roomId }) => {
         if (!rooms[roomId]) return;
-        
+
         const players = Object.values(rooms[roomId].players);
-        
+
         if (players.length === 2) {
             console.log(`🔄 Réémission de \`game_start\` pour Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
             io.to(roomId).emit("game_start", { player1: players[0], player2: players[1] });
@@ -95,34 +95,46 @@ io.on("connection", (socket) => {
     });
 
     socket.on("disconnect", () => {
-        console.log(`🔌 Déconnexion : ${socket.id}`);
+        console.log(`🔌 Déconnexion détectée : ${socket.id}`);
 
         for (const roomId in rooms) {
             if (rooms[roomId]?.players[socket.id]) {
-                delete rooms[roomId].players[socket.id];
+                disconnectedPlayers[socket.id] = { roomId, player: rooms[roomId].players[socket.id] };
 
-                const remainingPlayers = Object.keys(rooms[roomId].players);
+                console.log(`⏳ Attente 5 secondes avant de supprimer ${socket.id} de Room ${roomId}...`);
 
-                if (remainingPlayers.length === 0) {
-                    delete rooms[roomId];
-                    console.log(`🗑️ Suppression de la Room ${roomId}`);
-                } else {
-                    console.log(`⚠️ Joueur déconnecté, mais l'autre joueur est toujours présent.`);
-                    io.to(roomId).emit("opponent_disconnected");
+                setTimeout(() => {
+                    if (disconnectedPlayers[socket.id]) {
+                        delete rooms[roomId].players[socket.id];
 
-                    // ✅ Réémission de `game_start` si un joueur revient dans les 10s
-                    setTimeout(() => {
-                        if (rooms[roomId] && Object.keys(rooms[roomId].players).length === 1) {
-                            console.log(`🔄 Tentative de récupération de la room ${roomId}`);
-                            io.to(roomId).emit("wait_for_reconnect", { message: "Attente de votre adversaire..." });
+                        if (Object.keys(rooms[roomId].players).length === 0) {
+                            delete rooms[roomId];
+                            console.log(`🗑️ Suppression de la Room ${roomId}`);
+                        } else {
+                            io.to(roomId).emit("opponent_disconnected");
                         }
-                    }, 10000);
-                }
+
+                        delete disconnectedPlayers[socket.id];
+                    }
+                }, 5000);
             }
         }
 
         if (waitingPlayer && waitingPlayer.id === socket.id) {
             waitingPlayer = null;
+        }
+    });
+
+    socket.on("reconnect_attempt", ({ roomId, name, avatar }) => {
+        if (disconnectedPlayers[socket.id] && disconnectedPlayers[socket.id].roomId === roomId) {
+            rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
+            socket.join(roomId);
+
+            console.log(`✅ Joueur ${name} a récupéré sa connexion dans Room ${roomId}`);
+
+            io.to(roomId).emit("opponent_reconnected", { name, avatar });
+
+            delete disconnectedPlayers[socket.id];
         }
     });
 });

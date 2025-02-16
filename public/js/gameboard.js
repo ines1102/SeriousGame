@@ -29,13 +29,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("player-avatar").src = userAvatar;
         document.getElementById("opponent-name").textContent = opponent.name;
         document.getElementById("opponent-avatar").src = opponent.avatar;
-
-        console.log(`👤 Joueur : ${userName} - Avatar : ${userAvatar}`);
-        console.log(`👤 Adversaire : ${opponent.name} - Avatar : ${opponent.avatar}`);
     });
 
     setTimeout(() => {
         console.log("⏳ Vérification : aucun `game_start` reçu après 5 secondes ?");
         socket.emit("check_game_start", { roomId });
     }, 5000);
+
+    window.addEventListener("beforeunload", () => {
+        sessionStorage.setItem("disconnected", "true");
+        socket.emit("manual_disconnect", { roomId, userName });
+    });
 });
