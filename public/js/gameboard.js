@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("🔄 Initialisation du jeu...");
 
-    // Vérification des données utilisateur
     const userName = sessionStorage.getItem("userName");
     const userAvatar = sessionStorage.getItem("userAvatar");
     const roomId = sessionStorage.getItem("roomId");
@@ -15,119 +14,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // Connexion au serveur via socket.io
     const socket = io();
 
-    // Émettre un événement pour rejoindre la room
     socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
-    // Mise à jour du profil joueur
     document.getElementById("player-name").textContent = userName;
     document.getElementById("player-avatar").src = userAvatar;
 
-    // Écoute de l'événement `game_start`
     socket.on("game_start", (gameData) => {
         console.log("✅ Game start reçu :", gameData);
 
-        if (!gameData.player2) {
-            console.warn("⚠️ Aucun adversaire trouvé !");
-            return;
-        }
+        let opponent = gameData.player1.name === userName ? gameData.player2 : gameData.player1;
 
-        // Mise à jour du profil adversaire
-        document.getElementById("opponent-name").textContent = gameData.player2.name;
-        document.getElementById("opponent-avatar").src = gameData.player2.avatar;
+        document.getElementById("opponent-name").textContent = opponent.name;
+        document.getElementById("opponent-avatar").src = opponent.avatar;
 
-        console.log("🎭 Profil adversaire mis à jour :", gameData.player2.name, gameData.player2.avatar);
-
-        // Afficher les mains des joueurs
-        displayHand(gameData.player1Hand, document.getElementById("player-hand"));
-        displayOpponentHand(gameData.player2Hand, document.getElementById("opponent-hand"));
+        console.log(`🎭 Profil adversaire mis à jour : ${opponent.name}, ${opponent.avatar}`);
     });
 
-    // Écoute du tour de jeu
     socket.on("update_turn", (currentTurn) => {
         const turnIndicator = document.getElementById("turn-indicator");
         turnIndicator.textContent = currentTurn === userName ? "Votre tour !" : "Tour de l'adversaire";
     });
 
-    // Gestion des cartes jouées
-    socket.on("card_played", ({ player, card, slot }) => {
-        console.log(`🎴 Carte jouée par ${player}: ${card} sur ${slot}`);
-
-        const dropArea = document.querySelector(`[data-slot="${slot}"]`);
-        if (dropArea) {
-            const cardElement = document.createElement("img");
-            cardElement.src = card;
-            cardElement.classList.add("card");
-            dropArea.appendChild(cardElement);
-        }
-    });
-
-    // Gestion de la déconnexion
-    socket.on("opponent_disconnected", () => {
-        console.warn("❌ L'adversaire s'est déconnecté !");
-        alert("Votre adversaire a quitté la partie.");
-    });
-
-    // Gestion de la reconnexion
-    socket.on("opponent_reconnected", (data) => {
-        console.log(`✅ ${data.name} est revenu !`);
-        document.getElementById("opponent-name").textContent = data.name;
-        document.getElementById("opponent-avatar").src = data.avatar;
-    });
-
-    // Gestion de la fin de partie
     socket.on("game_over", ({ winner }) => {
         alert(`🏆 Partie terminée ! Gagnant : ${winner}`);
         window.location.href = "/";
     });
 
-    /** 📌 **Fonctions d'affichage** */
+    socket.on("opponent_disconnected", () => {
+        console.warn("❌ L'adversaire s'est déconnecté !");
+        alert("Votre adversaire a quitté la partie.");
+    });
 
-    function displayHand(deck, handContainer) {
-        handContainer.innerHTML = "";
-        deck.forEach((card) => {
-            const cardElement = document.createElement("img");
-            cardElement.src = card;
-            cardElement.classList.add("card");
-            cardElement.draggable = true;
-
-            cardElement.addEventListener("dragstart", (event) => {
-                event.dataTransfer.setData("cardSrc", card);
-            });
-
-            handContainer.appendChild(cardElement);
-        });
-    }
-
-    function displayOpponentHand(deck, handContainer) {
-        handContainer.innerHTML = "";
-        deck.forEach(() => {
-            const cardBack = document.createElement("div");
-            cardBack.classList.add("card-back");
-            handContainer.appendChild(cardBack);
-        });
-    }
-
-    /** ✅ **Drag and Drop des cartes** */
-    document.querySelectorAll(".drop-area").forEach((dropArea) => {
-        dropArea.addEventListener("dragover", (event) => {
-            event.preventDefault();
-        });
-
-        dropArea.addEventListener("drop", (event) => {
-            event.preventDefault();
-            const cardSrc = event.dataTransfer.getData("cardSrc");
-            if (cardSrc) {
-                const img = document.createElement("img");
-                img.src = cardSrc;
-                img.classList.add("card");
-                dropArea.appendChild(img);
-
-                // Envoyer l'action au serveur
-                socket.emit("play_card", { roomId, player: userName, card: cardSrc, slot: dropArea.dataset.slot });
-            }
-        });
+    socket.on("opponent_reconnected", (data) => {
+        console.log(`✅ ${data.name} est revenu !`);
+        document.getElementById("opponent-name").textContent = data.name;
+        document.getElementById("opponent-avatar").src = data.avatar;
     });
 });
