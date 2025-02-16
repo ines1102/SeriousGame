@@ -297,6 +297,10 @@ app.get('*', (req, res) => {
     res.sendFile(join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/game-room.html', (req, res) => {
+    res.sendFile(join(__dirname, 'public', 'game-room.html'));
+});
+
 // Gestion des erreurs
 app.use((err, req, res, next) => {
     console.error('Erreur:', err);
