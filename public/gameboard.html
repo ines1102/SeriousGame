@@ -2,65 +2,79 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gameboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Health Royale - En jeu</title>
+    
     <!-- Favicon -->
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
-    <link rel="manifest" href="./favicon_io/site.webmanifest">
+    <link rel="manifest" href="/favicon_io/site.webmanifest">
     
-    <!-- Styles -->
+    <!-- CSS -->
     <link rel="stylesheet" href="/css/gameboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-    <div id="game-container">
+    <main id="game-container" aria-live="polite">
         <!-- Profil de l'adversaire -->
         <div class="opponent-profile">
             <div class="opponent-avatar">
-                <img src="/avatars/default.png" alt="Avatar de l'adversaire">
+                <img id="opponent-avatar" src="/Avatars/default.jpeg" alt="Avatar de l'adversaire">
             </div>
-            <div class="opponent-name">En attente...</div>
-            <div class="health-bar">
-                <div class="health-fill" style="width: 100%;"></div>
+            <div id="opponent-name" class="opponent-name">En attente...</div>
+            <div class="opponent-health-bar">
+                <div class="opponent-health-bar-fill" style="width: 100%;"></div>
             </div>
         </div>
 
         <!-- Main de l'adversaire -->
-        <div id="opponent-hand" class="hand"></div>
+        <div id="opponent-hand" class="hand opponent-hand"></div>
 
-        <!-- Plateau de jeu avec Drop Areas -->
-        <div id="game-board">
-            <div class="drop-area opponent-area" data-slot="opponent-1"></div>
-            <div class="drop-area opponent-area" data-slot="opponent-2"></div>
-            <div class="drop-area opponent-area" data-slot="opponent-3"></div>
-            <div class="drop-area opponent-area" data-slot="opponent-4"></div>
-            <div class="drop-area opponent-area" data-slot="opponent-5"></div>
+        <!-- Plateau de jeu -->
+        <section id="game-board" class="game-board">
+            <div class="play-area">
+                <!-- Zone de jeu adversaire -->
+                <div class="game-areas opponent-areas">
+                    <div class="drop-area" data-slot="opponent-1"></div>
+                    <div class="drop-area" data-slot="opponent-2"></div>
+                    <div class="drop-area" data-slot="opponent-3"></div>
+                    <div class="drop-area" data-slot="opponent-4"></div>
+                    <div class="drop-area" data-slot="opponent-5"></div>
+                </div>
 
-            <div class="drop-area player-area" data-slot="player-1"></div>
-            <div class="drop-area player-area" data-slot="player-2"></div>
-            <div class="drop-area player-area" data-slot="player-3"></div>
-            <div class="drop-area player-area" data-slot="player-4"></div>
-            <div class="drop-area player-area" data-slot="player-5"></div>
-        </div>
+                <!-- Zone de jeu joueur -->
+                <div class="game-areas player-areas">
+                    <div class="drop-area" data-slot="player-1"></div>
+                    <div class="drop-area" data-slot="player-2"></div>
+                    <div class="drop-area" data-slot="player-3"></div>
+                    <div class="drop-area" data-slot="player-4"></div>
+                    <div class="drop-area" data-slot="player-5"></div>
+                </div>
+            </div>
+        </section>
 
         <!-- Profil du joueur -->
         <div class="player-profile">
             <div class="player-avatar">
-                <img src="/avatars/default.png" alt="Votre avatar">
+                <img id="player-avatar" src="/Avatars/default.jpeg" alt="Votre avatar">
             </div>
-            <div class="player-name">Joueur</div>
-            <div class="health-bar">
-                <div class="health-fill" style="width: 100%;"></div>
+            <div id="player-name" class="player-name">Votre nom</div>
+            <div class="player-health-bar">
+                <div class="player-health-bar-fill" style="width: 100%;"></div>
             </div>
         </div>
 
         <!-- Main du joueur -->
-        <div id="player-hand" class="hand"></div>
+        <div id="player-hand" class="hand player-hand"></div>
 
-        <!-- Scripts -->
-        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-        <script src="/js/gameboard.js"></script>
-    </div>
+        <!-- Indicateur de tour -->
+        <div id="turn-indicator" class="turn-indicator"></div>
+    </main>
+
+    <script src="/js/socketManager.js"></script>
+    <script src="/js/gameboard.js"></script>
 </body>
 </html>
