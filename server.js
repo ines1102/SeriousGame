@@ -28,13 +28,13 @@ io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
     // 📌 Mode Aléatoire
-    socket.on("find_random_room", ({ name, avatar }) => {
+    socket.on("find_random_room", ({ name, sex, avatar }) => {
         if (waitingPlayer) {
             const roomId = generateRoomId();
             rooms[roomId] = { players: {} };
 
             rooms[roomId].players[waitingPlayer.id] = waitingPlayer;
-            rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
+            rooms[roomId].players[socket.id] = { id: socket.id, name, sex, avatar };
 
             io.to(waitingPlayer.id).emit("game_found", { roomId });
             io.to(socket.id).emit("game_found", { roomId });
@@ -42,26 +42,28 @@ io.on("connection", (socket) => {
             io.sockets.sockets.get(waitingPlayer.id)?.join(roomId);
             socket.join(roomId);
 
-            console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} vs ${name} dans Room ${roomId}`);
+            console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} (${waitingPlayer.sex}) vs ${name} (${sex}) dans Room ${roomId}`);
+            console.log(`👤 Joueur 1 :`, waitingPlayer);
+            console.log(`👤 Joueur 2 :`, { id: socket.id, name, sex, avatar });
 
             startGameIfReady(roomId);
             waitingPlayer = null;
         } else {
-            waitingPlayer = { id: socket.id, name, avatar };
-            console.log(`⌛ Joueur ${name} en attente d'un adversaire...`);
+            waitingPlayer = { id: socket.id, name, sex, avatar };
+            console.log(`⌛ Joueur ${name} (${sex}) en attente d'un adversaire...`);
         }
     });
 
     // 📌 Mode Avec un Ami
-    socket.on("join_private_game", ({ roomId, name, avatar }) => {
+    socket.on("join_private_game", ({ roomId, name, sex, avatar }) => {
         if (!rooms[roomId]) {
             rooms[roomId] = { players: {} };
         }
 
-        rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
+        rooms[roomId].players[socket.id] = { id: socket.id, name, sex, avatar };
         socket.join(roomId);
 
-        console.log(`👥 Joueur ${name} a rejoint Room ${roomId}`);
+        console.log(`👥 Joueur ${name} (${sex}) a rejoint Room ${roomId}`);
 
         io.to(socket.id).emit("room_joined", { roomId });
 
@@ -100,7 +102,13 @@ function startGameIfReady(roomId) {
                 player1: players[0],
                 player2: players[1]
             });
-            console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
+
+            console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} (${players[0].sex}) vs ${players[1].name} (${players[1].sex})`);
+            console.log(`📌 Profils des joueurs mis à jour :`);
+            console.log(`👤 Joueur 1 :`, players[0]);
+            console.log(`👤 Joueur 2 :`, players[1]);
+        } else {
+            console.log(`⚠️ Impossible de démarrer le jeu dans la Room ${roomId}, il manque un joueur.`);
         }
     }
 }
