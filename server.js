@@ -28,7 +28,7 @@ let waitingPlayer = null;
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
-    // 📌 Mode Aléatoire
+    // 📌 Mode Aléatoire : Assigner un adversaire dès que possible
     socket.on("find_random_room", ({ name, avatar }) => {
         if (waitingPlayer) {
             const roomId = generateRoomId();
@@ -42,15 +42,15 @@ io.on("connection", (socket) => {
             io.to(waitingPlayer.id).emit("game_found", { roomId });
             io.to(socket.id).emit("game_found", { roomId });
 
-            io.sockets.sockets.get(waitingPlayer.id).join(roomId);
+            io.sockets.sockets.get(waitingPlayer.id)?.join(roomId);
             socket.join(roomId);
 
             console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} vs ${name} dans Room ${roomId}`);
 
-            // Lancer la partie
+            // **Forcer l'émission immédiate de `game_start`**
             startGameIfReady(roomId);
 
-            waitingPlayer = null; 
+            waitingPlayer = null;
         } else {
             waitingPlayer = { id: socket.id, name, avatar };
             console.log(`⌛ Joueur ${name} en attente d'un adversaire...`);
@@ -70,9 +70,24 @@ io.on("connection", (socket) => {
 
         io.to(socket.id).emit("room_joined", { roomId });
 
-        // Vérifier si la room est complète et démarrer la partie
+        // **Forcer l'émission immédiate de `game_start`**
         startGameIfReady(roomId);
     });
+
+    // 📌 Vérifier si une room a 2 joueurs et démarrer immédiatement le jeu
+    function startGameIfReady(roomId) {
+        const players = Object.values(rooms[roomId]?.players || {});
+        if (players.length === 2) {
+            console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
+
+            io.to(roomId).emit("game_start", {
+                player1: players[0],
+                player2: players[1],
+            });
+
+            console.log("📌 Profils des joueurs envoyés aux clients :", players);
+        }
+    }
 
     // 📌 Gestion des déconnexions
     socket.on("disconnect", () => {
@@ -95,37 +110,12 @@ io.on("connection", (socket) => {
             waitingPlayer = null;
         }
     });
-
-    // 📌 Vérifier si la room a 2 joueurs et démarrer la partie
-    function startGameIfReady(roomId) {
-        const players = Object.values(rooms[roomId].players);
-    
-        if (players.length === 2) {
-            console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
-    
-            // 🔍 Vérifier si la room contient bien les deux joueurs
-            console.log(`📌 Vérification : joueurs connectés dans la Room ${roomId}`, io.sockets.adapter.rooms.get(roomId));
-    
-            // 🔥 **Tester si les joueurs reçoivent un message simple**
-            io.to(roomId).emit("test_connection", { message: "Test : êtes-vous bien dans la room ?" });
-    
-            // ✅ Émettre `game_start`
-            io.to(roomId).emit("game_start", {
-                player1: players[0],
-                player2: players[1]
-            });
-    
-            console.log("📌 Profils des joueurs envoyés aux clients :", players);
-        } else {
-            console.warn(`⚠️ Pas assez de joueurs dans la Room ${roomId}, en attente...`);
-        }
-    }
-
-    // 📌 Générer un ID unique de 4 chiffres pour les rooms privées
-    function generateRoomId() {
-        return Math.floor(1000 + Math.random() * 9000).toString();
-    }
 });
+
+// 📌 Générer un ID unique de 4 chiffres pour les rooms privées
+function generateRoomId() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+}
 
 // 📌 Démarrer le serveur
 httpServer.listen(PORT, () => console.log(`🚀 Serveur en ligne sur http://localhost:${PORT}`));
