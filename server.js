@@ -89,7 +89,7 @@ class Game {
         return {
             id: Math.random().toString(36).substr(2, 9),
             ...type,
-            image: `cards/${type.name.toLowerCase()}.jpg`
+            image: `Cartes/${type.name.toLowerCase()}.jpg`
         };
     }
 
