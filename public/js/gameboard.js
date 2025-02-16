@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     socket.on("game_start", (gameData) => {
         console.log("✅ Game start reçu :", gameData);
 
-        if (!gameData.opponent) {
+        if (!gameData.opponent || !gameData.opponent.name || !gameData.opponent.avatar) {
             console.warn("⚠️ Aucun adversaire trouvé !");
             return;
         }
@@ -42,12 +42,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         // 📌 Mise en place des cartes
         displayHand(gameData.playerHand, document.getElementById("player-hand"));
         displayOpponentHand(gameData.opponentHand, document.getElementById("opponent-hand"));
+
+        // 📌 Mettre à jour les cartes déjà placées
+        updateBoard(gameData.board);
     });
 
     // ✅ Écoute du tour de jeu
     socket.on("update_turn", (currentTurn) => {
         const turnIndicator = document.getElementById("turn-indicator");
-        turnIndicator.textContent = currentTurn === userName ? "Votre tour !" : "Tour de l'adversaire";
+        turnIndicator.textContent = currentTurn === userName ? "🟢 Votre tour !" : "🔴 Tour de l'adversaire";
     });
 
     // ✅ Gestion des cartes jouées
@@ -58,19 +61,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (dropArea) {
             const cardElement = document.createElement("img");
             cardElement.src = card;
+            cardElement.alt = "Carte jouée";
             cardElement.classList.add("card");
             dropArea.appendChild(cardElement);
         }
     });
 
-    // ✅ Gestion de la déconnexion
+    // ✅ Mise à jour du plateau de jeu
+    socket.on("update_board", (boardState) => {
+        console.log("🔄 Mise à jour du plateau de jeu :", boardState);
+        updateBoard(boardState);
+    });
+
+    // ✅ Gestion de la déconnexion de l'adversaire
     socket.on("opponent_disconnected", () => {
         console.warn("❌ L'adversaire s'est déconnecté !");
         alert("Votre adversaire a quitté la partie.");
         document.getElementById("disconnect-overlay").classList.remove("hidden");
     });
 
-    // ✅ Gestion de la reconnexion
+    // ✅ Gestion de la reconnexion de l'adversaire
     socket.on("opponent_reconnected", (data) => {
         console.log(`✅ ${data.name} est revenu !`);
         document.querySelector(".opponent-name").textContent = data.name;
@@ -91,6 +101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         deck.forEach((card) => {
             const cardElement = document.createElement("img");
             cardElement.src = card;
+            cardElement.alt = "Carte";
             cardElement.classList.add("card");
             cardElement.draggable = true;
 
@@ -111,6 +122,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    /** ✅ **Mise à jour du plateau de jeu** */
+    function updateBoard(boardState) {
+        document.querySelectorAll(".drop-area").forEach((dropArea) => {
+            dropArea.innerHTML = "";
+            const slot = dropArea.dataset.slot;
+            if (boardState[slot]) {
+                const img = document.createElement("img");
+                img.src = boardState[slot];
+                img.alt = "Carte placée";
+                img.classList.add("card");
+                dropArea.appendChild(img);
+            }
+        });
+    }
+
     /** ✅ **Drag and Drop des cartes** */
     document.querySelectorAll(".drop-area").forEach((dropArea) => {
         dropArea.addEventListener("dragover", (event) => {
@@ -123,6 +149,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (cardSrc) {
                 const img = document.createElement("img");
                 img.src = cardSrc;
+                img.alt = "Carte jouée";
                 img.classList.add("card");
                 dropArea.appendChild(img);
 
