@@ -3,7 +3,7 @@ const socketManager = (() => {
     let isConnected = false;
     let connectionPromise = null;
 
-    function connect() {
+    async function connect() {
         if (!socket) {
             console.log("✅ Connexion Socket.IO en cours...");
 
@@ -35,7 +35,7 @@ const socketManager = (() => {
         return socket;
     }
 
-    return { getSocket, connect };
+    return { getSocket };
 })();
 
 export default socketManager;
