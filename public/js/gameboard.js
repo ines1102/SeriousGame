@@ -32,7 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const player1 = gameData.player1;
         const player2 = gameData.player2;
 
-        // Vérifier quel joueur est l'utilisateur actuel
         let opponent;
         if (player1.name === userName) {
             opponent = player2;
@@ -48,7 +47,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         // 🎭 **Mise à jour du profil adversaire**
         document.getElementById("opponent-name").textContent = opponent.name;
         document.getElementById("opponent-avatar").src = opponent.avatar;
-        
+
+        // ✅ **Affichage dans la console client**
         console.log("📌 Profils des joueurs mis à jour (Client) :");
         console.log("👤 Joueur :", { name: userName, avatar: userAvatar });
         console.log("👤 Adversaire :", { name: opponent.name, avatar: opponent.avatar });
@@ -58,33 +58,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         displayOpponentHand(gameData.opponentHand, document.getElementById("opponent-hand"));
     });
 
-    // ✅ Gestion des tours
-    socket.on("update_turn", (currentTurn) => {
-        const turnIndicator = document.getElementById("turn-indicator");
-        turnIndicator.textContent = currentTurn === userName ? "Votre tour !" : "Tour de l'adversaire";
-    });
-
-    // ✅ Gestion des cartes jouées
-    socket.on("card_played", ({ player, card, slot }) => {
-        console.log(`🎴 Carte jouée par ${player}: ${card} sur ${slot}`);
-
-        const dropArea = document.querySelector(`[data-slot="${slot}"]`);
-        if (dropArea) {
-            const cardElement = document.createElement("img");
-            cardElement.src = card;
-            cardElement.classList.add("card");
-            dropArea.appendChild(cardElement);
-        }
-    });
-
-    // ✅ Gestion de la déconnexion de l'adversaire
+    // ✅ Gestion des déconnexions et reconnexions
     socket.on("opponent_disconnected", () => {
         console.warn("❌ L'adversaire s'est déconnecté !");
         alert("Votre adversaire a quitté la partie.");
         document.getElementById("disconnect-overlay").classList.remove("hidden");
     });
 
-    // ✅ Gestion de la reconnexion de l'adversaire
     socket.on("opponent_reconnected", (data) => {
         console.log(`✅ ${data.name} est revenu !`);
         document.getElementById("opponent-name").textContent = data.name;

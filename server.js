@@ -102,15 +102,12 @@ io.on("connection", (socket) => {
         if (players.length === 2) {
             console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
 
-            // ✅ Affichage des infos des joueurs sur le serveur
-            console.log("📌 Profils des joueurs mis à jour :");
-            console.log("👤 Joueur 1 :", players[0]);
-            console.log("👤 Joueur 2 :", players[1]);
-
             io.to(roomId).emit("game_start", {
                 player1: players[0],
-                player2: players[1],
+                player2: players[1]
             });
+
+            console.log("📌 Profils des joueurs envoyés aux clients :", players);
         }
     }
 
