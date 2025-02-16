@@ -99,16 +99,17 @@ io.on("connection", (socket) => {
     // 📌 Vérifier si la room a 2 joueurs et démarrer la partie
     function startGameIfReady(roomId) {
         const players = Object.values(rooms[roomId].players);
+    
         if (players.length === 2) {
             console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
     
-            // S'assurer que les joueurs sont bien dans la room
-            console.log(`📌 Vérification : joueurs dans la Room ${roomId}`, io.sockets.adapter.rooms.get(roomId));
+            // 🔍 Vérifier si la room contient bien les deux joueurs
+            console.log(`📌 Vérification : joueurs connectés dans la Room ${roomId}`, io.sockets.adapter.rooms.get(roomId));
     
-            // 📌 Vérification avant l'émission de `game_start`
-            io.to(roomId).emit("test_connection", { message: "Test si les clients reçoivent cet événement" });
+            // 🔥 **Tester si les joueurs reçoivent un message simple**
+            io.to(roomId).emit("test_connection", { message: "Test : êtes-vous bien dans la room ?" });
     
-            // 🔥 **Émettre `game_start`**
+            // ✅ Émettre `game_start`
             io.to(roomId).emit("game_start", {
                 player1: players[0],
                 player2: players[1]
