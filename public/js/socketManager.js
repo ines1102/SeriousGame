@@ -1,5 +1,6 @@
 const socketManager = (() => {
     let socket = null;
+    let isConnected = false;
 
     function connect() {
         if (!socket) {
@@ -9,18 +10,20 @@ const socketManager = (() => {
             });
 
             socket.on("connect", () => {
+                isConnected = true;
                 console.log("✅ Connexion établie avec succès !");
             });
 
             socket.on("disconnect", () => {
+                isConnected = false;
                 console.warn("❌ Déconnexion du serveur détectée.");
             });
         }
     }
 
     function getSocket() {
-        if (!socket) {
-            console.warn("⚠️ Socket.IO non initialisé, connexion en cours...");
+        if (!socket || !isConnected) {
+            console.warn("⚠️ Socket.IO non initialisé ou pas encore connecté, tentative de connexion...");
             connect();
         }
         return socket;
