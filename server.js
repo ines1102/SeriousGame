@@ -4,7 +4,6 @@ import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// 📌 Configuration ES Module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -17,20 +16,19 @@ const PORT = process.env.PORT || 10000;
 // 📌 Servir les fichiers statiques
 app.use(express.static(path.join(__dirname, "public")));
 
-// 📌 Routes
+// 📌 Routes HTML
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 app.get("/choose-mode", (req, res) => res.sendFile(path.join(__dirname, "public/choose-mode.html")));
 app.get("/room-choice", (req, res) => res.sendFile(path.join(__dirname, "public/room-choice.html")));
 app.get("/gameboard", (req, res) => res.sendFile(path.join(__dirname, "public/gameboard.html")));
 
-// 📌 Gestion des rooms et des joueurs
 let rooms = {};
-let waitingPlayer = null; // Stocker un joueur en attente de match aléatoire
+let waitingPlayer = null;
 
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
-    // 📌 Mode Aléatoire : Trouver une room disponible
+    // 📌 Mode Aléatoire
     socket.on("find_random_room", ({ name, avatar }) => {
         if (waitingPlayer) {
             const roomId = generateRoomId();
@@ -52,15 +50,14 @@ io.on("connection", (socket) => {
             // Lancer la partie
             startGameIfReady(roomId);
 
-            waitingPlayer = null; // Reset attente
+            waitingPlayer = null; 
         } else {
-            // Stocker le joueur en attente
             waitingPlayer = { id: socket.id, name, avatar };
             console.log(`⌛ Joueur ${name} en attente d'un adversaire...`);
         }
     });
 
-    // 📌 Mode Avec un Ami : Rejoindre une room spécifique
+    // 📌 Mode Avec un Ami
     socket.on("join_private_game", ({ roomId, name, avatar }) => {
         if (!rooms[roomId]) {
             rooms[roomId] = { players: {} };
@@ -71,16 +68,13 @@ io.on("connection", (socket) => {
 
         console.log(`👥 Joueur ${name} a rejoint Room ${roomId}`);
 
+        io.to(socket.id).emit("room_joined", { roomId });
+
         // Vérifier si la room est complète et démarrer la partie
         startGameIfReady(roomId);
     });
 
-    // 📌 Jouer une carte
-    socket.on("play_card", ({ roomId, player, card, slot }) => {
-        io.to(roomId).emit("card_played", { player, card, slot });
-    });
-
-    // 📌 Gestion de la déconnexion
+    // 📌 Gestion des déconnexions
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion : ${socket.id}`);
 
@@ -88,7 +82,6 @@ io.on("connection", (socket) => {
             if (rooms[roomId].players[socket.id]) {
                 delete rooms[roomId].players[socket.id];
 
-                // Si la room devient vide, la supprimer
                 if (Object.keys(rooms[roomId].players).length === 0) {
                     delete rooms[roomId];
                     console.log(`🗑️ Suppression de la Room ${roomId}`);
@@ -98,7 +91,6 @@ io.on("connection", (socket) => {
             }
         }
 
-        // Si un joueur était en attente de match aléatoire, l'annuler
         if (waitingPlayer && waitingPlayer.id === socket.id) {
             waitingPlayer = null;
         }
@@ -117,9 +109,9 @@ function startGameIfReady(roomId) {
     }
 }
 
-// 📌 Générer un ID unique pour une room
+// 📌 Générer un ID unique de 4 chiffres pour les rooms privées
 function generateRoomId() {
-    return Math.random().toString(36).substr(2, 6);
+    return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
 // 📌 Démarrer le serveur
