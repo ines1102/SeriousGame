@@ -1,18 +1,31 @@
-// ✅ Connexion unique à Socket.IO
-const socket = io("https://seriousgame-ds65.onrender.com", {
-    transports: ["websocket"], // 🚀 Optimisation pour WebSocket direct
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 2000,
-});
+// socketManager.js
+import { io } from "https://cdn.socket.io/4.7.2/socket.io.min.js";
 
-// ✅ Événements de connexion
-socket.on("connect", () => {
-    console.log("✅ Connexion Socket.IO établie !");
-});
+class SocketManager {
+    constructor() {
+        if (!SocketManager.instance) {
+            this.socket = io();
+            this.init();
+            SocketManager.instance = this;
+        }
+        return SocketManager.instance;
+    }
 
-socket.on("disconnect", (reason) => {
-    console.warn(`❌ Déconnexion Socket.IO : ${reason}`);
-});
+    init() {
+        this.socket.on("connect", () => {
+            console.log("✅ Connexion Socket.IO établie !");
+        });
 
-export default socket;
+        this.socket.on("disconnect", () => {
+            console.warn("❌ Déconnexion du serveur détectée.");
+        });
+    }
+
+    getSocket() {
+        return this.socket;
+    }
+}
+
+// ✅ Exporter une instance unique
+const socketManager = new SocketManager();
+export default socketManager;
