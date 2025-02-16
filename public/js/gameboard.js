@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("🔄 Initialisation du jeu...");
 
-    // 📌 Vérification des données utilisateur stockées en session
+    // Récupération des données utilisateur
     const userName = sessionStorage.getItem("userName");
     const userAvatar = sessionStorage.getItem("userAvatar");
     const roomId = sessionStorage.getItem("roomId");
@@ -15,48 +15,56 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // 📌 Connexion au serveur via socket
+    // Connexion au serveur via socket.io
     const socket = io();
 
-    // 📌 Émettre un événement pour rejoindre la room
+    // ✅ Envoi de la demande de connexion
     socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
-    // ✅ Mise à jour du profil du joueur (CLIENT)
-    document.querySelector("#player-name").textContent = userName;
-    document.querySelector("#player-avatar").src = userAvatar;
+    // ✅ Mise à jour du profil joueur
+    document.getElementById("player-name").textContent = userName;
+    document.getElementById("player-avatar").src = userAvatar;
 
-    // 📌 Attente du début du jeu
+    // ✅ Écoute de l'événement `game_start` pour récupérer les deux joueurs
     socket.on("game_start", (gameData) => {
         console.log("✅ Game start reçu :", gameData);
 
-        if (!gameData.player1 || !gameData.player2) {
-            console.warn("⚠️ Impossible de trouver les deux joueurs !");
+        const player1 = gameData.player1;
+        const player2 = gameData.player2;
+
+        // Vérifier quel joueur est l'utilisateur actuel
+        let opponent;
+        if (player1.name === userName) {
+            opponent = player2;
+        } else {
+            opponent = player1;
+        }
+
+        if (!opponent) {
+            console.warn("⚠️ Aucun adversaire trouvé !");
             return;
         }
 
-        // 📌 Déterminer qui est l'adversaire
-        const opponent = gameData.player1.name === userName ? gameData.player2 : gameData.player1;
+        // 🎭 **Mise à jour du profil adversaire**
+        document.getElementById("opponent-name").textContent = opponent.name;
+        document.getElementById("opponent-avatar").src = opponent.avatar;
+        
+        console.log("📌 Profils des joueurs mis à jour (Client) :");
+        console.log("👤 Joueur :", { name: userName, avatar: userAvatar });
+        console.log("👤 Adversaire :", { name: opponent.name, avatar: opponent.avatar });
 
-        // ✅ Affichage des infos des joueurs dans la console web
-        console.log(`👤 Joueur : ${userName} - Avatar : ${userAvatar}`);
-        console.log(`🎭 Adversaire : ${opponent.name} - Avatar : ${opponent.avatar}`);
-
-        // ✅ Mise à jour du profil de l'adversaire
-        document.querySelector("#opponent-name").textContent = opponent.name;
-        document.querySelector("#opponent-avatar").src = opponent.avatar;
-
-        // 📌 Mise en place des cartes des joueurs
+        // 📌 Mise en place des cartes
         displayHand(gameData.playerHand, document.getElementById("player-hand"));
         displayOpponentHand(gameData.opponentHand, document.getElementById("opponent-hand"));
     });
 
-    // 📌 Écoute des tours de jeu
+    // ✅ Gestion des tours
     socket.on("update_turn", (currentTurn) => {
         const turnIndicator = document.getElementById("turn-indicator");
         turnIndicator.textContent = currentTurn === userName ? "Votre tour !" : "Tour de l'adversaire";
     });
 
-    // 📌 Gestion des cartes jouées
+    // ✅ Gestion des cartes jouées
     socket.on("card_played", ({ player, card, slot }) => {
         console.log(`🎴 Carte jouée par ${player}: ${card} sur ${slot}`);
 
@@ -69,22 +77,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
 
-    // 📌 Gestion de la déconnexion de l'adversaire
+    // ✅ Gestion de la déconnexion de l'adversaire
     socket.on("opponent_disconnected", () => {
         console.warn("❌ L'adversaire s'est déconnecté !");
         alert("Votre adversaire a quitté la partie.");
         document.getElementById("disconnect-overlay").classList.remove("hidden");
     });
 
-    // 📌 Reconnexion de l'adversaire
+    // ✅ Gestion de la reconnexion de l'adversaire
     socket.on("opponent_reconnected", (data) => {
         console.log(`✅ ${data.name} est revenu !`);
-        document.querySelector("#opponent-name").textContent = data.name;
-        document.querySelector("#opponent-avatar").src = data.avatar;
+        document.getElementById("opponent-name").textContent = data.name;
+        document.getElementById("opponent-avatar").src = data.avatar;
         document.getElementById("disconnect-overlay").classList.add("hidden");
     });
 
-    // 📌 Fin de la partie
+    // ✅ Gestion de la fin de partie
     socket.on("game_over", ({ winner }) => {
         alert(`🏆 Partie terminée ! Gagnant : ${winner}`);
         window.location.href = "/";
