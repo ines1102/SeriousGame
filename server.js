@@ -29,18 +29,15 @@ app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "publ
 
 // Stockage des rooms et joueurs
 const rooms = {};
+const playerStatus = {}; // Statut des joueurs
+const PING_INTERVAL = 5000; // Ping toutes les 5 sec
+const DISCONNECT_TIMEOUT = 15000; // Déconnexion après 15 sec
 
-// ✅ Ajout d’un système pour suivre les connexions des joueurs
-const playerStatus = {};  // Stocke les joueurs et leur dernier ping
-const PING_INTERVAL = 5000;  // Ping toutes les 5 secondes
-const DISCONNECT_TIMEOUT = 10000;  // Déconnecte après 10 secondes sans réponse
-
-// Ping/pong pour vérifier si un joueur est actif
+// ✅ Vérification périodique des connexions
 setInterval(() => {
     Object.keys(playerStatus).forEach((socketId) => {
-        const lastPing = playerStatus[socketId].lastPing;
-        if (Date.now() - lastPing > DISCONNECT_TIMEOUT) {
-            console.warn(`🛑 Suppression du joueur ${playerStatus[socketId].name} pour inactivité.`);
+        if (Date.now() - playerStatus[socketId].lastPing > DISCONNECT_TIMEOUT) {
+            console.warn(`🛑 Suppression de ${playerStatus[socketId].name} pour inactivité.`);
             removePlayerFromRoom(socketId);
         }
     });
@@ -49,10 +46,10 @@ setInterval(() => {
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
-    // ⚡ Met à jour le statut du joueur lors de la connexion
+    // ✅ Ajoute le joueur dans le suivi des connexions
     playerStatus[socket.id] = { lastPing: Date.now(), connected: true };
 
-    /** ✅ Mode Joueur Aléatoire */
+    /** 🎮 Mode Joueur Aléatoire */
     socket.on("find_random_room", (playerData) => {
         let roomId = Object.keys(rooms).find((id) => rooms[id].players.length === 1);
         if (!roomId) {
@@ -70,7 +67,7 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** ✅ Mode Jouer entre amis */
+    /** 🎮 Mode Jouer entre amis */
     socket.on("create_room", ({ roomId, name, avatar }) => {
         if (!rooms[roomId]) rooms[roomId] = { players: [] };
         socket.join(roomId);
@@ -91,16 +88,19 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** ✅ Vérification des connexions */
+    /** 🔄 Vérification de l'activité des joueurs */
     socket.on("pong", () => {
         if (playerStatus[socket.id]) {
             playerStatus[socket.id].lastPing = Date.now();
         }
     });
 
-    /** ✅ Déconnexion */
+    /** ✅ Gestion des déconnexions avec temporisation */
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion détectée : ${socket.id}`);
+        if (rooms[roomId]) {
+            console.log(`⚠️ Joueur ${socket.id} pourrait être encore connecté, attente...`);
+        }
         setTimeout(() => {
             if (playerStatus[socket.id] && Date.now() - playerStatus[socket.id].lastPing > DISCONNECT_TIMEOUT) {
                 console.warn(`❌ Joueur ${socket.id} réellement déconnecté.`);
@@ -111,13 +111,31 @@ io.on("connection", (socket) => {
         }, DISCONNECT_TIMEOUT);
     });
 
+    /** 🎮 Gestion des reconnexions */
+    socket.on("rejoin_game", ({ roomId, name, avatar }) => {
+        if (!rooms[roomId]) {
+            console.warn(`⚠️ Tentative de reconnexion à Room ${roomId}, mais elle n'existe plus.`);
+            io.to(socket.id).emit("room_not_found");
+            return;
+        }
+
+        // Ajoute le joueur à la room si nécessaire
+        if (!rooms[roomId].players.some((p) => p.id === socket.id)) {
+            rooms[roomId].players.push({ id: socket.id, name, avatar });
+            console.log(`🔄 ${name} tente de rejoindre Room ${roomId} après reconnexion.`);
+        }
+
+        socket.join(roomId);
+        io.to(socket.id).emit("rejoined", roomId);
+    });
+
     /** ✅ Quitter une Room */
     socket.on("leave_room", () => {
         removePlayerFromRoom(socket.id);
     });
 });
 
-/** ✅ Fonction pour démarrer la partie */
+/** 🎮 Fonction pour démarrer la partie */
 function startGame(roomId) {
     if (!rooms[roomId] || rooms[roomId].players.length !== 2) return;
     const [player1, player2] = rooms[roomId].players;
