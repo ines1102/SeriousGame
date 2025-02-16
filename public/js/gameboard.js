@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ✅ Émettre un événement pour rejoindre la room
     socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
-    // **🔹 Mise à jour de l'interface joueur**
+    // ✅ Mise à jour du profil joueur
     document.querySelector(".player-name").textContent = userName;
     document.querySelector(".player-avatar img").src = userAvatar;
 
@@ -29,14 +29,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     socket.on("game_start", (gameData) => {
         console.log("✅ Game start reçu :", gameData);
 
-        if (!gameData.opponent || !gameData.opponent.name || !gameData.opponent.avatar) {
-            console.warn("⚠️ Aucun adversaire trouvé !");
+        if (!gameData.opponent) {
+            console.warn("⚠️ Aucun adversaire trouvé ! Attente de mise à jour...");
             return;
         }
 
         // 🎭 **Mise à jour du profil adversaire**
-        document.querySelector(".opponent-name").textContent = gameData.opponent.name;
-        document.querySelector(".opponent-avatar img").src = gameData.opponent.avatar;
+        updateOpponentProfile(gameData.opponent);
         console.log("🎭 Profil adversaire mis à jour :", gameData.opponent.name, gameData.opponent.avatar);
 
         // 📌 Mise en place des cartes
@@ -45,6 +44,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // 📌 Mettre à jour les cartes déjà placées
         updateBoard(gameData.board);
+    });
+
+    // ✅ Événement de mise à jour de l'adversaire
+    socket.on("update_opponent", (opponentData) => {
+        console.log("🔄 Mise à jour de l'adversaire :", opponentData);
+        updateOpponentProfile(opponentData);
     });
 
     // ✅ Écoute du tour de jeu
@@ -83,8 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ✅ Gestion de la reconnexion de l'adversaire
     socket.on("opponent_reconnected", (data) => {
         console.log(`✅ ${data.name} est revenu !`);
-        document.querySelector(".opponent-name").textContent = data.name;
-        document.querySelector(".opponent-avatar img").src = data.avatar;
+        updateOpponentProfile(data);
         document.getElementById("disconnect-overlay").classList.add("hidden");
     });
 
@@ -95,6 +99,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     /** 📌 **Fonctions d'affichage** */
+
+    function updateOpponentProfile(opponent) {
+        if (opponent && opponent.name && opponent.avatar) {
+            document.querySelector(".opponent-name").textContent = opponent.name;
+            document.querySelector(".opponent-avatar img").src = opponent.avatar;
+        } else {
+            console.warn("⚠️ Impossible de mettre à jour l'adversaire, données manquantes.");
+        }
+    }
 
     function displayHand(deck, handContainer) {
         handContainer.innerHTML = "";
