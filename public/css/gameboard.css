@@ -1,4 +1,4 @@
-/* Variables globales */
+/* 🎨 Variables globales */
 :root {
     --primary-color: #4a90e2;
     --secondary-color: #50b04f;
@@ -8,7 +8,7 @@
     --hover-color: #357abd;
 }
 
-/* Reset */
+/* 🛑 Reset */
 * {
     margin: 0;
     padding: 0;
@@ -22,42 +22,45 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     height: 100vh;
 }
 
-/* Profils des joueurs */
+/* 🏆 Profils des joueurs */
 .player-profile, .opponent-profile {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 10px;
     width: 100%;
-    max-width: 400px;
+    max-width: 350px;  
     justify-content: center;
+    text-align: center;
 }
 
+/* 📷 Avatars */
 .avatar-img {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     border: 2px solid var(--primary-color);
 }
 
-.opponent-avatar img {
-    width: 60px;
-    height: 60px;
+.opponent-avatar img, .player-avatar img {
+    width: 50px; 
+    height: 50px;
     border-radius: 50%;
-    border: 3px solid #4a90e2;
+    border: 3px solid var(--primary-color);
     object-fit: cover;
 }
 
+/* 🏷️ Noms des joueurs */
 .player-name, .opponent-name {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: bold;
 }
 
-/* Barre de vie */
+/* ❤️ Barre de vie */
 .player-health-bar, .opponent-health-bar {
     width: 100%;
     height: 10px;
@@ -71,13 +74,39 @@ body {
     background-color: var(--secondary-color);
 }
 
-/* Main des joueurs */
-.hand {
+/* 🎮 Zone de jeu principale */
+.game-board {
     display: flex;
-    gap: 10px;
-    margin: 20px 0;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    width: 100%;
+    max-width: 600px;
 }
 
+/* 📍 Drop Areas - **En deux lignes de 5 cases** */
+.game-areas {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+/* 🎯 Drop Zones */
+.drop-area {
+    width: 80px;
+    height: 120px;
+    border: 2px dashed var(--border-color);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+}
+
+/* 🃏 Cartes */
 .card {
     width: 70px;
     height: 100px;
@@ -91,32 +120,56 @@ body {
     transform: scale(1.1);
 }
 
-/* Plateau de jeu */
-.game-board {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    padding: 20px;
-    width: 100%;
-    max-width: 600px;
-}
-
-/* Zone de jeu */
-.drop-area {
-    width: 80px;
-    height: 120px;
-    border: 2px dashed var(--border-color);
+/* 🔄 Main de l'adversaire */
+.opponent-hand .card-back {
+    width: 70px;
+    height: 100px;
+    background: url("/img/card-back.png") center/cover no-repeat;
     border-radius: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-/* Indicateur de tour */
+/* 🎲 Indicateur de tour */
 .turn-indicator {
     margin-top: 10px;
     font-size: 1.2rem;
     font-weight: bold;
     color: var(--primary-color);
+}
+
+/* 🚨 Overlay de déconnexion */
+.disconnect-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.disconnect-message {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+}
+
+/* ❌ Message d'erreur */
+.status-message {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ff4444;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.status-message.show {
+    opacity: 1;
 }
