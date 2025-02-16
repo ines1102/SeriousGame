@@ -1,93 +1,91 @@
 // choose-mode.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Récupérer les données du joueur
     const playerData = JSON.parse(localStorage.getItem('playerData'));
-    
-    // Mettre à jour l'interface avec les données du joueur
-    if (playerData) {
-        document.getElementById('playerName').textContent = playerData.name;
-        document.getElementById('playerAvatar').src = `/Avatars/${playerData.avatar}`;
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    let socket;
+
+    // Initialiser Socket.IO
+    function initializeSocket() {
+        socket = io('https://seriousgame-ds65.onrender.com:1000', {
+            transports: ['websocket']
+        });
+
+        setupSocketListeners();
     }
 
-    // Gérer les clics sur les boutons de mode
-    document.querySelectorAll('.play-btn').forEach(button => {
-        button.addEventListener('click', async function(e) {
-            e.preventDefault();
-            const mode = this.dataset.mode;
-            
-            // Ajouter une classe pour l'animation de clic
-            this.classList.add('btn-clicked');
-            
-            // Désactiver les boutons pendant la transition
-            document.querySelectorAll('.play-btn').forEach(btn => {
-                btn.disabled = true;
-            });
-
-            try {
-                // Ajouter une animation de transition
-                const container = document.querySelector('.container');
-                container.style.opacity = '0';
-                container.style.transform = 'translateY(-20px)';
-                container.style.transition = 'all 0.5s ease';
-
-                // Attendre la fin de l'animation
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Rediriger vers la page appropriée
-                if (mode === 'random') {
-                    window.location.href = '/waiting-room.html';
-                } else if (mode === 'friend') {
-                    window.location.href = '/room-choice.html';
-                }
-            } catch (error) {
-                console.error('Erreur lors de la redirection:', error);
-                
-                // Réactiver les boutons en cas d'erreur
-                document.querySelectorAll('.play-btn').forEach(btn => {
-                    btn.disabled = false;
-                    btn.classList.remove('btn-clicked');
-                });
-
-                // Restaurer l'opacité
-                const container = document.querySelector('.container');
-                container.style.opacity = '1';
-                container.style.transform = 'translateY(0)';
-            }
-        });
-    });
-
-    // Ajouter des effets de survol aux cartes
-    document.querySelectorAll('.mode-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.querySelector('.mode-icon').style.transform = 'scale(1.1) rotate(5deg)';
+    // Configurer les écouteurs Socket.IO
+    function setupSocketListeners() {
+        socket.on('connect', () => {
+            console.log('Connecté au serveur');
         });
 
-        card.addEventListener('mouseleave', function() {
-            this.querySelector('.mode-icon').style.transform = 'scale(1) rotate(0)';
+        socket.on('waiting', () => {
+            showLoading('Recherche d\'un adversaire...');
         });
-    });
 
-    // Animation au chargement de la page
-    function animateElements() {
-        const elements = document.querySelectorAll('.fade-in');
-        elements.forEach((element, index) => {
-            element.style.animationDelay = `${index * 0.2}s`;
-            element.style.opacity = '1';
-        });
-    }
-
-    // Déclencher les animations après un court délai
-    setTimeout(animateElements, 100);
-
-    // Gérer le bouton retour
-    const backBtn = document.querySelector('.back-btn');
-    if (backBtn) {
-        backBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            document.body.style.opacity = '0';
+        socket.on('gameStart', (gameData) => {
+            showLoading('Adversaire trouvé !', 'Préparation de la partie...');
             setTimeout(() => {
-                window.history.back();
-            }, 300);
+                window.location.href = 'game-room.html';
+            }, 1500);
+        });
+
+        socket.on('error', (error) => {
+            hideLoading();
+            alert('Erreur de connexion. Veuillez réessayer.');
         });
     }
+
+    // Afficher l'overlay de chargement
+    function showLoading(message, subMessage = '') {
+        loadingOverlay.querySelector('.loading-text').textContent = message;
+        if (subMessage) {
+            const subText = document.createElement('div');
+            subText.className = 'loading-subtext';
+            subText.textContent = subMessage;
+            loadingOverlay.querySelector('.loading-content').appendChild(subText);
+        }
+        loadingOverlay.classList.add('active');
+    }
+
+    // Cacher l'overlay de chargement
+    function hideLoading() {
+        loadingOverlay.classList.remove('active');
+    }
+
+    // Mettre à jour les informations du joueur
+    function updatePlayerInfo() {
+        if (playerData) {
+            document.getElementById('playerName').textContent = playerData.name;
+            document.getElementById('playerAvatar').src = `Avatars/${playerData.avatar}`;
+        } else {
+            window.location.href = 'index.html';
+        }
+    }
+
+    // Gérer la sélection du mode
+    window.selectMode = function(mode) {
+        if (!socket) {
+            initializeSocket();
+        }
+
+        if (mode === 'random') {
+            showLoading('Recherche d\'un adversaire...');
+            socket.emit('joinRandomGame', playerData);
+        } else if (mode === 'friend') {
+            window.location.href = 'room-choice.html';
+        }
+    };
+
+    // Animation au chargement
+    function animateElements() {
+        document.querySelectorAll('.fade-in').forEach(el => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        });
+    }
+
+    // Initialisation
+    updatePlayerInfo();
+    setTimeout(animateElements, 100);
 });

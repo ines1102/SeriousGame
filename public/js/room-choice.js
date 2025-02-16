@@ -1,82 +1,91 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const userNameElement = document.getElementById("user-name");
-    const userAvatarElement = document.getElementById("user-avatar");
-    const createRoomButton = document.getElementById("create-room");
-    const joinRoomButton = document.getElementById("join-room");
-    const roomCodeInput = document.getElementById("room-code");
-    const loadingOverlay = document.getElementById("loading-overlay");
-    const cancelWaitButton = document.getElementById("cancel-wait");
-    const roomCodeDisplay = document.getElementById("room-code-display");
-    const displayCode = document.getElementById("display-code");
-    const copyCodeButton = document.getElementById("copy-code");
+// choose-mode.js
+document.addEventListener('DOMContentLoaded', function() {
+    const playerData = JSON.parse(localStorage.getItem('playerData'));
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    let socket;
 
-    const socket = io(); // Connexion au serveur Socket.io
+    // Initialiser Socket.IO
+    function initializeSocket() {
+        socket = io('https://seriousgame-ds65.onrender.com:1000', {
+            transports: ['websocket']
+        });
 
-    // Récupération des informations utilisateur
-    const userName = sessionStorage.getItem("userName");
-    const userAvatar = sessionStorage.getItem("userAvatar");
-    sessionStorage.setItem("roomId", roomId);
-    
-    if (userName) userNameElement.textContent = userName;
-    if (userAvatar) userAvatarElement.src = userAvatar;
-    else userAvatarElement.src = "/Avatars/default.jpeg"; // Avatar par défaut
-
-    /** Fonction pour générer un code de room à 4 chiffres */
-    function generateRoomCode() {
-        return Math.floor(1000 + Math.random() * 9000).toString();
+        setupSocketListeners();
     }
 
-    /** Création d'une room */
-    createRoomButton.addEventListener("click", () => {
-        const roomId = generateRoomCode();
-        sessionStorage.setItem("roomId", roomId);
-
-        // Affiche l'overlay de chargement
-        loadingOverlay.classList.remove("hidden");
-        roomCodeDisplay.classList.remove("hidden");
-        displayCode.textContent = roomId;
-
-        socket.emit("create_room", { roomId, name: userName, avatar: userAvatar });
-
-        socket.on("room_ready", () => {
-            window.location.href = "/gameboard.html"; // Rediriger vers le plateau de jeu
+    // Configurer les écouteurs Socket.IO
+    function setupSocketListeners() {
+        socket.on('connect', () => {
+            console.log('Connecté au serveur');
         });
-    });
 
-    /** Rejoindre une room existante */
-    joinRoomButton.addEventListener("click", () => {
-        const roomId = roomCodeInput.value.trim();
+        socket.on('waiting', () => {
+            showLoading('Recherche d\'un adversaire...');
+        });
 
-        if (roomId.length !== 4 || isNaN(roomId)) {
-            alert("Veuillez entrer un code de room valide (4 chiffres).");
-            return;
+        socket.on('gameStart', (gameData) => {
+            showLoading('Adversaire trouvé !', 'Préparation de la partie...');
+            setTimeout(() => {
+                window.location.href = 'game-room.html';
+            }, 1500);
+        });
+
+        socket.on('error', (error) => {
+            hideLoading();
+            alert('Erreur de connexion. Veuillez réessayer.');
+        });
+    }
+
+    // Afficher l'overlay de chargement
+    function showLoading(message, subMessage = '') {
+        loadingOverlay.querySelector('.loading-text').textContent = message;
+        if (subMessage) {
+            const subText = document.createElement('div');
+            subText.className = 'loading-subtext';
+            subText.textContent = subMessage;
+            loadingOverlay.querySelector('.loading-content').appendChild(subText);
+        }
+        loadingOverlay.classList.add('active');
+    }
+
+    // Cacher l'overlay de chargement
+    function hideLoading() {
+        loadingOverlay.classList.remove('active');
+    }
+
+    // Mettre à jour les informations du joueur
+    function updatePlayerInfo() {
+        if (playerData) {
+            document.getElementById('playerName').textContent = playerData.name;
+            document.getElementById('playerAvatar').src = `Avatars/${playerData.avatar}`;
+        } else {
+            window.location.href = 'index.html';
+        }
+    }
+
+    // Gérer la sélection du mode
+    window.selectMode = function(mode) {
+        if (!socket) {
+            initializeSocket();
         }
 
-        sessionStorage.setItem("roomId", roomId);
-        loadingOverlay.classList.remove("hidden");
+        if (mode === 'random') {
+            showLoading('Recherche d\'un adversaire...');
+            socket.emit('joinRandomGame', playerData);
+        } else if (mode === 'friend') {
+            window.location.href = 'room-choice.html';
+        }
+    };
 
-        socket.emit("join_room", { roomId, name: userName, avatar: userAvatar });
-
-        socket.on("room_joined", () => {
-            window.location.href = "/gameboard.html";
+    // Animation au chargement
+    function animateElements() {
+        document.querySelectorAll('.fade-in').forEach(el => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
         });
+    }
 
-        socket.on("room_not_found", () => {
-            alert("La room n'existe pas ou est pleine.");
-            loadingOverlay.classList.add("hidden");
-        });
-    });
-
-    /** Copier le code de la room */
-    copyCodeButton.addEventListener("click", () => {
-        navigator.clipboard.writeText(displayCode.textContent).then(() => {
-            alert("Code copié dans le presse-papiers !");
-        });
-    });
-
-    /** Annuler la recherche d'un adversaire */
-    cancelWaitButton.addEventListener("click", () => {
-        socket.emit("leave_room");
-        loadingOverlay.classList.add("hidden");
-    });
+    // Initialisation
+    updatePlayerInfo();
+    setTimeout(animateElements, 100);
 });
