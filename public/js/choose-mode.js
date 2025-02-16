@@ -1,5 +1,3 @@
-import { time } from "console";
-
 document.addEventListener('DOMContentLoaded', function() {
     const playerData = JSON.parse(localStorage.getItem('playerData'));
     if (!playerData || !playerData.name || !playerData.avatar) {
