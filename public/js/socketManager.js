@@ -1,67 +1,56 @@
-const socketManager = (() => {
-    let socket = null;
+import { io } from "https://cdn.socket.io/4.7.2/socket.io.min.js";
 
-    /**
-     * 📌 Établit une connexion avec le serveur Socket.IO
-     */
-    function connect() {
-        if (!socket) {
-            socket = window.io("https://seriousgame-ds65.onrender.com", {
-                transports: ["websocket"],
-                reconnection: true,
-                reconnectionAttempts: 5, // Tente 5 fois avant d'abandonner
-                reconnectionDelay: 2000, // Délai entre chaque tentative
-            });
+class SocketManager {
+    constructor() {
+        if (!SocketManager.instance) {
+            console.log("✅ Initialisation de Socket.IO...");
 
-            console.log("✅ Connexion Socket.IO en cours...");
+            // Connexion à Socket.IO
+            this.socket = io();
 
-            // ✅ Gérer la connexion réussie
-            socket.on("connect", () => {
-                console.log("✅ Connexion établie avec succès !");
-            });
+            // Ajout des écouteurs d'événements
+            this.setupListeners();
 
-            // ❌ Gérer les erreurs de connexion
-            socket.on("connect_error", (error) => {
-                console.error("❌ Erreur de connexion Socket.IO :", error);
-            });
-
-            // 🔌 Détection de déconnexion
-            socket.on("disconnect", (reason) => {
-                console.warn(`🔌 Déconnexion détectée : ${reason}`);
-                if (reason === "io server disconnect") {
-                    console.warn("🔄 Tentative de reconnexion forcée...");
-                    socket.connect();
-                }
-            });
-
-            // 🔄 Tentative de reconnexion automatique
-            socket.on("reconnect_attempt", (attempt) => {
-                console.log(`🔄 Tentative de reconnexion #${attempt}...`);
-            });
-
-            socket.on("reconnect", () => {
-                console.log("✅ Reconnexion réussie !");
-            });
+            // Singleton pour éviter les connexions multiples
+            SocketManager.instance = this;
         }
-        return socket;
+        return SocketManager.instance;
     }
 
-    /**
-     * 📌 Retourne l'instance actuelle de la connexion Socket.IO
-     */
-    function getSocket() {
-        if (!socket) {
-            console.warn("⚠️ Socket.IO non initialisé, connexion en cours...");
-            return connect();
-        }
-        return socket;
+    /** 🎧 Ajoute les écouteurs d'événements */
+    setupListeners() {
+        this.socket.on("connect", () => {
+            console.log(`✅ Connecté au serveur Socket.IO avec l'ID : ${this.socket.id}`);
+        });
+
+        this.socket.on("disconnect", (reason) => {
+            console.warn(`⚠️ Déconnecté de Socket.IO : ${reason}`);
+        });
+
+        this.socket.on("connect_error", (error) => {
+            console.error("❌ Erreur de connexion à Socket.IO :", error);
+        });
+
+        this.socket.on("reconnect", (attempt) => {
+            console.log(`🔄 Reconnexion réussie après ${attempt} tentatives.`);
+        });
+
+        this.socket.on("reconnect_attempt", (attempt) => {
+            console.warn(`⚠️ Tentative de reconnexion #${attempt}`);
+        });
     }
 
-    return {
-        connect,
-        getSocket
-    };
-})();
+    /** 📡 Retourne le socket actif */
+    getSocket() {
+        if (!this.socket || !this.socket.connected) {
+            console.warn("⚠️ Socket.IO non connecté, tentative de reconnexion...");
+            this.socket = io();
+            this.setupListeners();
+        }
+        return this.socket;
+    }
+}
 
-// ✅ Exporter le module pour une utilisation dans d'autres fichiers
+// ⚡ Création d'une instance unique (Singleton)
+const socketManager = new SocketManager();
 export default socketManager;
