@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("🔄 Initialisation du jeu...");
 
-    // 📌 Récupération des données utilisateur
     const roomId = sessionStorage.getItem("roomId");
     const userName = sessionStorage.getItem("userName");
     const userAvatar = sessionStorage.getItem("userAvatar");
@@ -15,39 +14,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // ✅ Connexion à Socket.io
     const socket = io();
-
-    // ✅ Rejoindre la room
     socket.emit("join_room", { roomId, name: userName, avatar: userAvatar });
 
     console.log("👂 En attente de l'événement `game_start`...");
 
-    // ✅ Écoute de `game_start`
     socket.on("game_start", ({ player1, player2 }) => {
         console.log("🎮 `game_start` reçu !");
-
-        // 📌 Vérification des joueurs
         console.log("📌 Profils des joueurs reçus :", player1, player2);
 
-        // Mise à jour de l'affichage des joueurs
-        if (player1.name === userName) {
-            document.getElementById("player-name").textContent = player1.name;
-            document.getElementById("player-avatar").src = player1.avatar;
-            document.getElementById("opponent-name").textContent = player2.name;
-            document.getElementById("opponent-avatar").src = player2.avatar;
-        } else {
-            document.getElementById("player-name").textContent = player2.name;
-            document.getElementById("player-avatar").src = player2.avatar;
-            document.getElementById("opponent-name").textContent = player1.name;
-            document.getElementById("opponent-avatar").src = player1.avatar;
-        }
+        const opponent = player1.name === userName ? player2 : player1;
+
+        document.getElementById("player-name").textContent = userName;
+        document.getElementById("player-avatar").src = userAvatar;
+        document.getElementById("opponent-name").textContent = opponent.name;
+        document.getElementById("opponent-avatar").src = opponent.avatar;
 
         console.log(`👤 Joueur : ${userName} - Avatar : ${userAvatar}`);
-        console.log(`👤 Adversaire : ${player1.name === userName ? player2.name : player1.name}`);
+        console.log(`👤 Adversaire : ${opponent.name} - Avatar : ${opponent.avatar}`);
     });
 
-    // ✅ Vérification après 5 secondes si `game_start` ne s'est pas déclenché
     setTimeout(() => {
         console.log("⏳ Vérification : aucun `game_start` reçu après 5 secondes ?");
         socket.emit("check_game_start", { roomId });
