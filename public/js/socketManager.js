@@ -1,9 +1,8 @@
 const socketManager = (() => {
     let socket = null;
-    let isConnected = false;
     let connectionPromise = null;
 
-    async function connect() {
+    function connect() {
         if (!socket) {
             console.log("✅ Connexion Socket.IO en cours...");
 
@@ -11,15 +10,18 @@ const socketManager = (() => {
                 transports: ["websocket"],
             });
 
-            connectionPromise = new Promise((resolve) => {
+            connectionPromise = new Promise((resolve, reject) => {
                 socket.on("connect", () => {
-                    isConnected = true;
                     console.log("✅ Connexion établie avec succès !");
                     resolve(socket);
                 });
 
+                socket.on("connect_error", (error) => {
+                    console.error("❌ Erreur de connexion :", error);
+                    reject(error);
+                });
+
                 socket.on("disconnect", () => {
-                    isConnected = false;
                     console.warn("❌ Déconnexion du serveur détectée.");
                 });
             });
@@ -28,7 +30,7 @@ const socketManager = (() => {
     }
 
     async function getSocket() {
-        if (!socket || !isConnected) {
+        if (!socket || socket.disconnected) {
             console.warn("⚠️ Socket.IO non initialisé ou pas encore connecté, attente de connexion...");
             await connect();
         }
