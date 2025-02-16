@@ -15,35 +15,49 @@
     </button>
 
     <div class="container">
-        <main class="modes-container">
-            <div class="player-info fade-in">
-                <img id="playerAvatar" src="" alt="Avatar">
-                <span id="playerName"></span>
+        <!-- Profil du joueur en haut -->
+        <div class="player-profile fade-in">
+            <div class="profile-card">
+                <img id="playerAvatar" src="" alt="Avatar" class="profile-avatar">
+                <h2 id="playerName" class="profile-name"></h2>
+            </div>
+        </div>
+
+        <!-- Options de jeu -->
+        <div class="modes-container">
+            <div class="mode-card fade-in delay-1" onclick="selectMode('random')">
+                <div class="mode-icon">🎲</div>
+                <h3>Mode Aléatoire</h3>
+                <p>Affrontez un adversaire au hasard</p>
+                <button class="btn-primary">
+                    Jouer
+                    <span class="btn-icon">→</span>
+                </button>
             </div>
 
-            <div class="mode-options">
-                <div class="mode-card fade-in delay-1" onclick="selectMode('random')">
-                    <div class="mode-icon">🎲</div>
-                    <h2>Partie Aléatoire</h2>
-                    <p>Affrontez un adversaire au hasard</p>
-                    <button class="btn-primary">Jouer</button>
-                </div>
-
-                <div class="mode-card fade-in delay-2" onclick="selectMode('friend')">
-                    <div class="mode-icon">👥</div>
-                    <h2>Partie Privée</h2>
-                    <p>Jouez avec un ami</p>
-                    <button class="btn-primary">Créer/Rejoindre</button>
-                </div>
+            <div class="mode-card fade-in delay-2" onclick="selectMode('friend')">
+                <div class="mode-icon">👥</div>
+                <h3>Partie Privée</h3>
+                <p>Jouez avec un ami</p>
+                <button class="btn-primary">
+                    Créer/Rejoindre
+                    <span class="btn-icon">→</span>
+                </button>
             </div>
-        </main>
+        </div>
     </div>
 
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <div class="loading-text">Recherche d'une partie<span class="loading-dots"></span></div>
+            <div class="loading-text">
+                <span id="loadingMessage">Recherche d'une partie</span>
+                <span class="loading-dots"></span>
+            </div>
+            <div id="waitingPlayers" class="waiting-players hidden">
+                <span class="player-count">Joueurs en attente: <span id="playerCount">0</span></span>
+            </div>
         </div>
     </div>
 

@@ -2,6 +2,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     const playerData = JSON.parse(localStorage.getItem('playerData'));
     const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingMessage = document.getElementById('loadingMessage');
+    const waitingPlayers = document.getElementById('waitingPlayers');
+    const playerCount = document.getElementById('playerCount');
     let socket;
 
     // Initialiser Socket.IO
@@ -19,15 +22,26 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Connecté au serveur');
         });
 
+        socket.on('waitingPlayersUpdate', (count) => {
+            updateWaitingPlayers(count);
+        });
+
         socket.on('waiting', () => {
-            showLoading('Recherche d\'un adversaire...');
+            showLoading('En attente d\'un adversaire...');
+            waitingPlayers.classList.remove('hidden');
         });
 
         socket.on('gameStart', (gameData) => {
+            waitingPlayers.classList.add('hidden');
             showLoading('Adversaire trouvé !', 'Préparation de la partie...');
+            
+            // Animation de transition
             setTimeout(() => {
-                window.location.href = 'game-room.html';
-            }, 1500);
+                document.body.style.opacity = '0';
+                setTimeout(() => {
+                    window.location.href = 'game-room.html';
+                }, 500);
+            }, 1000);
         });
 
         socket.on('error', (error) => {
@@ -36,21 +50,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Mettre à jour le compteur de joueurs en attente
+    function updateWaitingPlayers(count) {
+        playerCount.textContent = count;
+        if (count > 0) {
+            loadingMessage.textContent = `${count} joueur${count > 1 ? 's' : ''} en attente`;
+        }
+    }
+
     // Afficher l'overlay de chargement
     function showLoading(message, subMessage = '') {
-        loadingOverlay.querySelector('.loading-text').textContent = message;
-        if (subMessage) {
-            const subText = document.createElement('div');
-            subText.className = 'loading-subtext';
-            subText.textContent = subMessage;
-            loadingOverlay.querySelector('.loading-content').appendChild(subText);
-        }
+        loadingMessage.textContent = message;
         loadingOverlay.classList.add('active');
     }
 
     // Cacher l'overlay de chargement
     function hideLoading() {
         loadingOverlay.classList.remove('active');
+        waitingPlayers.classList.add('hidden');
     }
 
     // Mettre à jour les informations du joueur
@@ -70,22 +87,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (mode === 'random') {
-            showLoading('Recherche d\'un adversaire...');
+            showLoading('Connexion au serveur...');
             socket.emit('joinRandomGame', playerData);
         } else if (mode === 'friend') {
-            window.location.href = 'room-choice.html';
+            // Animation de transition
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                window.location.href = 'room-choice.html';
+            }, 500);
         }
     };
 
-    // Animation au chargement
-    function animateElements() {
-        document.querySelectorAll('.fade-in').forEach(el => {
-            el.style.opacity = '1';
-            el.style.transform = 'translateY(0)';
-        });
-    }
-
     // Initialisation
     updatePlayerInfo();
-    setTimeout(animateElements, 100);
+    
+    // Animation d'entrée
+    document.body.style.opacity = '0';
+    setTimeout(() => {
+        document.body.style.opacity = '1';
+        document.body.style.transition = 'opacity 0.5s ease';
+    }, 100);
 });
