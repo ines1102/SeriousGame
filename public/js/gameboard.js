@@ -1,15 +1,11 @@
-import { getSocket } from "./socketManager.js";
-
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("🔄 Initialisation du jeu...");
+    console.log("🔄 Chargement du plateau de jeu...");
 
-    const socket = getSocket(); // ✅ Connexion centralisée via socketManager
+    const socket = io();
 
-    let userName = sessionStorage.getItem("userName");
-    let userAvatar = sessionStorage.getItem("userAvatar");
-    let roomId = sessionStorage.getItem("roomId");
-
-    console.log("📌 Vérification des données avant connexion :", { roomId, userName, userAvatar });
+    const userName = sessionStorage.getItem("userName");
+    const userAvatar = sessionStorage.getItem("userAvatar");
+    const roomId = sessionStorage.getItem("roomId");
 
     if (!userName || !userAvatar || !roomId) {
         console.error("❌ Données utilisateur manquantes !");
@@ -17,44 +13,52 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    console.log(`📌 Connexion en cours pour ${userName} avec avatar ${userAvatar} dans la room ${roomId}`);
+    console.log(`📌 Connexion : ${userName} (Avatar: ${userAvatar}) - Room ${roomId}`);
+
+    document.querySelector(".player-name").textContent = userName;
+    document.querySelector(".player-avatar img").src = userAvatar;
 
     socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
-    socket.on("game_start", (gameData) => {
-        console.log("✅ Début du jeu :", gameData);
+    socket.on("game_start", ({ player1, player2, decks }) => {
+        const opponent = player1.name === userName ? player2 : player1;
 
-        if (!gameData.player1 || !gameData.player2) {
-            console.warn("⚠️ Problème avec les données des joueurs !");
-            return;
-        }
-
-        const opponent = gameData.player1.name === userName ? gameData.player2 : gameData.player1;
-
-        // ✅ Mise à jour du profil de l'adversaire
         document.querySelector(".opponent-name").textContent = opponent.name;
         document.querySelector(".opponent-avatar img").src = opponent.avatar;
+
+        displayHand(decks[userName], document.getElementById("player-hand"));
+        displayHand(decks[opponent.name], document.getElementById("opponent-hand"), true);
     });
 
-    socket.on("update_players", (players) => {
-        console.log("✅ Mise à jour des joueurs :", players);
+    function displayHand(deck, container, hidden = false) {
+        container.innerHTML = "";
+        deck.forEach(card => {
+            const cardElement = document.createElement("img");
+            cardElement.src = hidden ? "/cards/card-back.png" : card.image;
+            cardElement.classList.add("card");
+            cardElement.draggable = !hidden;
+            cardElement.addEventListener("dragstart", dragStart);
+            container.appendChild(cardElement);
+        });
+    }
 
-        if (players.length !== 2) {
-            console.warn("⚠️ Pas assez de joueurs connectés.");
-            return;
-        }
+    // Gestion du Drag and Drop
+    function dragStart(event) {
+        event.dataTransfer.setData("text/plain", event.target.src);
+    }
 
-        const opponent = players.find(p => p.name !== userName);
+    document.querySelectorAll(".drop-area").forEach(area => {
+        area.addEventListener("dragover", (event) => {
+            event.preventDefault();
+        });
 
-        if (opponent) {
-            document.querySelector(".opponent-name").textContent = opponent.name;
-            document.querySelector(".opponent-avatar img").src = opponent.avatar;
-        }
-    });
-
-    socket.on("player_disconnected", () => {
-        console.warn("❌ L'adversaire s'est déconnecté !");
-        alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
-        window.location.href = "/";
+        area.addEventListener("drop", (event) => {
+            event.preventDefault();
+            const cardSrc = event.dataTransfer.getData("text/plain");
+            const droppedCard = document.createElement("img");
+            droppedCard.src = cardSrc;
+            droppedCard.classList.add("card");
+            event.target.appendChild(droppedCard);
+        });
     });
 });

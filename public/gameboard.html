@@ -2,117 +2,65 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Health Royale - En jeu</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gameboard</title>
     <!-- Favicon -->
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
-    <link rel="manifest" href="/favicon_io/site.webmanifest">
+    <link rel="manifest" href="./favicon_io/site.webmanifest">
     
-    <!-- CSS -->
-    <link rel="stylesheet" href="/css/gameboard.css" onload="console.log('✅ CSS chargé')" onerror="console.error('❌ Erreur de chargement du CSS')">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-    <!-- Préchargement des images critiques -->
-    <link rel="preload" as="image" href="/Avatars/default.jpeg">
-    
-    <style>
-        body { visibility: hidden; }
-    </style>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            document.body.style.visibility = "visible";
-        });
-    </script>
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/gameboard.css">
 </head>
 <body>
-    <main id="game-container" aria-live="polite">
+    <div id="game-container">
         <!-- Profil de l'adversaire -->
         <div class="opponent-profile">
             <div class="opponent-avatar">
-                <img src="/Avatars/default.jpeg" alt="Avatar de l'adversaire">
+                <img src="/avatars/default.png" alt="Avatar de l'adversaire">
             </div>
             <div class="opponent-name">En attente...</div>
-            <div class="opponent-health-bar">
-                <div class="opponent-health-bar-fill" style="width: 100%;"></div>
+            <div class="health-bar">
+                <div class="health-fill" style="width: 100%;"></div>
             </div>
         </div>
 
         <!-- Main de l'adversaire -->
-        <div id="opponent-hand" class="hand opponent-hand" aria-label="Main de l'adversaire"></div>
+        <div id="opponent-hand" class="hand"></div>
 
-        <!-- Plateau de jeu -->
-        <section id="game-board" class="game-board" aria-label="Plateau de jeu">
-            <div class="play-area">
-                <!-- Zone de jeu adversaire -->
-                <div class="game-areas opponent-areas" aria-label="Zone de jeu adversaire">
-                    <div class="drop-area" data-slot="opponent-1"></div>
-                    <div class="drop-area" data-slot="opponent-2"></div>
-                    <div class="drop-area" data-slot="opponent-3"></div>
-                    <div class="drop-area" data-slot="opponent-4"></div>
-                    <div class="drop-area" data-slot="opponent-5"></div>
-                </div>
+        <!-- Plateau de jeu avec Drop Areas -->
+        <div id="game-board">
+            <div class="drop-area opponent-area" data-slot="opponent-1"></div>
+            <div class="drop-area opponent-area" data-slot="opponent-2"></div>
+            <div class="drop-area opponent-area" data-slot="opponent-3"></div>
+            <div class="drop-area opponent-area" data-slot="opponent-4"></div>
+            <div class="drop-area opponent-area" data-slot="opponent-5"></div>
 
-                <!-- Zone de jeu joueur -->
-                <div class="game-areas player-areas" aria-label="Votre zone de jeu">
-                    <div class="drop-area" data-slot="player-1"></div>
-                    <div class="drop-area" data-slot="player-2"></div>
-                    <div class="drop-area" data-slot="player-3"></div>
-                    <div class="drop-area" data-slot="player-4"></div>
-                    <div class="drop-area" data-slot="player-5"></div>
-                </div>
-            </div>
-        </section>
+            <div class="drop-area player-area" data-slot="player-1"></div>
+            <div class="drop-area player-area" data-slot="player-2"></div>
+            <div class="drop-area player-area" data-slot="player-3"></div>
+            <div class="drop-area player-area" data-slot="player-4"></div>
+            <div class="drop-area player-area" data-slot="player-5"></div>
+        </div>
 
         <!-- Profil du joueur -->
         <div class="player-profile">
             <div class="player-avatar">
-                <img src="/Avatars/default.jpeg" alt="Votre avatar" class="avatar-img">
+                <img src="/avatars/default.png" alt="Votre avatar">
             </div>
-            <div class="player-name">Votre nom</div>
-            <div class="player-health-bar">
-                <div class="player-health-bar-fill" style="width: 100%;"></div>
+            <div class="player-name">Joueur</div>
+            <div class="health-bar">
+                <div class="health-fill" style="width: 100%;"></div>
             </div>
         </div>
 
         <!-- Main du joueur -->
-        <div id="player-hand" class="hand player-hand" aria-label="Votre main"></div>
+        <div id="player-hand" class="hand"></div>
 
-        <!-- Zone du deck -->
-        <div id="deck-area" class="deck-area" aria-label="Pile de cartes">
-            <div class="deck">
-                <div class="card-back" role="img" aria-label="Dos de carte"></div>
-            </div>
-        </div>
-
-        <!-- Indicateur de tour -->
-        <div id="turn-indicator" class="turn-indicator" aria-live="assertive" role="status"></div>
-    </main>
-
-    <!-- Overlay de déconnexion -->
-    <div id="disconnect-overlay" class="disconnect-overlay hidden">
-        <div class="disconnect-message">
-            <h2>Déconnexion</h2>
-            <p>Message de déconnexion...</p>
-        </div>
+        <!-- Scripts -->
+        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+        <script src="/js/gameboard.js"></script>
     </div>
-
-    <!-- Conteneur pour les messages de statut -->
-    <div id="status-message" class="status-message" role="alert" aria-live="polite"></div>
-
-    <div id="loading-screen" class="loading hidden">Chargement...</div>
-    
-    <div id="error-message" class="error hidden">Une erreur est survenue.</div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="/js/socketManager.js"></script>
-    <script type="module" src="/js/deck.js"></script>
-    <script type="module" src="/js/game.js"></script>
-    <script type="module" src="/js/dragAndDrop.js"></script>
-    <script type="module" src="/js/uiManager.js"></script>
-    <script type="module" src="/js/gameboard.js"></script>
 </body>
 </html>
