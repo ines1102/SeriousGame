@@ -68,6 +68,7 @@ io.on("connection", (socket) => {
 
     function startGameIfReady(roomId) {
         const players = Object.values(rooms[roomId]?.players || {});
+
         if (players.length === 2) {
             console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
 
@@ -81,9 +82,12 @@ io.on("connection", (socket) => {
     }
 
     socket.on("check_game_start", ({ roomId }) => {
-        const players = Object.values(rooms[roomId]?.players || {});
+        if (!rooms[roomId]) return;
+        
+        const players = Object.values(rooms[roomId].players);
+        
         if (players.length === 2) {
-            console.log(`🔄 RÉÉMISSION de \`game_start\` pour Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
+            console.log(`🔄 Réémission de \`game_start\` pour Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
             io.to(roomId).emit("game_start", { player1: players[0], player2: players[1] });
         } else {
             console.log(`⚠️ Impossible d'envoyer \`game_start\` : il manque un joueur dans Room ${roomId}`);
@@ -94,14 +98,25 @@ io.on("connection", (socket) => {
         console.log(`🔌 Déconnexion : ${socket.id}`);
 
         for (const roomId in rooms) {
-            if (rooms[roomId].players[socket.id]) {
+            if (rooms[roomId]?.players[socket.id]) {
                 delete rooms[roomId].players[socket.id];
 
-                if (Object.keys(rooms[roomId].players).length === 0) {
+                const remainingPlayers = Object.keys(rooms[roomId].players);
+
+                if (remainingPlayers.length === 0) {
                     delete rooms[roomId];
                     console.log(`🗑️ Suppression de la Room ${roomId}`);
                 } else {
+                    console.log(`⚠️ Joueur déconnecté, mais l'autre joueur est toujours présent.`);
                     io.to(roomId).emit("opponent_disconnected");
+
+                    // ✅ Réémission de `game_start` si un joueur revient dans les 10s
+                    setTimeout(() => {
+                        if (rooms[roomId] && Object.keys(rooms[roomId].players).length === 1) {
+                            console.log(`🔄 Tentative de récupération de la room ${roomId}`);
+                            io.to(roomId).emit("wait_for_reconnect", { message: "Attente de votre adversaire..." });
+                        }
+                    }, 10000);
                 }
             }
         }
