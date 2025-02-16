@@ -1,15 +1,10 @@
 import { getSocket } from "./socketManager.js";
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     console.log("🔄 Initialisation du jeu...");
 
-    const socket = getSocket(); // Récupérer le socket via socketManager.js
-    if (!socket) {
-        console.error("❌ Erreur : Impossible d'obtenir la connexion WebSocket.");
-        return;
-    }
+    const socket = getSocket(); // ✅ Connexion centralisée via socketManager
 
-    // **📌 Récupération des données utilisateur**
     let userName = sessionStorage.getItem("userName");
     let userAvatar = sessionStorage.getItem("userAvatar");
     let roomId = sessionStorage.getItem("roomId");
@@ -17,40 +12,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log("📌 Vérification des données avant connexion :", { roomId, userName, userAvatar });
 
     if (!userName || !userAvatar || !roomId) {
-        console.error("❌ Données utilisateur manquantes. Retour à l'accueil.");
-        alert("Erreur : Données utilisateur manquantes.");
+        console.error("❌ Données utilisateur manquantes !");
         window.location.href = "/";
         return;
     }
 
     console.log(`📌 Connexion en cours pour ${userName} avec avatar ${userAvatar} dans la room ${roomId}`);
 
-    // **📌 Mise à jour de l'affichage du joueur**
-    document.querySelector(".player-name").textContent = userName;
-    document.querySelector(".player-avatar img").src = userAvatar;
-
-    // **📌 Émission de l'événement pour rejoindre la room**
     socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
-    // **📌 Gestion des joueurs connectés**
-    socket.on("players_ready", (data) => {
-        console.log("✅ Les joueurs sont prêts :", data);
+    socket.on("game_start", (gameData) => {
+        console.log("✅ Début du jeu :", gameData);
 
-        // **📌 Mise à jour des profils joueurs/adversaires**
-        if (data.player1.name === userName) {
-            updateOpponentProfile(data.player2);
-        } else {
-            updateOpponentProfile(data.player1);
+        if (!gameData.player1 || !gameData.player2) {
+            console.warn("⚠️ Problème avec les données des joueurs !");
+            return;
+        }
+
+        const opponent = gameData.player1.name === userName ? gameData.player2 : gameData.player1;
+
+        // ✅ Mise à jour du profil de l'adversaire
+        document.querySelector(".opponent-name").textContent = opponent.name;
+        document.querySelector(".opponent-avatar img").src = opponent.avatar;
+    });
+
+    socket.on("update_players", (players) => {
+        console.log("✅ Mise à jour des joueurs :", players);
+
+        if (players.length !== 2) {
+            console.warn("⚠️ Pas assez de joueurs connectés.");
+            return;
+        }
+
+        const opponent = players.find(p => p.name !== userName);
+
+        if (opponent) {
+            document.querySelector(".opponent-name").textContent = opponent.name;
+            document.querySelector(".opponent-avatar img").src = opponent.avatar;
         }
     });
 
-    /**
-     * **📌 Fonction pour mettre à jour le profil de l'adversaire**
-     */
-    function updateOpponentProfile(opponent) {
-        console.log(`🎭 Mise à jour du profil adversaire : ${opponent.name}`);
-
-        document.querySelector(".opponent-name").textContent = opponent.name;
-        document.querySelector(".opponent-avatar img").src = opponent.avatar;
-    }
+    socket.on("player_disconnected", () => {
+        console.warn("❌ L'adversaire s'est déconnecté !");
+        alert("Votre adversaire a quitté la partie. Retour à l'accueil.");
+        window.location.href = "/";
+    });
 });
