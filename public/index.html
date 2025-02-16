@@ -9,8 +9,9 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/index.css">
 
+    <!-- ✅ Correction CSP : Ajout du nonce dynamique pour éviter les blocages -->
     <script nonce="<%= res.locals.nonce %>">
-        console.log("CSP actif avec nonce sécurisé !");
+        console.log("✅ CSP actif avec nonce sécurisé !");
     </script>
 </head>
 <body>
@@ -49,6 +50,7 @@
         </main>
     </div>
 
+    <!-- ✅ Chargement sécurisé des scripts -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="js/index.js"></script>
 </body>
