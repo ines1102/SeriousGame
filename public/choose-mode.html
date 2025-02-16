@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Health Royale - Mode de jeu</title>
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/choose-mode.css">
 </head>
 <body>
-    <button onclick="history.back()" class="back-btn">
+    <!-- Bouton retour -->
+    <button id="backButton" class="back-btn">
         <span class="back-icon">←</span>
     </button>
 
     <div class="container">
-        <!-- Profil du joueur en haut -->
+        <!-- Profil du joueur -->
         <div class="player-profile fade-in">
             <div class="profile-card">
                 <img id="playerAvatar" src="" alt="Avatar" class="profile-avatar">
@@ -23,9 +24,9 @@
             </div>
         </div>
 
-        <!-- Options de jeu -->
+        <!-- Choix du mode de jeu -->
         <div class="modes-container">
-            <div class="mode-card fade-in delay-1" onclick="selectMode('random')">
+            <div class="mode-card fade-in delay-1" id="randomMode">
                 <div class="mode-icon">🎲</div>
                 <h3>Mode Aléatoire</h3>
                 <p>Affrontez un adversaire au hasard</p>
@@ -35,7 +36,7 @@
                 </button>
             </div>
 
-            <div class="mode-card fade-in delay-2" onclick="selectMode('friend')">
+            <div class="mode-card fade-in delay-2" id="friendMode">
                 <div class="mode-icon">👥</div>
                 <h3>Partie Privée</h3>
                 <p>Jouez avec un ami</p>
@@ -47,7 +48,7 @@
         </div>
     </div>
 
-    <!-- Loading Overlay -->
+    <!-- Overlay de chargement -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
@@ -61,7 +62,8 @@
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Importation des scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script src="js/choose-mode.js"></script>
 </body>
 </html>
