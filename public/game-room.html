@@ -14,8 +14,13 @@
     
     <!-- Police Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script nonce="<%= res.locals.nonce %>">
+        console.log("CSP actif avec nonce sécurisé !");
+    </script>
 </head>
 <body>
+
     <div class="game-container">
         <!-- Profil de l'adversaire -->
         <div class="opponent-section">
@@ -117,7 +122,7 @@
             </div>
         </div>
     </template>
-    
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/game-room.js"></script>
 </body>

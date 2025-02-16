@@ -8,8 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/room-choice.css">
+
+    <script nonce="<%= res.locals.nonce %>">
+        console.log("CSP actif avec nonce sécurisé !");
+    </script>
 </head>
 <body>
+
     <button onclick="history.back()" class="back-btn">
         <span class="back-icon">←</span>
     </button>

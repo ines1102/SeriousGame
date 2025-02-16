@@ -1,3 +1,5 @@
+import { time } from "console";
+
 document.addEventListener('DOMContentLoaded', function() {
     const playerData = JSON.parse(localStorage.getItem('playerData'));
     if (!playerData || !playerData.name || !playerData.avatar) {
@@ -28,7 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
             transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: 5,
-            reconnectionDelay: 1000
+            reconnectionDelay: 1000,
+            timeout: 50000
         });
 
         socket.on('connect', () => {

@@ -8,6 +8,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/index.css">
+
+    <script nonce="<%= res.locals.nonce %>">
+        console.log("CSP actif avec nonce sécurisé !");
+    </script>
 </head>
 <body>
     <div class="container">

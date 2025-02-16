@@ -40,7 +40,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     res.header('Access-Control-Allow-Credentials', 'true');
-    res.locals.nonce = nonce; // Injecte le nonce dans les vues si besoin
+    res.locals.nonce = Buffer.from(crypto.randomBytes(16)).toString("base64");
     next();
 });
 
@@ -81,7 +81,9 @@ const io = new SocketIOServer(server, {
         credentials: true
     },
     transports: ['websocket'], // ✅ Force WebSocket uniquement
-    allowEIO3: true
+    allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000
 });
 
 const waitingPlayers = new Set();

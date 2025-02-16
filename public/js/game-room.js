@@ -1,3 +1,5 @@
+import { time } from "console";
+
 document.addEventListener('DOMContentLoaded', () => {
     new GameRoom();
 });
@@ -49,7 +51,8 @@ class GameRoom {
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: 5,
-            reconnectionDelay: 1000
+            reconnectionDelay: 1000,
+            timeout: 50000
         });
 
         this.socket.on('connect', () => {
