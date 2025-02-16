@@ -1,6 +1,5 @@
-import { io } from "https://cdn.socket.io/4.7.2/socket.io.min.js";
-
-let socket = null;
+const socket = window.io(); // Utilisation de la variable globale
+export default socket;
 
 /** ✅ Initialisation unique du socket */
 export function initSocket() {
