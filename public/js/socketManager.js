@@ -12,15 +12,15 @@ class SocketManager {
         }
 
         console.log("✅ Chargement dynamique de Socket.IO...");
-        const { io } = await import("/js/socket.io.esm.min.js"); // 🔥 Correction ici
+        const { io } = await import("/js/socket.io.esm.min.js"); // 🔥 Import dynamique
 
         return new Promise((resolve, reject) => {
             console.log("✅ Connexion Socket.IO en cours...");
 
             this.socket = io({
-                reconnection: true, 
-                reconnectionAttempts: 5, 
-                reconnectionDelay: 1000, 
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
             });
 
             this.socket.on("connect", () => {
@@ -39,12 +39,11 @@ class SocketManager {
     async getSocket() {
         if (!this.isConnected) {
             console.warn("⚠️ Socket.IO non initialisé ou pas encore connecté, attente de connexion...");
-            await this.connectionPromise;
+            await this.connectionPromise; // 🔥 Attend que la connexion soit prête
         }
         return this.socket;
     }
 }
 
-// ✅ Exporter une **instance unique**
 const socketManager = new SocketManager();
 export default socketManager;
