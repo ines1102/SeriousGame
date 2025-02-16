@@ -55,18 +55,6 @@ app.get('/favicon_io/:file', (req, res) => {
     res.sendFile(join(__dirname, 'public', 'favicon_io', req.params.file));
 });
 
-// Reste du code serveur...
-
-// Route pour toutes les autres requêtes HTML
-app.get('/*', (req, res) => {
-    res.sendFile(join(__dirname, 'public', 'index.html'));
-});
-
-// Démarrage du serveur
-const PORT = process.env.PORT || 1000;
-server.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
-});
 
 // Servir les fichiers statiques
 app.use(express.static(join(__dirname, 'public')));
