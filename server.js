@@ -1,115 +1,127 @@
-const express = import('express');
-const http = import('http');
-const path = import('path');
-const { Server } = import('socket.io');
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// 📌 Configuration pour ES Module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
-});
+const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: { origin: "*" } });
 
-const PORT = 10000;
-let rooms = {}; // Stocke les rooms actives
+const PORT = process.env.PORT || 10000;
 
-// Middleware pour servir les fichiers statiques
-app.use(express.static(path.join(__dirname, 'public')));
+// 📌 Servir les fichiers statiques
+app.use(express.static(path.join(__dirname, "public")));
 
-// Routes principales
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
-app.get('/choose-mode', (req, res) => res.sendFile(path.join(__dirname, 'public/choose-mode.html')));
-app.get('/room-choice', (req, res) => res.sendFile(path.join(__dirname, 'public/room-choice.html')));
-app.get('/gameboard', (req, res) => res.sendFile(path.join(__dirname, 'public/gameboard.html')));
+// 📌 Routes
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
+app.get("/choose-mode", (req, res) => res.sendFile(path.join(__dirname, "public/choose-mode.html")));
+app.get("/room-choice", (req, res) => res.sendFile(path.join(__dirname, "public/room-choice.html")));
+app.get("/gameboard", (req, res) => res.sendFile(path.join(__dirname, "public/gameboard.html")));
 
-// Gestion des connexions Socket.io
-io.on('connection', (socket) => {
-    console.log(`🔗 Connexion : ${socket.id}`);
+// 📌 Gestion des rooms et joueurs
+let rooms = {};
+let waitingPlayer = null; // Pour stocker un joueur en attente de partie aléatoire
 
-    socket.on('join_game', (playerData) => {
-        console.log(`👤 Joueur ${playerData.name} tente de rejoindre une room...`);
+io.on("connection", (socket) => {
+    console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
-        let room = findOrCreateRoom(playerData);
-        playerData.roomId = room.id;
-        playerData.socketId = socket.id;
-        room.players.push(playerData);
+    // 📌 Rejoindre une room spécifique (mode avec un ami)
+    socket.on("join_private_game", ({ roomId, name, avatar }) => {
+        if (!rooms[roomId]) {
+            rooms[roomId] = { players: {} };
+        }
 
-        socket.join(room.id);
-        console.log(`✅ ${playerData.name} rejoint la Room ${room.id}`);
+        rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
+        socket.join(roomId);
 
-        io.to(socket.id).emit('room_joined', room.id);
+        console.log(`👥 Joueur ${name} a rejoint Room ${roomId}`);
 
-        if (room.players.length === 2) {
-            console.log(`✅ 2 joueurs trouvés dans Room ${room.id}, démarrage du jeu.`);
+        // Vérifier si la room a 2 joueurs et lancer le jeu
+        startGameIfReady(roomId);
+    });
 
-            let deck = shuffleDeck(); // Génération du deck
+    // 📌 Mode Aléatoire : Rejoindre un adversaire aléatoire
+    socket.on("join_random_game", ({ name, avatar }) => {
+        if (waitingPlayer) {
+            const roomId = generateRoomId();
+            rooms[roomId] = { players: {} };
 
-            io.to(room.id).emit('game_start', {
-                players: room.players,
-                deck: deck,
-                turn: room.players[0].name, // Premier joueur commence
-            });
+            // Associer les deux joueurs à la même room
+            rooms[roomId].players[waitingPlayer.id] = waitingPlayer;
+            rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
+
+            io.to(waitingPlayer.id).emit("game_found", { roomId });
+            io.to(socket.id).emit("game_found", { roomId });
+
+            // Faire rejoindre la room
+            io.sockets.sockets.get(waitingPlayer.id).join(roomId);
+            socket.join(roomId);
+
+            console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} vs ${name} dans Room ${roomId}`);
+
+            // Lancer la partie
+            startGameIfReady(roomId);
+
+            waitingPlayer = null; // Reset l'attente
+        } else {
+            // Stocker le joueur en attente
+            waitingPlayer = { id: socket.id, name, avatar };
+            console.log(`⌛ Joueur ${name} en attente d'un adversaire...`);
         }
     });
 
-    socket.on('play_card', ({ roomId, player, card, slot }) => {
-        console.log(`🎴 Carte jouée par ${player}: ${card} sur ${slot}`);
-        io.to(roomId).emit('card_played', { player, card, slot });
+    // 📌 Jouer une carte
+    socket.on("play_card", ({ roomId, player, card, slot }) => {
+        io.to(roomId).emit("card_played", { player, card, slot });
     });
 
-    socket.on('disconnect', () => {
+    // 📌 Gestion de la déconnexion
+    socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion : ${socket.id}`);
-        let roomId = removePlayerFromRoom(socket.id);
 
-        if (roomId) {
-            io.to(roomId).emit('opponent_disconnected');
+        for (const roomId in rooms) {
+            if (rooms[roomId].players[socket.id]) {
+                delete rooms[roomId].players[socket.id];
 
-            if (rooms[roomId].players.length === 0) {
-                console.log(`🗑️ Suppression de Room ${roomId} car elle est vide.`);
-                delete rooms[roomId];
+                // Si l'autre joueur est toujours présent, il doit être informé
+                const remainingPlayers = Object.keys(rooms[roomId].players);
+                if (remainingPlayers.length === 0) {
+                    delete rooms[roomId];
+                    console.log(`🗑️ Suppression de la Room ${roomId}`);
+                } else {
+                    io.to(roomId).emit("opponent_disconnected");
+                }
             }
         }
+
+        // Si un joueur était en attente de match aléatoire, l'annuler
+        if (waitingPlayer && waitingPlayer.id === socket.id) {
+            waitingPlayer = null;
+        }
     });
 });
 
-// Lancement du serveur
-server.listen(PORT, () => {
-    console.log(`🚀 Serveur lancé sur http://localhost:${PORT}/`);
-});
-
-/** 📌 Fonctions utilitaires */
-function findOrCreateRoom(player) {
-    let availableRoom = Object.values(rooms).find(room => room.players.length < 2);
-    if (availableRoom) return availableRoom;
-
-    let roomId = generateRoomId();
-    rooms[roomId] = { id: roomId, players: [] };
-    return rooms[roomId];
-}
-
-function generateRoomId() {
-    return Math.random().toString(36).substr(2, 9);
-}
-
-function removePlayerFromRoom(socketId) {
-    for (let roomId in rooms) {
-        let room = rooms[roomId];
-        let playerIndex = room.players.findIndex(player => player.socketId === socketId);
-        if (playerIndex !== -1) {
-            room.players.splice(playerIndex, 1);
-            return roomId;
-        }
+// 📌 Fonction pour démarrer une partie si 2 joueurs sont prêts
+function startGameIfReady(roomId) {
+    const players = Object.values(rooms[roomId].players);
+    if (players.length === 2) {
+        io.to(roomId).emit("game_start", {
+            player1: players[0],
+            player2: players[1],
+        });
+        console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
     }
-    return null;
 }
 
-// 📌 Simulation d'un deck
-function shuffleDeck() {
-    const deck = [
-        "/cards/card1.png", "/cards/card2.png", "/cards/card3.png",
-        "/cards/card4.png", "/cards/card5.png", "/cards/card6.png"
-    ];
-    return deck.sort(() => Math.random() - 0.5);
+// 📌 Générer un ID unique pour une room
+function generateRoomId() {
+    return Math.random().toString(36).substr(2, 6);
 }
+
+// 📌 Démarrer le serveur
+httpServer.listen(PORT, () => console.log(`🚀 Serveur en ligne sur http://localhost:${PORT}`));
