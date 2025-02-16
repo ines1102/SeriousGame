@@ -22,11 +22,13 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", `'nonce-${nonce}'`, "https://cdnjs.cloudflare.com", "https://seriousgame-ds65.onrender.com"],
+            scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://seriousgame-ds65.onrender.com", "'unsafe-inline'"], // ✅ Suppression du nonce
             connectSrc: ["'self'", "https://seriousgame-ds65.onrender.com", "wss://seriousgame-ds65.onrender.com"],
             imgSrc: ["'self'", "data:"],
             styleSrc: ["'self'", "https://fonts.googleapis.com"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"]
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            frameAncestors: ["'self'"],
+            objectSrc: ["'none'"]
         }
     }
 }));

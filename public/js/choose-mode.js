@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
         socket = io('https://seriousgame-ds65.onrender.com', {
             transports: ['websocket'],
             reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            timeout: 50000
+            reconnectionAttempts: 10,
+            reconnectionDelay: 2000,
+            timeout: 60000
         });
 
         socket.on('connect', () => {
