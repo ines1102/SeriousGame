@@ -5,6 +5,7 @@ import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import helmet from 'helmet';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,12 +14,15 @@ const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 10000;
 
+// ✅ Génération d'un nonce sécurisé pour CSP
+const nonce = Buffer.from(crypto.randomBytes(16)).toString("base64");
+
 // ✅ Sécurité avec Helmet (CSP, XSS Protection, etc.)
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://seriousgame-ds65.onrender.com"],
+            scriptSrc: ["'self'", `'nonce-${nonce}'`, "https://cdnjs.cloudflare.com", "https://seriousgame-ds65.onrender.com"],
             connectSrc: ["'self'", "https://seriousgame-ds65.onrender.com", "wss://seriousgame-ds65.onrender.com"],
             imgSrc: ["'self'", "data:"],
             styleSrc: ["'self'", "https://fonts.googleapis.com"],
@@ -36,6 +40,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     res.header('Access-Control-Allow-Credentials', 'true');
+    res.locals.nonce = nonce; // Injecte le nonce dans les vues si besoin
     next();
 });
 
@@ -75,7 +80,7 @@ const io = new SocketIOServer(server, {
         methods: ["GET", "POST"],
         credentials: true
     },
-    transports: ['websocket'],
+    transports: ['websocket'], // ✅ Force WebSocket uniquement
     allowEIO3: true
 });
 

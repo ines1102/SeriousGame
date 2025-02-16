@@ -8,20 +8,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/choose-mode.css">
+
+    <!-- ✅ Protection contre CSP avec nonce -->
+    <script nonce="<%= nonce %>">
+        console.log("CSP actif avec nonce sécurisé !");
+    </script>
 </head>
 <body>
-    <script>
-        var conn = new WebSocket('wss://seriousgame-ds65.onrender.com');
-    
-        conn.onopen = function() {
-            console.log("✅ Connexion WebSocket établie !");
-            conn.send("Hello, serveur WebSocket !");
-        };
-    
-        conn.onmessage = function(event) {
-            console.log("📩 Réponse serveur :", event.data);
-        };
-    </script>
+
     <!-- Bouton retour -->
     <button id="backButton" class="back-btn">
         <span class="back-icon">←</span>
@@ -42,14 +36,18 @@
                 <div class="mode-icon">🎲</div>
                 <h3>Mode Aléatoire</h3>
                 <p>Affrontez un adversaire au hasard</p>
-                <button class="btn-primary">Jouer<span class="btn-icon">→</span></button>
+                <button class="btn-primary" onclick="selectMode('random')">
+                    Jouer <span class="btn-icon">→</span>
+                </button>
             </div>
 
             <div class="mode-card fade-in delay-2" id="friendMode">
                 <div class="mode-icon">👥</div>
                 <h3>Partie Privée</h3>
                 <p>Jouez avec un ami</p>
-                <button class="btn-primary">Créer/Rejoindre<span class="btn-icon">→</span></button>
+                <button class="btn-primary" onclick="selectMode('friend')">
+                    Créer/Rejoindre <span class="btn-icon">→</span>
+                </button>
             </div>
         </div>
     </div>
@@ -59,7 +57,7 @@
         <div class="loading-content">
             <div class="loading-spinner"></div>
             <div class="loading-text">
-                <span id="loadingMessage">Recherche d'une partie</span>
+                <span id="loadingMessage">Recherche d'une partie...</span>
                 <span class="loading-dots"></span>
             </div>
             <div id="waitingPlayers" class="waiting-players hidden">
@@ -68,9 +66,9 @@
         </div>
     </div>
 
-    <!-- Importation des scripts -->
+    <!-- ✅ Scripts -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script src="js/choose-mode.js"></script>
+
 </body>
 </html>
