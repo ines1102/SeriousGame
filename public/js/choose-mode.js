@@ -14,22 +14,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const socket = io();
 
-    // 🎮 Mode Aléatoire
-    document.getElementById("random-game-btn").addEventListener("click", () => {
-        console.log("🔄 Recherche d'une room aléatoire...");
-        socket.emit("find_random_room", { name: userName, avatar: userAvatar });
-    });
+    // Vérifier si les boutons existent avant d'ajouter les `eventListeners`
+    const randomGameBtn = document.getElementById("random-game-btn");
+    const friendGameBtn = document.getElementById("friend-game-btn");
 
-    // 🎮 Mode Avec un Ami
-    document.getElementById("friend-game-btn").addEventListener("click", () => {
-        const roomId = prompt("Entrez le code de la room (4 chiffres) :");
-        if (roomId && /^\d{4}$/.test(roomId)) {
-            console.log(`🔄 Tentative de rejoindre Room ${roomId}...`);
-            socket.emit("join_private_game", { roomId, name: userName, avatar: userAvatar });
-        } else {
-            alert("❌ Code de room invalide. Entrez 4 chiffres.");
-        }
-    });
+    if (randomGameBtn) {
+        randomGameBtn.addEventListener("click", () => {
+            console.log("🔄 Recherche d'une room aléatoire...");
+            socket.emit("find_random_room", { name: userName, avatar: userAvatar });
+        });
+    } else {
+        console.error("❌ Bouton 'Jouer aléatoire' introuvable.");
+    }
+
+    if (friendGameBtn) {
+        friendGameBtn.addEventListener("click", () => {
+            const roomId = prompt("Entrez le code de la room (4 chiffres) :");
+            if (roomId && /^\d{4}$/.test(roomId)) {
+                console.log(`🔄 Tentative de rejoindre Room ${roomId}...`);
+                socket.emit("join_private_game", { roomId, name: userName, avatar: userAvatar });
+            } else {
+                alert("❌ Code de room invalide. Entrez 4 chiffres.");
+            }
+        });
+    } else {
+        console.error("❌ Bouton 'Jouer avec un ami' introuvable.");
+    }
 
     // 🎮 Room trouvée pour un match aléatoire
     socket.on("game_found", ({ roomId }) => {
