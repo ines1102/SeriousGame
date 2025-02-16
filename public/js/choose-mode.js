@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("✅ choose-mode.js chargé correctement");
+
     const playerData = JSON.parse(localStorage.getItem('playerData'));
     if (!playerData || !playerData.name || !playerData.avatar) {
         console.error('❌ Données du joueur manquantes, redirection...');
@@ -16,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let socket = null;
     let reconnectAttempts = 0;
 
-    // ✅ Initialisation de l'affichage du joueur
     document.getElementById('playerName').textContent = playerData.name;
     document.getElementById('playerAvatar').src = `Avatars/${playerData.avatar}`;
 
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 reconnectAttempts++;
                 console.error(`❌ Erreur de connexion (tentative ${reconnectAttempts}):`, error);
 
-                if (reconnectAttempts >= 5) {
+                if (reconnectAttempts >= 3) {
                     console.warn("🛠 Passage en mode `polling`...");
                     socket.io.opts.transports = ['polling'];
                 }
@@ -87,15 +88,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000);
     }
 
-    // ✅ Gestion des boutons via `addEventListener()`
     if (randomModeBtn) {
+        console.log("✅ Ajout de l'écouteur d'événement sur Random Mode");
         randomModeBtn.addEventListener('click', () => {
+            console.log("🖱️ Bouton Mode Aléatoire cliqué !");
             selectMode('random');
         });
     }
 
     if (friendModeBtn) {
+        console.log("✅ Ajout de l'écouteur d'événement sur Friend Mode");
         friendModeBtn.addEventListener('click', () => {
+            console.log("🖱️ Bouton Mode Ami cliqué !");
             selectMode('friend');
         });
     }
@@ -108,29 +112,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (mode === 'random') {
-            console.log('🎲 Envoi de la demande de partie aléatoire...');
+            console.log("🎲 Envoi de la demande de partie aléatoire...");
             showLoading('Connexion au serveur...');
             socket.emit('joinRandomGame', playerData);
         } else if (mode === 'friend') {
+            console.log("👥 Redirection vers room-choice.html");
             window.location.href = '/room-choice.html';
         }
     }
 
     function showLoading(message, subMessage = '') {
         loadingMessage.textContent = message;
-        if (subMessage) {
-            const subText = document.createElement('div');
-            subText.className = 'loading-subtext';
-            subText.textContent = subMessage;
-            loadingMessage.appendChild(subText);
-        }
         loadingOverlay.classList.add('active');
     }
 
     function updateWaitingPlayers(count) {
-        if (playerCount) {
-            playerCount.textContent = count;
-        }
+        playerCount.textContent = count;
         loadingMessage.textContent = count > 0 ? `${count} joueur${count > 1 ? 's' : ''} en attente` : 'En attente d\'adversaire...';
     }
 
