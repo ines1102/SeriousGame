@@ -1,11 +1,15 @@
 // server.js
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
+const server = createServer(app);
 
 // Configuration de Socket.IO avec CORS
 const io = new Server(server, {
@@ -26,12 +30,12 @@ app.use((req, res, next) => {
 });
 
 // Servir les fichiers statiques
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(join(__dirname, 'public')));
 
 // Structures de données pour la gestion du jeu
-const waitingPlayers = new Map(); // Joueurs en attente de partie
-const games = new Map(); // Parties en cours
-const playerSessions = new Map(); // Association socketId -> gameId
+const waitingPlayers = new Map();
+const games = new Map();
+const playerSessions = new Map();
 
 // Classe pour gérer une partie
 class Game {
@@ -65,9 +69,7 @@ class Game {
     startGame() {
         if (this.players.size !== 2 || this.started) return false;
         this.started = true;
-        // Choisir aléatoirement le premier joueur
         this.currentTurn = Array.from(this.players.keys())[Math.floor(Math.random() * 2)];
-        // Distribuer les cartes initiales
         for (const playerId of this.players.keys()) {
             this.dealInitialHand(playerId);
         }
@@ -108,7 +110,6 @@ class Game {
         hand.splice(cardIndex, 1);
         this.state.board[playerId][position] = card;
         
-        // Changer le tour
         this.changeTurn();
         return true;
     }
@@ -147,28 +148,22 @@ io.on('connection', (socket) => {
         const player = { id: socket.id, ...playerData };
         
         if (waitingPlayers.size > 0) {
-            // Trouver un adversaire
             const [opponentId, opponentData] = Array.from(waitingPlayers.entries())[0];
             waitingPlayers.delete(opponentId);
             
-            // Créer une nouvelle partie
             const gameId = Math.random().toString(36).substr(2, 9);
             const game = new Game(gameId, opponentData);
             game.addPlayer(player);
             
-            // Démarrer la partie
             game.startGame();
             games.set(gameId, game);
             
-            // Associer les joueurs à la partie
             playerSessions.set(socket.id, gameId);
             playerSessions.set(opponentId, gameId);
             
-            // Notifier les deux joueurs
             io.to(socket.id).emit('gameStart', game.toJSON());
             io.to(opponentId).emit('gameStart', game.toJSON());
         } else {
-            // Mettre le joueur en attente
             waitingPlayers.set(socket.id, player);
             socket.emit('waiting');
         }
@@ -197,7 +192,6 @@ io.on('connection', (socket) => {
             playerSessions.set(socket.id, gameId);
             game.startGame();
             
-            // Notifier tous les joueurs de la partie
             for (const playerId of game.players.keys()) {
                 io.to(playerId).emit('gameStart', game.toJSON());
             }
@@ -213,7 +207,6 @@ io.on('connection', (socket) => {
         if (!game || !game.isPlayerTurn(socket.id)) return;
 
         if (game.playCard(socket.id, cardId, position)) {
-            // Notifier les joueurs de la mise à jour
             for (const playerId of game.players.keys()) {
                 io.to(playerId).emit('gameStateUpdate', game.toJSON());
             }
@@ -222,20 +215,16 @@ io.on('connection', (socket) => {
 
     // Déconnexion
     socket.on('disconnect', () => {
-        // Nettoyer les parties en attente
         waitingPlayers.delete(socket.id);
         
-        // Gérer la déconnexion dans une partie en cours
         const gameId = playerSessions.get(socket.id);
         if (gameId) {
             const game = games.get(gameId);
             if (game) {
-                // Notifier l'adversaire
                 const opponent = game.getOpponent(socket.id);
                 if (opponent) {
                     io.to(opponent).emit('opponentLeft');
                 }
-                // Nettoyer la partie
                 games.delete(gameId);
             }
             playerSessions.delete(socket.id);
@@ -245,7 +234,7 @@ io.on('connection', (socket) => {
 
 // Routes Express
 app.get('/*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(join(__dirname, 'public', 'index.html'));
 });
 
 // Démarrage du serveur
