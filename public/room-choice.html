@@ -1,87 +1,95 @@
+<!-- room-choice.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Royale - Choix de la room</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
-    <link rel="manifest" href="/favicon_io/site.webmanifest">
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="/css/room-choice.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Socket.IO -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    
-    <!-- Page specific JS -->
-    <script type = "module" src="js/room-choice.js" defer></script>
+    <title>Choix de la Room</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .room-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .room-option {
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .room-id {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+            margin: 10px 0;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="room-choice-card">
-            <div class="user-info">
-                <img id="user-avatar" src="" alt="Votre avatar" class="avatar">
-                <span id="user-name" class="username"></span>
-            </div>
-            
-            <h2>Rejoindre une partie</h2>
-            <div class="room-options">
-                <button id="create-room" class="btn-create" aria-label="Créer une room">
-                    <i class="fas fa-plus-circle"></i>
-                    Créer une room
-                </button>
-                <div class="separator">ou</div>
-                <div class="room-join">
-                    <input type="text" id="room-code" maxlength="4" placeholder="Code à 4 chiffres" aria-label="Entrer le code de la room">
-                    <button id="join-room" class="btn-join" aria-label="Rejoindre la room">
-                        <i class="fas fa-sign-in-alt"></i>
-                        Rejoindre
-                    </button>
-                </div>
-            </div>
+    <h1>Choix de la Room</h1>
+    <div class="room-container">
+        <div class="room-option">
+            <h2>Créer une nouvelle room</h2>
+            <button onclick="createRoom()">Créer une Room</button>
+            <div id="newRoomId" class="room-id"></div>
+        </div>
+        
+        <div class="room-option">
+            <h2>Rejoindre une room</h2>
+            <input type="text" id="joinRoomId" placeholder="Entrez l'ID de la room" maxlength="4" pattern="[0-9]{4}">
+            <button onclick="joinRoom()">Rejoindre</button>
         </div>
     </div>
 
-    <!-- Écran de chargement -->
-    <!-- Écran de chargement (overlay) -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="loading-content">
-            <h2>En attente d'un adversaire...</h2>
-            <div class="spinner"></div>
+    <script>
+        function generateRoomId() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
 
-            <!-- AFFICHAGE DU CODE DE LA ROOM DANS L'OVERLAY -->
-            <div id="room-code-display" class="room-code-display hidden">
-                <p>Code de la room :</p>
-                <div class="code-container">
-                    <span id="display-code">----</span> <!-- ICI LE CODE APPARAÎT -->
-                    <button id="copy-code" class="btn-copy" aria-label="Copier le code">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-            </div>
+        function createRoom() {
+            const roomId = generateRoomId();
+            document.getElementById('newRoomId').textContent = `ID de votre room : ${roomId}`;
+            // Ici, vous pouvez ajouter la logique pour créer la room sur le serveur
+            // et rediriger vers la salle de jeu
+            localStorage.setItem('roomId', roomId);
+            // window.location.href = `game-room.html?id=${roomId}`;
+        }
 
-            <button id="cancel-wait" class="btn-cancel">
-                <i class="fas fa-times"></i>
-                Annuler
-            </button>
-        </div>
-    </div>
-
-    <!-- Overlay de déconnexion -->
-    <div id="disconnect-overlay" class="overlay hidden">
-        <div class="overlay-content">
-            <h2>Déconnexion</h2>
-            <p>Message d'erreur ici</p>
-            <div class="spinner"></div>
-        </div>
-    </div>
-    <!-- Scripts -->
-    <script src="/socket.io/socket.io.js" defer></script>
+        function joinRoom() {
+            const roomId = document.getElementById('joinRoomId').value;
+            if (roomId.length !== 4 || isNaN(roomId)) {
+                alert('Veuillez entrer un ID de room valide (4 chiffres)');
+                return;
+            }
+            // Ici, vous pouvez ajouter la logique pour vérifier si la room existe
+            // et rediriger vers la salle de jeu
+            localStorage.setItem('roomId', roomId);
+            // window.location.href = `game-room.html?id=${roomId}`;
+        }
+    </script>
 </body>
 </html>

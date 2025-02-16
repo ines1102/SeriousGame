@@ -1,62 +1,120 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Royale - Connexion</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
-    <link rel="manifest" href="/favicon_io/site.webmanifest">
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="/css/index.css">
-    
-    <!-- Socket.IO -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-        
-    <!-- Page specific JS -->
-    <script type="module" src="/js/index.js" type="module" defer></script>
+    <title>Inscription au Jeu</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .avatar-selection {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .avatar-option {
+            cursor: pointer;
+            border: 2px solid transparent;
+            padding: 5px;
+        }
+        .avatar-option.selected {
+            border-color: #007bff;
+        }
+        .avatar-option img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="login-card">
-            <h1>Health Royale</h1>
-            <form id="user-form">
-                <div class="form-group">
-                    <label for="name">Nom :</label>
-                    <input type="text" id="name" name="name" required 
-                           placeholder="Entrez votre nom" minlength="2" maxlength="20">
-                </div>
-                
-                <div class="form-group">
-                    <label for="sex">Sexe :</label>
-                    <select id="sex" name="sex" required>
-                        <option value="" disabled selected>Choisissez votre sexe</option>
-                        <option value="male">Homme</option>
-                        <option value="female">Femme</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Choisissez votre avatar :</label>
-                    <div id="avatar-selection" class="avatar-grid"></div>
-                </div>
-                
-                <button type="submit" class="btn-primary">Commencer</button>
-            </form>
-            
-            <!-- Conteneur pour les messages d'erreur -->
-            <div id="error-message" class="error-message"></div>
+    <h1>Inscription au Jeu</h1>
+    <form id="registrationForm" onsubmit="return validateForm()">
+        <div>
+            <label for="name">Nom :</label>
+            <input type="text" id="name" name="name" required>
         </div>
-    </div>
+        <div>
+            <label for="gender">Sexe :</label>
+            <select id="gender" name="gender" onchange="updateAvatars()">
+                <option value="">Sélectionnez</option>
+                <option value="male">Homme</option>
+                <option value="female">Femme</option>
+            </select>
+        </div>
+        <div>
+            <label>Choisissez votre avatar :</label>
+            <div id="avatarContainer" class="avatar-selection"></div>
+        </div>
+        <input type="hidden" id="selectedAvatar" name="selectedAvatar">
+        <button type="submit">Continuer</button>
+    </form>
 
-    <!-- Indicateur de chargement -->
-    <div id="loading" class="loading-overlay">
-        <div class="loading-spinner"></div>
-    </div>
+    <script>
+        let selectedAvatarElement = null;
+
+        function updateAvatars() {
+            const gender = document.getElementById('gender').value;
+            const container = document.getElementById('avatarContainer');
+            container.innerHTML = '';
+
+            if (gender) {
+                // Ajouter l'avatar par défaut
+                addAvatarOption('default.jpeg', 'Avatar par défaut');
+
+                // Ajouter les avatars spécifiques au genre
+                for (let i = 1; i <= 3; i++) {
+                    addAvatarOption(`${gender}${i}.jpeg`, `${gender} avatar ${i}`);
+                }
+            }
+        }
+
+        function addAvatarOption(filename, alt) {
+            const container = document.getElementById('avatarContainer');
+            const div = document.createElement('div');
+            div.className = 'avatar-option';
+            
+            const img = document.createElement('img');
+            img.src = `public/Avatars/${filename}`;
+            img.alt = alt;
+            
+            div.appendChild(img);
+            div.onclick = function() {
+                if (selectedAvatarElement) {
+                    selectedAvatarElement.classList.remove('selected');
+                }
+                this.classList.add('selected');
+                selectedAvatarElement = this;
+                document.getElementById('selectedAvatar').value = filename;
+            };
+            
+            container.appendChild(div);
+        }
+
+        function validateForm() {
+            const name = document.getElementById('name').value;
+            const gender = document.getElementById('gender').value;
+            const avatar = document.getElementById('selectedAvatar').value;
+
+            if (!name || !gender || !avatar) {
+                alert('Veuillez remplir tous les champs et sélectionner un avatar.');
+                return false;
+            }
+
+            // Stocker les informations dans le localStorage
+            localStorage.setItem('playerName', name);
+            localStorage.setItem('playerGender', gender);
+            localStorage.setItem('playerAvatar', avatar);
+
+            // Rediriger vers la page de choix du mode
+            window.location.href = 'choose-mode.html';
+            return false;
+        }
+    </script>
 </body>
 </html>

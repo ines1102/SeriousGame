@@ -1,69 +1,55 @@
+<!-- choose-mode.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Royale - Mode de jeu</title>
-    
-    <!-- Favicon -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
-    <link rel="manifest" href="./favicon_io/site.webmanifest">
-    
-    <!-- JS -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
-    <!-- CSS -->
-    <link rel="stylesheet" href="./css/choose-mode.css">
+    <title>Choisir le Mode de Jeu</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .mode-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .mode-button {
+            padding: 20px 40px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+        }
+        .mode-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="mode-selection-card">
-            <!-- Info utilisateur -->
-            <div class="user-info">
-                <img id="user-avatar" src="" alt="Votre avatar" class="avatar">
-                <span id="user-name" class="username"></span>
-            </div>
-            
-            <h2>Choisissez votre mode de jeu</h2>
-            
-            <!-- Boutons de mode -->
-            <div class="mode-buttons">
-                <button id="random-mode" class="btn-mode">
-                    <i class="fas fa-random"></i>
-                    Joueur aléatoire
-                </button>
-                <button id="friend-mode" class="btn-mode">
-                    <i class="fas fa-users"></i>
-                    Jouer entre amis
-                </button>
-            </div>
-        </div>
+    <h1>Choisir le Mode de Jeu</h1>
+    <div class="mode-container">
+        <button class="mode-button" onclick="chooseMode('random')">Mode Aléatoire</button>
+        <button class="mode-button" onclick="chooseMode('friend')">Jouer entre Amis</button>
     </div>
 
-    <!-- Overlay de chargement -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="loading-content">
-            <h3>Recherche d'un adversaire</h3>
-            <div class="spinner"></div>
-            <p>Veuillez patienter...</p>
-            <button id="cancel-search" class="btn-cancel">
-                <i class="fas fa-times"></i>
-                Annuler la recherche
-            </button>
-        </div>
-    </div>
-
-    <!-- Toast d'erreur -->
-    <div id="error-toast" class="error-toast">
-        <i class="fas fa-exclamation-circle"></i>
-        <span id="error-message"></span>
-    </div>
-
-    <!-- Scripts -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="./js/choose-mode.js"></script>
+    <script>
+        function chooseMode(mode) {
+            if (mode === 'random') {
+                // Redirection vers la salle d'attente pour le mode aléatoire
+                window.location.href = 'waiting-room.html';
+            } else if (mode === 'friend') {
+                // Redirection vers la page de choix de room
+                window.location.href = 'room-choice.html';
+            }
+        }
+    </script>
 </body>
 </html>
