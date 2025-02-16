@@ -1,49 +1,49 @@
-class SocketManager {
-    constructor() {
-        this.socket = null;
-        this.isConnected = false;
-        this.connectionPromise = this.initSocket();
-    }
+// socketManager.js - Gestion centralisée de la connexion Socket.IO
+const SERVER_URL = "https://seriousgame-ds65.onrender.com"; // 🔄 Change l'URL si nécessaire
+let socket = null;
 
-    async initSocket() {
-        if (this.isConnected) {
-            console.log("⚠️ Socket.IO déjà connecté.");
-            return this.socket;
+const socketManager = {
+    async getSocket() {
+        // 🔄 Vérifier si le socket est déjà connecté
+        if (socket && socket.connected) {
+            console.log("✅ Socket.IO déjà connecté !");
+            return socket;
         }
 
-        console.log("✅ Chargement dynamique de Socket.IO...");
-        const { io } = await import("/js/socket.io.esm.min.js"); // 🔥 Import dynamique
+        console.warn("⚠️ Socket.IO non initialisé ou pas encore connecté, tentative de connexion...");
 
         return new Promise((resolve, reject) => {
-            console.log("✅ Connexion Socket.IO en cours...");
+            // 🛠️ S'assurer que le script Socket.IO est bien chargé
+            if (!window.io) {
+                console.log("✅ Chargement dynamique de Socket.IO...");
+                const script = document.createElement("script");
+                script.src = "https://cdn.socket.io/4.7.2/socket.io.min.js";
+                script.onload = () => this.connectSocket(resolve, reject);
+                script.onerror = () => reject(new Error("❌ Impossible de charger Socket.IO"));
+                document.head.appendChild(script);
+            } else {
+                this.connectSocket(resolve, reject);
+            }
+        });
+    },
 
-            this.socket = io({
-                reconnection: true,
-                reconnectionAttempts: 5,
-                reconnectionDelay: 1000,
-            });
+    connectSocket(resolve, reject) {
+        socket = io(SERVER_URL, { transports: ["websocket", "polling"] });
 
-            this.socket.on("connect", () => {
-                console.log("✅ Connexion établie avec succès !");
-                this.isConnected = true;
-                resolve(this.socket);
-            });
+        socket.on("connect", () => {
+            console.log("✅ Connexion Socket.IO établie !");
+            resolve(socket);
+        });
 
-            this.socket.on("connect_error", (error) => {
-                console.error("❌ Erreur de connexion Socket.IO :", error);
-                reject(error);
-            });
+        socket.on("connect_error", (error) => {
+            console.error("❌ Erreur de connexion à Socket.IO :", error);
+            reject(error);
+        });
+
+        socket.on("disconnect", (reason) => {
+            console.warn(`⚠️ Déconnexion du serveur Socket.IO : ${reason}`);
         });
     }
+};
 
-    async getSocket() {
-        if (!this.isConnected) {
-            console.warn("⚠️ Socket.IO non initialisé ou pas encore connecté, attente de connexion...");
-            await this.connectionPromise; // 🔥 Attend que la connexion soit prête
-        }
-        return this.socket;
-    }
-}
-
-const socketManager = new SocketManager();
 export default socketManager;
