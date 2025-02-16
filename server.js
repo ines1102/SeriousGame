@@ -11,25 +11,37 @@ const __dirname = dirname(__filename);
 const app = express();
 const server = createServer(app);
 
-// Configuration de Socket.IO avec CORS
+// Configuration de Socket.IO
 const io = new Server(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+        origin: "https://seriousgame-ds65.onrender.com",
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    transports: ['websocket', 'polling']
 });
 
-// Middleware pour CORS et JSON
-app.use(express.json());
+// Middleware pour CORS
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'https://seriousgame-ds65.onrender.com');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
+});
+
+// Servir les fichiers statiques
 app.use(express.static('public'));
 
 // Structures de données pour la gestion du jeu
 let waitingPlayersCount = 0;
-const waitingPlayers = new Map(); // Joueurs en attente
-const activeGames = new Map();    // Parties en cours
-const playerGameMap = new Map();  // Association joueur -> partie
+const waitingPlayers = new Map();
+const activeGames = new Map();
+const playerGameMap = new Map();
 
-// Classe pour gérer l'état d'une partie
+// Classe de gestion des parties
 class Game {
     constructor(player1) {
         this.id = Math.random().toString(36).substring(7);
@@ -46,7 +58,8 @@ class Game {
             }
         };
         this.currentTurn = null;
-        this.status = 'waiting'; // waiting, playing, finished
+        this.status = 'waiting';
+        this.createdAt = Date.now();
     }
 
     addPlayer(player) {
@@ -71,9 +84,9 @@ class Game {
 
     generateCard() {
         const cardTypes = [
-            { name: "Soigneur", cost: 2, attack: 1, health: 3, effect: "heal" },
-            { name: "Guerrier", cost: 3, attack: 3, health: 3, effect: "damage" },
-            { name: "Défenseur", cost: 1, attack: 1, health: 4, effect: "shield" }
+            { name: "Soigneur", cost: 2, attack: 1, health: 3, effect: "heal", description: "Soigne les alliés" },
+            { name: "Guerrier", cost: 3, attack: 3, health: 3, effect: "damage", description: "Inflige des dégâts" },
+            { name: "Défenseur", cost: 1, attack: 1, health: 4, effect: "shield", description: "Protège les alliés" }
         ];
         
         const type = cardTypes[Math.floor(Math.random() * cardTypes.length)];
@@ -85,19 +98,43 @@ class Game {
     }
 
     getGameState(forPlayer) {
+        const opponent = Array.from(this.players.keys()).find(id => id !== forPlayer);
+        
         return {
             id: this.id,
             currentTurn: this.currentTurn,
             status: this.status,
-            players: Array.from(this.players.values()).map(p => ({
-                id: p.socketId,
-                name: p.name,
-                avatar: p.avatar
-            })),
-            yourCards: this.state.cards[forPlayer],
-            board: this.state.board,
-            health: this.state.health
+            playerInfo: {
+                you: this.players.get(forPlayer),
+                opponent: this.players.get(opponent)
+            },
+            state: {
+                yourCards: this.state.cards[forPlayer],
+                yourBoard: this.state.board[forPlayer],
+                opponentBoard: this.state.board[opponent],
+                health: this.state.health
+            },
+            isYourTurn: this.currentTurn === forPlayer
         };
+    }
+
+    playCard(playerId, cardId, position) {
+        if (this.currentTurn !== playerId) return false;
+        
+        const playerCards = this.state.cards[playerId];
+        const cardIndex = playerCards.findIndex(card => card.id === cardId);
+        
+        if (cardIndex === -1) return false;
+        if (this.state.board[playerId][position] !== null) return false;
+        
+        const card = playerCards.splice(cardIndex, 1)[0];
+        this.state.board[playerId][position] = card;
+        
+        // Changer le tour
+        const players = Array.from(this.players.keys());
+        this.currentTurn = players.find(id => id !== playerId);
+        
+        return true;
     }
 
     getOpponent(playerId) {
@@ -105,17 +142,35 @@ class Game {
     }
 }
 
+// Nettoyage périodique des parties inactives
+setInterval(() => {
+    const now = Date.now();
+    activeGames.forEach((game, id) => {
+        if (now - game.createdAt > 30 * 60 * 1000) { // 30 minutes
+            game.players.forEach((player) => {
+                playerGameMap.delete(player.socketId);
+            });
+            activeGames.delete(id);
+        }
+    });
+}, 5 * 60 * 1000); // Vérifier toutes les 5 minutes
+
 // Configuration des événements Socket.IO
 io.on('connection', (socket) => {
     console.log('Nouveau joueur connecté:', socket.id);
 
-    // Gestion du matchmaking aléatoire
     socket.on('joinRandomGame', (playerData) => {
         const player = {
             socketId: socket.id,
             name: playerData.name,
             avatar: playerData.avatar
         };
+
+        // Vérifier si le joueur est déjà dans une partie
+        if (playerGameMap.has(socket.id)) {
+            socket.emit('error', { message: 'Vous êtes déjà dans une partie' });
+            return;
+        }
 
         if (waitingPlayers.size > 0) {
             // Trouver un adversaire
@@ -124,7 +179,7 @@ io.on('connection', (socket) => {
             waitingPlayersCount--;
             io.emit('waitingPlayersUpdate', waitingPlayersCount);
 
-            // Créer une nouvelle partie
+            // Créer la partie
             const game = new Game(opponentData);
             game.addPlayer(player);
             activeGames.set(game.id, game);
@@ -133,11 +188,10 @@ io.on('connection', (socket) => {
             playerGameMap.set(socket.id, game.id);
             playerGameMap.set(opponentId, game.id);
 
-            // Notifier les deux joueurs
+            // Notifier les joueurs
             io.to(socket.id).emit('gameStart', game.getGameState(socket.id));
             io.to(opponentId).emit('gameStart', game.getGameState(opponentId));
         } else {
-            // Mettre le joueur en attente
             waitingPlayers.set(socket.id, player);
             waitingPlayersCount++;
             io.emit('waitingPlayersUpdate', waitingPlayersCount);
@@ -145,7 +199,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Création d'une room privée
     socket.on('createRoom', (playerData) => {
         const player = {
             socketId: socket.id,
@@ -163,7 +216,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Rejoindre une room privée
     socket.on('joinRoom', ({ roomId, playerData }) => {
         const game = activeGames.get(roomId);
         
@@ -186,31 +238,17 @@ io.on('connection', (socket) => {
         game.addPlayer(player);
         playerGameMap.set(socket.id, game.id);
 
-        // Notifier les deux joueurs
         game.players.forEach((_, playerId) => {
             io.to(playerId).emit('gameStart', game.getGameState(playerId));
         });
     });
 
-    // Jouer une carte
     socket.on('playCard', ({ cardId, position }) => {
         const gameId = playerGameMap.get(socket.id);
         if (!gameId) return;
 
         const game = activeGames.get(gameId);
-        if (!game || game.currentTurn !== socket.id) return;
-
-        const playerCards = game.state.cards[socket.id];
-        const cardIndex = playerCards.findIndex(card => card.id === cardId);
-        
-        if (cardIndex === -1) return;
-
-        // Placer la carte sur le plateau
-        const card = playerCards.splice(cardIndex, 1)[0];
-        game.state.board[socket.id][position] = card;
-
-        // Changer le tour
-        game.currentTurn = game.getOpponent(socket.id);
+        if (!game || !game.playCard(socket.id, cardId, position)) return;
 
         // Notifier les joueurs
         game.players.forEach((_, playerId) => {
@@ -218,10 +256,7 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Déconnexion
     socket.on('disconnect', () => {
-        console.log('Joueur déconnecté:', socket.id);
-
         // Nettoyer le matchmaking
         if (waitingPlayers.has(socket.id)) {
             waitingPlayers.delete(socket.id);
@@ -240,9 +275,11 @@ io.on('connection', (socket) => {
                         message: 'Votre adversaire s\'est déconnecté'
                     });
                 }
+                game.players.forEach((player) => {
+                    playerGameMap.delete(player.socketId);
+                });
                 activeGames.delete(gameId);
             }
-            playerGameMap.delete(socket.id);
         }
     });
 });
@@ -267,15 +304,15 @@ app.use((err, req, res, next) => {
 });
 
 // Démarrage du serveur
-const PORT = process.env.PORT || 1000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Serveur démarré sur http://0.0.0.0:${PORT}`);
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`Serveur démarré sur le port ${PORT}`);
 });
 
 // Gestion gracieuse de l'arrêt
 process.on('SIGTERM', () => {
     server.close(() => {
-        console.log('Serveur arrêté');
+        console.log('Serveur arrêté gracieusement');
         process.exit(0);
     });
 });

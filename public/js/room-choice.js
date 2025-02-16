@@ -1,4 +1,13 @@
 // choose-mode.js
+
+// À utiliser dans tous les fichiers JS où vous initialisez Socket.IO
+const socket = io('https://seriousgame-ds65.onrender.com', {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     const playerData = JSON.parse(localStorage.getItem('playerData'));
     const loadingOverlay = document.getElementById('loadingOverlay');

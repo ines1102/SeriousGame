@@ -32,16 +32,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         socket.on('gameStart', (gameData) => {
-            waitingPlayers.classList.add('hidden');
-            showLoading('Adversaire trouvé !', 'Préparation de la partie...');
+            // Sauvegarder les données du jeu
+            localStorage.setItem('gameData', JSON.stringify(gameData));
             
-            // Animation de transition
+            // Afficher le message de transition
+            showLoading('Adversaire trouvé !', 'Redirection...');
+            
+            // Transition douce
             setTimeout(() => {
-                document.body.style.opacity = '0';
-                setTimeout(() => {
-                    window.location.href = 'game-room.html';
-                }, 500);
-            }, 1000);
+                // Redirection avec vérification
+                try {
+                    window.location.href = '/game-room.html';
+                } catch (error) {
+                    console.error('Erreur de redirection:', error);
+                    // Tentative alternative
+                    window.location.replace('/game-room.html');
+                }
+            }, 1500);
         });
 
         socket.on('error', (error) => {

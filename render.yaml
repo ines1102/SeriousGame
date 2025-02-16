@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: health-royale
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 18.16.0
+    healthCheckPath: /health
+    websocket: true
