@@ -4,31 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Health Royale - En jeu</title>
-    
+
     <!-- Favicon -->
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png">
     <link rel="manifest" href="/favicon_io/site.webmanifest">
-    
+
     <!-- CSS -->
     <link rel="stylesheet" href="/css/gameboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <!-- JS -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
     <main id="game-container" aria-live="polite">
         <!-- Profil de l'adversaire -->
-        <div class="opponent-profile">
-            <div class="opponent-avatar">
+        <div class="profile-container opponent-profile">
+            <div class="avatar-container">
                 <img id="opponent-avatar" src="/Avatars/default.jpeg" alt="Avatar de l'adversaire">
             </div>
-            <div id="opponent-name" class="opponent-name">En attente...</div>
-            <div class="opponent-health-bar">
-                <div class="opponent-health-bar-fill" style="width: 100%;"></div>
+            <div id="opponent-name" class="player-name">En attente...</div>
+            <div class="health-bar">
+                <div id="opponent-health" class="health-bar-fill" style="width: 100%;"></div>
             </div>
         </div>
 
@@ -38,7 +37,7 @@
         <!-- Plateau de jeu -->
         <section id="game-board" class="game-board">
             <div class="play-area">
-                <!-- Zone de jeu adversaire -->
+                <!-- Zone de jeu adversaire (ligne du haut) -->
                 <div class="game-areas opponent-areas">
                     <div class="drop-area" data-slot="opponent-1"></div>
                     <div class="drop-area" data-slot="opponent-2"></div>
@@ -47,7 +46,7 @@
                     <div class="drop-area" data-slot="opponent-5"></div>
                 </div>
 
-                <!-- Zone de jeu joueur -->
+                <!-- Zone de jeu joueur (ligne du bas) -->
                 <div class="game-areas player-areas">
                     <div class="drop-area" data-slot="player-1"></div>
                     <div class="drop-area" data-slot="player-2"></div>
@@ -59,13 +58,13 @@
         </section>
 
         <!-- Profil du joueur -->
-        <div class="player-profile">
-            <div class="player-avatar">
+        <div class="profile-container player-profile">
+            <div class="avatar-container">
                 <img id="player-avatar" src="/Avatars/default.jpeg" alt="Votre avatar">
             </div>
             <div id="player-name" class="player-name">Votre nom</div>
-            <div class="player-health-bar">
-                <div class="player-health-bar-fill" style="width: 100%;"></div>
+            <div class="health-bar">
+                <div id="player-health" class="health-bar-fill" style="width: 100%;"></div>
             </div>
         </div>
 
@@ -76,7 +75,8 @@
         <div id="turn-indicator" class="turn-indicator"></div>
     </main>
 
+    <!-- Scripts -->
     <script type="module" src="/js/socketManager.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="/js/gameboard.js"></script></body>
+    <script type="module" src="/js/gameboard.js"></script>
+</body>
 </html>

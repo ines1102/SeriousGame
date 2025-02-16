@@ -13,24 +13,33 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    overflow-x: hidden; /* Empêche le scroll horizontal */
 }
 
-html, body {
+body {
     font-family: 'Arial', sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     height: 100vh;
-    width: 100vw;
-    overflow-x: hidden; /* Bloque le scroll horizontal */
+    overflow: hidden;
+}
+
+/* Conteneur principal */
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    height: 100vh;
+    padding: 10px;
 }
 
 /* Profils des joueurs */
-.player-profile, .opponent-profile {
+.profile-container {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -40,15 +49,7 @@ html, body {
     justify-content: center;
 }
 
-.avatar-img {
-    width: 50px; /* Taille plus petite pour éviter l'agrandissement */
-    height: 50px;
-    border-radius: 50%;
-    border: 2px solid var(--primary-color);
-    object-fit: cover; /* Assure le bon cadrage */
-}
-
-.opponent-avatar img, .player-avatar img {
+.avatar-container img {
     width: 50px;
     height: 50px;
     border-radius: 50%;
@@ -56,14 +57,13 @@ html, body {
     object-fit: cover;
 }
 
-.player-name, .opponent-name {
-    font-size: 1.2rem;
+.player-name {
+    font-size: 1rem;
     font-weight: bold;
-    white-space: nowrap; /* Empêche le texte de se couper */
 }
 
 /* Barre de vie */
-.player-health-bar, .opponent-health-bar {
+.health-bar {
     width: 100%;
     height: 10px;
     background-color: #ddd;
@@ -71,18 +71,17 @@ html, body {
     overflow: hidden;
 }
 
-.player-health-bar-fill, .opponent-health-bar-fill {
+.health-bar-fill {
     height: 100%;
     background-color: var(--secondary-color);
 }
 
-/* Main des joueurs */
+/* Mains des joueurs */
 .hand {
     display: flex;
     gap: 10px;
-    margin: 20px 0;
     justify-content: center;
-    flex-wrap: wrap;
+    margin: 10px 0;
 }
 
 .card {
@@ -109,9 +108,9 @@ html, body {
 /* Plateau de jeu */
 .game-board {
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
     padding: 20px;
     width: 100%;
     max-width: 600px;
@@ -119,16 +118,12 @@ html, body {
 
 /* Zone de jeu */
 .game-areas {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr); /* 5 colonnes */
-    gap: 10px;
+    display: flex;
     justify-content: center;
-    margin-bottom: 20px;
-    width: 100%;
-    max-width: 500px;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
-/* Drop Area */
 .drop-area {
     width: 70px;
     height: 100px;
@@ -138,11 +133,6 @@ html, body {
     align-items: center;
     justify-content: center;
     background-color: white;
-    transition: background-color 0.3s ease;
-}
-
-.drop-area:hover {
-    background-color: var(--hover-color);
 }
 
 /* Indicateur de tour */
@@ -151,69 +141,4 @@ html, body {
     font-size: 1.2rem;
     font-weight: bold;
     color: var(--primary-color);
-}
-
-/* Overlay de déconnexion */
-.disconnect-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.disconnect-message {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    text-align: center;
-}
-
-/* Message d'état */
-.status-message {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #ff4444;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.status-message.show {
-    opacity: 1;
-}
-
-/* Responsivité */
-@media (max-width: 768px) {
-    .avatar-img {
-        width: 40px;
-        height: 40px;
-    }
-
-    .opponent-avatar img, .player-avatar img {
-        width: 40px;
-        height: 40px;
-    }
-
-    .card {
-        width: 50px;
-        height: 75px;
-    }
-
-    .drop-area {
-        width: 60px;
-        height: 90px;
-    }
-
-    .player-name, .opponent-name {
-        font-size: 1rem;
-    }
 }

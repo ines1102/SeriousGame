@@ -1,7 +1,7 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     console.log("🔄 Initialisation du jeu...");
 
-    // ✅ Récupération des infos utilisateur
+    // Vérification des données utilisateur
     const userName = sessionStorage.getItem("userName");
     const userAvatar = sessionStorage.getItem("userAvatar");
     const roomId = sessionStorage.getItem("roomId");
@@ -15,42 +15,43 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    // ✅ Connexion au serveur via Socket.io
+    // Connexion au serveur via socket.io
     const socket = io();
 
-    // ✅ Émettre un événement pour rejoindre la room
+    // Émettre un événement pour rejoindre la room
     socket.emit("join_game", { roomId, name: userName, avatar: userAvatar });
 
-    // ✅ Mise à jour du profil du joueur
+    // Mise à jour du profil joueur
     document.getElementById("player-name").textContent = userName;
     document.getElementById("player-avatar").src = userAvatar;
 
-    // ✅ Écoute de l'événement `game_start` pour récupérer l'adversaire
+    // Écoute de l'événement `game_start`
     socket.on("game_start", (gameData) => {
         console.log("✅ Game start reçu :", gameData);
 
-        if (!gameData.opponent) {
+        if (!gameData.player2) {
             console.warn("⚠️ Aucun adversaire trouvé !");
             return;
         }
 
-        // 🎭 Mise à jour du profil adversaire
-        document.getElementById("opponent-name").textContent = gameData.opponent.name;
-        document.getElementById("opponent-avatar").src = gameData.opponent.avatar;
-        console.log("🎭 Profil adversaire mis à jour :", gameData.opponent.name, gameData.opponent.avatar);
+        // Mise à jour du profil adversaire
+        document.getElementById("opponent-name").textContent = gameData.player2.name;
+        document.getElementById("opponent-avatar").src = gameData.player2.avatar;
 
-        // 📌 Mise en place des cartes
-        displayHand(gameData.playerHand, document.getElementById("player-hand"));
-        displayOpponentHand(gameData.opponentHand, document.getElementById("opponent-hand"));
+        console.log("🎭 Profil adversaire mis à jour :", gameData.player2.name, gameData.player2.avatar);
+
+        // Afficher les mains des joueurs
+        displayHand(gameData.player1Hand, document.getElementById("player-hand"));
+        displayOpponentHand(gameData.player2Hand, document.getElementById("opponent-hand"));
     });
 
-    // ✅ Écoute du tour de jeu
+    // Écoute du tour de jeu
     socket.on("update_turn", (currentTurn) => {
         const turnIndicator = document.getElementById("turn-indicator");
         turnIndicator.textContent = currentTurn === userName ? "Votre tour !" : "Tour de l'adversaire";
     });
 
-    // ✅ Gestion des cartes jouées
+    // Gestion des cartes jouées
     socket.on("card_played", ({ player, card, slot }) => {
         console.log(`🎴 Carte jouée par ${player}: ${card} sur ${slot}`);
 
@@ -63,22 +64,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ✅ Gestion de la déconnexion
+    // Gestion de la déconnexion
     socket.on("opponent_disconnected", () => {
         console.warn("❌ L'adversaire s'est déconnecté !");
         alert("Votre adversaire a quitté la partie.");
-        document.getElementById("disconnect-overlay").classList.remove("hidden");
     });
 
-    // ✅ Gestion de la reconnexion
+    // Gestion de la reconnexion
     socket.on("opponent_reconnected", (data) => {
         console.log(`✅ ${data.name} est revenu !`);
         document.getElementById("opponent-name").textContent = data.name;
         document.getElementById("opponent-avatar").src = data.avatar;
-        document.getElementById("disconnect-overlay").classList.add("hidden");
     });
 
-    // ✅ Gestion de la fin de partie
+    // Gestion de la fin de partie
     socket.on("game_over", ({ winner }) => {
         alert(`🏆 Partie terminée ! Gagnant : ${winner}`);
         window.location.href = "/";
