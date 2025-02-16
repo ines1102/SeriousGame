@@ -3,53 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Royale - Inscription</title>
+    <title>Health Royale</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon_io/favicon-32x32.png">
-    
-    <!-- Styles -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/index.css">
-    
-    <!-- Police Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <header class="game-header">
-            <h1 class="fade-in">Health Royale</h1>
-            <p class="subtitle fade-in">Entrez dans l'arène et défiez vos adversaires !</p>
-        </header>
+        <main class="login-container">
+            <div class="login-card fade-in">
+                <h1>Health Royale</h1>
+                
+                <form id="registrationForm">
+                    <div class="input-group">
+                        <input type="text" id="name" required maxlength="20"
+                               placeholder="Votre pseudo">
+                    </div>
 
-        <main class="registration-form fade-in">
-            <form id="registrationForm" class="card">
-                <div class="form-group">
-                    <label for="name" class="form-label">Nom du joueur</label>
-                    <input type="text" id="name" name="name" class="form-input" required 
-                           placeholder="Entrez votre nom de joueur" maxlength="20">
-                </div>
+                    <div class="input-group">
+                        <select id="gender" required>
+                            <option value="" disabled selected>Choisir votre genre</option>
+                            <option value="male">Homme</option>
+                            <option value="female">Femme</option>
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label for="gender" class="form-label">Genre</label>
-                    <select id="gender" name="gender" class="form-input" required>
-                        <option value="">Sélectionnez votre genre</option>
-                        <option value="male">Homme</option>
-                        <option value="female">Femme</option>
-                    </select>
-                </div>
+                    <div class="avatar-section">
+                        <h2>Choisir un avatar</h2>
+                        <div id="avatarContainer" class="avatar-grid">
+                            <!-- Les avatars seront ajoutés dynamiquement ici -->
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label class="form-label">Choisissez votre avatar</label>
-                    <div id="avatarContainer" class="avatar-grid"></div>
-                    <input type="hidden" id="selectedAvatar" name="selectedAvatar">
-                </div>
-
-                <button type="submit" class="btn btn-primary">
-                    Commencer l'aventure
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                </button>
-            </form>
+                    <button type="submit" class="btn-primary">
+                        Commencer
+                        <span class="btn-icon">→</span>
+                    </button>
+                </form>
+            </div>
         </main>
     </div>
 

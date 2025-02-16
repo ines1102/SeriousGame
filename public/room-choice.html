@@ -3,84 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Royale - Choix de la Room</title>
+    <title>Health Royale - Partie Privée</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon_io/favicon-32x32.png">
-    
-    <!-- Styles -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/room-choice.css">
-    
-    <!-- Police Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <a href="/choose-mode.html" class="back-btn">Retour</a>
+    <button onclick="history.back()" class="back-btn">
+        <span class="back-icon">←</span>
+    </button>
 
     <div class="container">
         <div class="player-info fade-in">
-            <div class="player-avatar">
-                <img id="playerAvatar" src="/Avatars/default.jpeg" alt="Avatar du joueur">
-            </div>
-            <h2 id="playerName">Joueur</h2>
+            <img id="playerAvatar" src="" alt="Avatar">
+            <span id="playerName"></span>
         </div>
 
-        <div class="rooms-container">
-            <div class="room-card create-room fade-in">
-                <div class="room-icon">🎮</div>
-                <h3>Créer une Room</h3>
-                <p>Créez votre propre room et invitez un ami à vous rejoindre</p>
-                
-                <div class="room-info hidden">
-                    <div class="room-id-display">
-                        <span>ID de la Room :</span>
-                        <div class="room-code">
-                            <span id="roomId">----</span>
-                            <button id="copyButton" class="btn-copy">
-                                📋
-                            </button>
-                        </div>
-                    </div>
-                    <p class="waiting-message">En attente d'un autre joueur...</p>
-                    <div class="loader"></div>
-                </div>
-
-                <button class="btn btn-primary create-btn">
-                    Créer une Room
+        <main class="room-options">
+            <div class="room-card fade-in delay-1">
+                <h2>Créer une partie</h2>
+                <button id="createRoomBtn" class="btn-primary">
+                    Créer une room
                 </button>
+                <div id="roomInfo" class="room-info hidden">
+                    <div class="room-id">
+                        <span id="roomCode">----</span>
+                        <button id="copyBtn" class="copy-btn" title="Copier">
+                            📋
+                        </button>
+                    </div>
+                    <p>Partagez ce code avec votre ami</p>
+                </div>
             </div>
 
-            <div class="room-card join-room fade-in">
-                <div class="room-icon">🤝</div>
-                <h3>Rejoindre une Room</h3>
-                <p>Rejoignez la room d'un ami avec le code à 4 chiffres</p>
-                
+            <div class="room-card fade-in delay-2">
+                <h2>Rejoindre une partie</h2>
                 <div class="join-form">
-                    <div class="room-input-container">
-                        <input type="text" 
-                               id="roomInput" 
+                    <div class="code-input">
+                        <input type="text" id="roomInput" 
                                maxlength="4" 
                                placeholder="CODE"
                                pattern="[0-9]*"
-                               inputmode="numeric"
-                               autocomplete="off">
-                        <div class="input-border"></div>
+                               inputmode="numeric">
                     </div>
-                    <p class="error-message hidden">Code invalide. Veuillez réessayer.</p>
-                    <button class="btn btn-secondary join-btn" disabled>
-                        Rejoindre la Room
+                    <button id="joinRoomBtn" class="btn-primary" disabled>
+                        Rejoindre
                     </button>
                 </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">
+                Connexion à la room<span class="loading-dots"></span>
             </div>
         </div>
     </div>
 
-    <!-- Notification de copie -->
-    <div id="copyNotification" class="copy-notification">
-        Code copié !
-    </div>
-
-    <script src="/js/room-choice.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/room-choice.js"></script>
 </body>
 </html>

@@ -3,73 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Royale - Choix du Mode</title>
+    <title>Health Royale - Mode de jeu</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon_io/favicon-32x32.png">
-    
-    <!-- Styles -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/choose-mode.css">
-    
-    <!-- Police Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <a href="/" class="back-btn">Retour</a>
+    <button onclick="history.back()" class="back-btn">
+        <span class="back-icon">←</span>
+    </button>
 
     <div class="container">
-        <div class="welcome-section fade-in">
-            <div class="player-info">
-                <div class="player-avatar">
-                    <img id="playerAvatar" src="/Avatars/default.jpeg" alt="Avatar du joueur">
-                </div>
-                <h2 id="playerName">Joueur</h2>
-            </div>
-        </div>
-
         <main class="modes-container">
-            <div class="mode-card random-mode fade-in">
-                <div class="mode-icon">🎲</div>
-                <h3>Mode Aléatoire</h3>
-                <p>Affrontez un adversaire aléatoire</p>
-                <div class="features">
-                    <div class="feature">
-                        <span class="feature-icon">⚡</span>
-                        <span>Matchmaking rapide</span>
-                    </div>
-                    <div class="feature">
-                        <span class="feature-icon">🏆</span>
-                        <span>Nouveaux défis</span>
-                    </div>
-                </div>
-                <button class="btn btn-primary play-btn" data-mode="random">
-                    Jouer en Aléatoire
-                </button>
+            <div class="player-info fade-in">
+                <img id="playerAvatar" src="" alt="Avatar">
+                <span id="playerName"></span>
             </div>
 
-            <div class="mode-card friend-mode fade-in">
-                <div class="mode-icon">👥</div>
-                <h3>Jouer avec un Ami</h3>
-                <p>Créez ou rejoignez une partie privée</p>
-                <div class="features">
-                    <div class="feature">
-                        <span class="feature-icon">🔒</span>
-                        <span>Partie privée</span>
-                    </div>
-                    <div class="feature">
-                        <span class="feature-icon">🤝</span>
-                        <span>Entre amis</span>
-                    </div>
+            <div class="mode-options">
+                <div class="mode-card fade-in delay-1" onclick="selectMode('random')">
+                    <div class="mode-icon">🎲</div>
+                    <h2>Partie Aléatoire</h2>
+                    <p>Affrontez un adversaire au hasard</p>
+                    <button class="btn-primary">Jouer</button>
                 </div>
-                <button class="btn btn-secondary play-btn" data-mode="friend">
-                    Jouer avec un Ami
-                </button>
+
+                <div class="mode-card fade-in delay-2" onclick="selectMode('friend')">
+                    <div class="mode-icon">👥</div>
+                    <h2>Partie Privée</h2>
+                    <p>Jouez avec un ami</p>
+                    <button class="btn-primary">Créer/Rejoindre</button>
+                </div>
             </div>
         </main>
     </div>
 
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Recherche d'une partie<span class="loading-dots"></span></div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/choose-mode.js"></script>
+    <script src="js/choose-mode.js"></script>
 </body>
 </html>
