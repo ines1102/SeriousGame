@@ -125,7 +125,7 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on("reconnect_attempt", ({ roomId, name, avatar }) => {
+    socket.on("reconnect", ({ roomId, name, avatar }) => {
         if (disconnectedPlayers[socket.id] && disconnectedPlayers[socket.id].roomId === roomId) {
             rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
             socket.join(roomId);
@@ -133,6 +133,8 @@ io.on("connection", (socket) => {
             console.log(`✅ Joueur ${name} a récupéré sa connexion dans Room ${roomId}`);
 
             io.to(roomId).emit("opponent_reconnected", { name, avatar });
+
+            startGameIfReady(roomId);
 
             delete disconnectedPlayers[socket.id];
         }
