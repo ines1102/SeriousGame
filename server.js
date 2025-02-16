@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// 📌 Définition de __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -19,8 +20,10 @@ app.use(express.static(path.join(__dirname, "public")));
 // 📌 Routes HTML
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 app.get("/choose-mode", (req, res) => res.sendFile(path.join(__dirname, "public/choose-mode.html")));
+app.get("/room-choice", (req, res) => res.sendFile(path.join(__dirname, "public/room-choice.html")));
 app.get("/gameboard", (req, res) => res.sendFile(path.join(__dirname, "public/gameboard.html")));
 
+// 📌 Gestion des rooms et joueurs
 let rooms = {};
 let waitingPlayer = null;
 
@@ -28,46 +31,59 @@ io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
     // 📌 Mode Aléatoire
-    socket.on("find_random_room", ({ name, sex, avatar }) => {
+    socket.on("find_random_room", ({ name, avatar }) => {
         if (waitingPlayer) {
             const roomId = generateRoomId();
             rooms[roomId] = { players: {} };
 
+            // Ajouter les joueurs dans la room
             rooms[roomId].players[waitingPlayer.id] = waitingPlayer;
-            rooms[roomId].players[socket.id] = { id: socket.id, name, sex, avatar };
+            rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
 
+            // Faire rejoindre la room
             io.to(waitingPlayer.id).emit("game_found", { roomId });
             io.to(socket.id).emit("game_found", { roomId });
 
             io.sockets.sockets.get(waitingPlayer.id)?.join(roomId);
             socket.join(roomId);
 
-            console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} (${waitingPlayer.sex}) vs ${name} (${sex}) dans Room ${roomId}`);
-            console.log(`👤 Joueur 1 :`, waitingPlayer);
-            console.log(`👤 Joueur 2 :`, { id: socket.id, name, sex, avatar });
+            console.log(`🎮 Match Aléatoire : ${waitingPlayer.name} vs ${name} dans Room ${roomId}`);
 
+            // Démarrer la partie si prêt
             startGameIfReady(roomId);
-            waitingPlayer = null;
+
+            waitingPlayer = null; 
         } else {
-            waitingPlayer = { id: socket.id, name, sex, avatar };
-            console.log(`⌛ Joueur ${name} (${sex}) en attente d'un adversaire...`);
+            waitingPlayer = { id: socket.id, name, avatar };
+            console.log(`⌛ Joueur ${name} en attente d'un adversaire...`);
         }
     });
 
-    // 📌 Mode Avec un Ami
-    socket.on("join_private_game", ({ roomId, name, sex, avatar }) => {
+    // 📌 Mode Entre Amis
+    socket.on("join_private_game", ({ roomId, name, avatar }) => {
         if (!rooms[roomId]) {
             rooms[roomId] = { players: {} };
         }
 
-        rooms[roomId].players[socket.id] = { id: socket.id, name, sex, avatar };
+        rooms[roomId].players[socket.id] = { id: socket.id, name, avatar };
         socket.join(roomId);
 
-        console.log(`👥 Joueur ${name} (${sex}) a rejoint Room ${roomId}`);
+        console.log(`👥 Joueur ${name} a rejoint Room ${roomId}`);
 
         io.to(socket.id).emit("room_joined", { roomId });
 
+        // Vérifier si la room est complète et démarrer la partie
         startGameIfReady(roomId);
+    });
+
+    // 📌 Mise à jour du profil des joueurs
+    socket.on("update_profile", ({ roomId, name, avatar }) => {
+        if (rooms[roomId] && rooms[roomId].players[socket.id]) {
+            rooms[roomId].players[socket.id].name = name;
+            rooms[roomId].players[socket.id].avatar = avatar;
+            io.to(roomId).emit("profile_updated", rooms[roomId].players);
+            console.log(`🔄 Profil mis à jour : ${name} dans Room ${roomId}`);
+        }
     });
 
     // 📌 Gestion des déconnexions
@@ -95,21 +111,13 @@ io.on("connection", (socket) => {
 
 // 📌 Vérifier si la room a 2 joueurs et démarrer la partie
 function startGameIfReady(roomId) {
-    if (rooms[roomId]) {
-        const players = Object.values(rooms[roomId].players);
-        if (players.length === 2) {
-            io.to(roomId).emit("game_start", {
-                player1: players[0],
-                player2: players[1]
-            });
-
-            console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} (${players[0].sex}) vs ${players[1].name} (${players[1].sex})`);
-            console.log(`📌 Profils des joueurs mis à jour :`);
-            console.log(`👤 Joueur 1 :`, players[0]);
-            console.log(`👤 Joueur 2 :`, players[1]);
-        } else {
-            console.log(`⚠️ Impossible de démarrer le jeu dans la Room ${roomId}, il manque un joueur.`);
-        }
+    const players = Object.values(rooms[roomId].players);
+    if (players.length === 2) {
+        io.to(roomId).emit("game_start", {
+            player1: players[0],
+            player2: players[1],
+        });
+        console.log(`🎮 Début du jeu Room ${roomId} : ${players[0].name} vs ${players[1].name}`);
     }
 }
 
