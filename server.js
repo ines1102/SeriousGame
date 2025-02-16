@@ -32,18 +32,17 @@ app.get("/gameboard", (req, res) => res.sendFile(path.join(path.resolve(), "publ
 
 // Stockage des rooms et joueurs
 const rooms = {}; // Stocke les rooms avec les joueurs
-const disconnectTimers = {}; // Stocke les timers de déconnexion temporaire
 
 io.on("connection", (socket) => {
     console.log(`🔗 Nouvelle connexion : ${socket.id}`);
 
-    /** ✅ Mode Joueur Aléatoire */
+    // ✅ Mode Joueur Aléatoire
     socket.on("find_random_room", (playerData) => {
         let roomId = Object.keys(rooms).find((id) => rooms[id].players.length === 1);
 
         if (!roomId) {
             roomId = Math.floor(1000 + Math.random() * 9000).toString();
-            rooms[roomId] = { players: [] };
+            rooms[roomId] = { players: [], gameStarted: false };
         }
 
         socket.join(roomId);
@@ -58,10 +57,10 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** ✅ Mode Jouer entre amis */
+    // ✅ Mode Jouer entre amis (Création de Room)
     socket.on("create_room", ({ roomId, name, avatar }) => {
         if (!rooms[roomId]) {
-            rooms[roomId] = { players: [] };
+            rooms[roomId] = { players: [], gameStarted: false };
         }
 
         socket.join(roomId);
@@ -71,7 +70,7 @@ io.on("connection", (socket) => {
         io.to(socket.id).emit("room_created", roomId);
     });
 
-    /** ✅ Rejoindre une Room */
+    // ✅ Rejoindre une Room existante
     socket.on("join_room", ({ roomId, name, avatar }) => {
         if (!rooms[roomId] || rooms[roomId].players.length >= 2) {
             console.log(`❌ Room ${roomId} introuvable ou pleine.`);
@@ -91,34 +90,26 @@ io.on("connection", (socket) => {
         }
     });
 
-    /** ✅ Gestion des déconnexions */
+    // ✅ Détection de déconnexion et gestion des reconnexions
     socket.on("disconnect", () => {
         console.log(`🔌 Déconnexion détectée : ${socket.id}`);
-        markPlayerAsDisconnected(socket.id);
+        handleDisconnection(socket.id);
     });
 
-    /** ✅ Reconnexion d'un joueur */
+    // ✅ Quitter une Room
+    socket.on("leave_room", () => {
+        handleDisconnection(socket.id);
+    });
+
+    // ✅ Rejoindre une partie après reconnexion
     socket.on("rejoin_game", ({ roomId, name, avatar }) => {
         if (rooms[roomId]) {
-            console.log(`🔄 ${name} tente de rejoindre Room ${roomId} après reconnexion.`);
-            clearTimeout(disconnectTimers[socket.id]); // Annuler la suppression
-            delete disconnectTimers[socket.id];
-
             socket.join(roomId);
-            const playerIndex = rooms[roomId].players.findIndex(p => p.id === socket.id);
-            if (playerIndex !== -1) {
-                rooms[roomId].players[playerIndex].id = socket.id; // Mise à jour de l'ID du joueur
-            }
+            rooms[roomId].players.push({ id: socket.id, name, avatar });
 
+            console.log(`🔄 ${name} a rejoint à nouveau la Room ${roomId} après reconnexion.`);
             io.to(roomId).emit("opponent_reconnected", { name, avatar });
-        } else {
-            console.warn(`⚠️ Room ${roomId} introuvable lors de la reconnexion de ${name}.`);
         }
-    });
-
-    /** ✅ Quitter une Room */
-    socket.on("leave_room", () => {
-        removePlayerFromRoom(socket.id);
     });
 });
 
@@ -139,42 +130,34 @@ function startGame(roomId) {
         console.log(`👤 Joueur 1 : ${player1.name} - 👤 Joueur 2 : ${player2.name}`);
 
         io.to(roomId).emit("game_start", {
-            decks,
-            players: [player1, player2]
+            players: [player1, player2],
+            turn: player1.name,
         });
     });
 }
 
-/** ✅ Fonction pour gérer une déconnexion temporaire */
-function markPlayerAsDisconnected(socketId) {
-    for (const roomId in rooms) {
-        const player = rooms[roomId].players.find(p => p.id === socketId);
-        if (player) {
-            console.warn(`⚠️ Joueur ${player.name} marqué comme déconnecté, attente 10s pour reconnexion...`);
-            io.to(roomId).emit("opponent_disconnected", { name: player.name });
-
-            disconnectTimers[socketId] = setTimeout(() => {
-                removePlayerFromRoom(socketId);
-            }, 10000);
-        }
-    }
-}
-
-/** ✅ Fonction pour supprimer un joueur d'une room */
-function removePlayerFromRoom(socketId) {
+/** ✅ Fonction pour gérer la suppression d'un joueur de la room */
+function handleDisconnection(socketId) {
     for (const roomId in rooms) {
         const playerIndex = rooms[roomId].players.findIndex((player) => player.id === socketId);
-
         if (playerIndex !== -1) {
-            console.log(`🛑 Suppression confirmée de ${rooms[roomId].players[playerIndex].name} dans la Room ${roomId}`);
-            rooms[roomId].players.splice(playerIndex, 1);
-        }
+            const player = rooms[roomId].players[playerIndex];
+            console.log(`❌ Joueur ${player.name} marqué comme déconnecté dans Room ${roomId}`);
 
-        if (rooms[roomId].players.length === 0) {
-            console.log(`🗑️ Suppression de la Room ${roomId} car elle est vide.`);
-            delete rooms[roomId];
-        } else {
-            io.to(roomId).emit("player_disconnected");
+            // ✅ Attente de reconnexion avant suppression définitive
+            setTimeout(() => {
+                if (!rooms[roomId].players.some(p => p.id === socketId)) {
+                    console.log(`🛑 Suppression confirmée de ${player.name} dans la Room ${roomId}`);
+                    rooms[roomId].players.splice(playerIndex, 1);
+
+                    if (rooms[roomId].players.length === 0) {
+                        console.log(`🗑️ Suppression de la Room ${roomId} car elle est vide.`);
+                        delete rooms[roomId];
+                    } else {
+                        io.to(roomId).emit("opponent_disconnected", { name: player.name });
+                    }
+                }
+            }, 10000);
         }
     }
 }
