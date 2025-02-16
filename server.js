@@ -1,20 +1,36 @@
 import express from "express";
-import { Server } from "socket.io";
 import http from "http";
+import { Server } from "socket.io";
 import cors from "cors";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Correction pour `__dirname`
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config();
+
+const PORT = process.env.PORT || 10000;
+const CLIENT_URL = "https://seriousgame-ds65.onrender.com";
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+    cors: { origin: CLIENT_URL, methods: ["GET", "POST"] },
+});
 
-app.use(cors());
-app.use(express.static("public")); // Sert les fichiers statiques
+// Middleware
+app.use(cors({ origin: CLIENT_URL }));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public"))); // Correction ici
 
-// Routes
-app.get("/", (req, res) => res.sendFile(__dirname + "/public/index.html"));
-app.get("/choose-mode", (req, res) => res.sendFile(__dirname + "/public/choose-mode.html"));
-app.get("/room-choice", (req, res) => res.sendFile(__dirname + "/public/room-choice.html"));
-app.get("/gameboard", (req, res) => res.sendFile(__dirname + "/public/gameboard.html"));
+// Routes pour servir les pages HTML
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+app.get("/choose-mode", (req, res) => res.sendFile(path.join(__dirname, "public", "choose-mode.html")));
+app.get("/room-choice", (req, res) => res.sendFile(path.join(__dirname, "public", "room-choice.html")));
+app.get("/gameboard", (req, res) => res.sendFile(path.join(__dirname, "public", "gameboard.html")));
 
 const rooms = {}; // Stockage des rooms
 
