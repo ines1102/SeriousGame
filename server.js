@@ -29,6 +29,45 @@ app.use((req, res, next) => {
     next();
 });
 
+// Configuration pour servir les fichiers statiques
+app.use(express.static(join(__dirname, 'public')));
+
+// Routes spécifiques pour les ressources CSS et JS
+app.get('/css/:file', (req, res) => {
+    res.sendFile(join(__dirname, 'public', 'css', req.params.file));
+});
+
+app.get('/js/:file', (req, res) => {
+    res.sendFile(join(__dirname, 'public', 'js', req.params.file));
+});
+
+// Routes pour les images
+app.get('/Avatars/:file', (req, res) => {
+    res.sendFile(join(__dirname, 'public', 'Avatars', req.params.file));
+});
+
+app.get('/Cartes/:file', (req, res) => {
+    res.sendFile(join(__dirname, 'public', 'Cartes', req.params.file));
+});
+
+// Route pour le favicon
+app.get('/favicon_io/:file', (req, res) => {
+    res.sendFile(join(__dirname, 'public', 'favicon_io', req.params.file));
+});
+
+// Reste du code serveur...
+
+// Route pour toutes les autres requêtes HTML
+app.get('/*', (req, res) => {
+    res.sendFile(join(__dirname, 'public', 'index.html'));
+});
+
+// Démarrage du serveur
+const PORT = process.env.PORT || 1000;
+server.listen(PORT, () => {
+    console.log(`Serveur démarré sur le port ${PORT}`);
+});
+
 // Servir les fichiers statiques
 app.use(express.static(join(__dirname, 'public')));
 
